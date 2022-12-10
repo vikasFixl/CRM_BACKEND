@@ -2,7 +2,7 @@ const Org = require("../models/OrgModel");
 
 exports.getOrgData = async (req, res) => {
   try {
-    const data = await Org.find({ email: req.email }).exec();
+    const data = await Org.find({ orgEmail: req.params.email }).exec();
     if (data.length === 0) {
       res.json({
         success: true,
