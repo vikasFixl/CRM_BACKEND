@@ -61,13 +61,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(cors());
 app.use(express.json());
-app.use("/api/", async (req, res) => {
-  try {
-    res.status(200).json({ message: "Hello World!" });
-  } catch (error) {
-    res.status(404).json({ message: error.message });
-  }
-});
+// app.use("/", async (req, res) => {
+//   try {
+//     res.status(200).json({ message: "Hello World!" });
+//   } catch (error) {
+//     res.status(404).json({ message: error.message });
+//   }
+// });
 app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
 app.use("/api/profile", profileRoutes);
