@@ -12,94 +12,84 @@ const USER = process.env.SMTP_USER;
 const PASS = process.env.SMTP_PASS;
 
 const User = require("../models/userModel.js");
-const ProfileModel = require("../models/ProfileModel.js");
+const Org = require("../models/OrgModel");
 
 exports.signin = async (req, res) => {
-  const { email, password } = req.body; //Coming from formData
+  const { email, password } = req.body;
   try {
-    const existingUser = await User.findOne({ email });
-    // get userprofile and append to login auth detail
-    // const userProfile = await ProfileModel.findOne({
-    //   userId: existingUser?._id,
-    // });
-    if (!existingUser)
-      return res.status(404).json({ message: "User doesn't exist" });
-    const isPasswordCorrect = await bcrypt.compare(
-      password,
-      existingUser.password
-    );
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User doesn't exist" });
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: "Invalid password credentials" });
     }
-    //If crednetials are valid, create a token for the user
-    const accessToken = jwt.sign({ userId: existingUser._id }, SECRET, {
+    const accessToken = jwt.sign({ userId: user._id }, SECRET, {
       expiresIn: "1d",
     });
-    await User.findByIdAndUpdate(existingUser._id, { accessToken });
-    //Then send the token to the client/frontend
-    res.status(200).json({
-      data: {
-        email: existingUser.email,
-        firstName: existingUser.firstName,
-        lastName: existingUser.lastName,
-        phone: existingUser.phone,
-      },
-      success: true,
-      code: 200,
-      message: "You have logged in successfully",
-      // result: existingUser,
-      // userProfile,
-      token: accessToken,
-    });
+    await User.findByIdAndUpdate(user._id, { accessToken });
+    if (user.role === "Admin") {
+      const orgDetails = await Org.findOne({ email });
+      console.log(orgDetails);
+      res.status(200).json({
+        data: {
+          orgEmail: orgDetails.orgEmail,
+          orgName: orgDetails.orgName,
+          orgPhone: orgDetails.phone,
+          orgid: orgDetails._id,
+          role: user.role,
+          orgDept: orgDetails.orgDept,
+          orgLeadStatus: orgDetails.orgLeadStatus,
+          orgLeadStages: orgDetails.orgLeadStages,
+        },
+        success: true,
+        code: 200,
+        message: "You have logged in successfully",
+        token: accessToken,
+      });
+    } else {
+      res.status(200).json({
+        data: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          role: user.role,
+          department: user.department,
+        },
+        success: true,
+        code: 200,
+        message: "You have logged in successfully",
+        token: accessToken,
+      });
+    }
   } catch (error) {
+    console.log(error);
     res.status(404).json({ message: "Something went wrong" });
   }
 };
 
 exports.signup = async (req, res) => {
-  const { email, password, confirmPassword, firstName, lastName, phone } =
-    req.body;
+  const form = req.body;
+  const { email } = req.body;
   try {
-    //validation
     const existingUser = await User.findOne({ email });
-    // const userProfile = await ProfileModel.findOne({
-    //   userId: existingUser?._id,
-    // });
-
     if (existingUser)
       return res.status(403).json({ message: "User already exist" });
-
-    if (password !== confirmPassword)
-      return res.status(401).json({ message: "Password don't match" });
-
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    const newUser = await User.create({
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      password: hashedPassword,
-      confirmPassword: hashedPassword,
-      phone: phone,
-      // name: `${firstName} ${lastName}`,
-    });
-
-    // const token = jwt.sign({ email: result.email, id: result._id }, SECRET, {
-    //   expiresIn: "1h",
-    // });
-    await newUser.save();
+    const user = new User(form);
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(user.password, salt);
+    await user.save();
     res.status(201).json({
-      data: newUser,
       success: true,
       code: 201,
       message: "You have signed up successfully",
-      // userProfile,
-      // token
     });
   } catch (error) {
+    console.log(error);
     res.status(400).json({ message: "Something went wrong" });
   }
-}
+};
 
 exports.forgotPassword = (req, res) => {
   const { email } = req.body;
@@ -108,7 +98,7 @@ exports.forgotPassword = (req, res) => {
   const transporter = nodemailer.createTransport({
     host: HOST,
     port: PORT,
-    secure:true,
+    secure: true,
     auth: {
       user: USER,
       pass: PASS,

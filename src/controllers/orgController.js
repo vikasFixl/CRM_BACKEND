@@ -2,7 +2,7 @@ const Org = require("../models/OrgModel");
 
 exports.getOrgData = async (req, res) => {
   try {
-    const data = await Org.find({ orgEmail: req.params.email }).exec();
+    const data = await Org.findById(req.params.id);
     if (data.length === 0) {
       res.json({
         success: true,
@@ -12,6 +12,32 @@ exports.getOrgData = async (req, res) => {
     } else {
       res.json({
         data: data,
+        success: true,
+        message: "Org Data.",
+        status: 200,
+      });
+    }
+  } catch (err) {
+    res.json({
+      message: "Someting went wrong !",
+      success: false,
+      status: 400,
+    });
+  }
+};
+exports.getOrgDeprt = async (req, res) => {
+  try {
+    const data = await Org.findById(req.params.id);
+    if (data.length === 0) {
+      res.json({
+        success: true,
+        message: "Org data not found.",
+        status: 200,
+      });
+    } else {
+      // console.log(data.orgDept)
+      res.json({
+        data: data.orgDept,
         success: true,
         message: "Org Data.",
         status: 200,
@@ -69,5 +95,43 @@ exports.addOrg = async (req, res) => {
       status: 400,
       success: false,
     });
+  }
+};
+exports.signin = async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const existingUser = await Org.findOne({ email });
+    if (!existingUser)
+      return res.status(404).json({ message: "User doesn't exist" });
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      existingUser.password
+    );
+    if (!isPasswordCorrect) {
+      return res.status(400).json({ message: "Invalid password credentials" });
+    }
+    const accessToken = jwt.sign(
+      { orgId: existingUser._id },
+      existingUser.orgName,
+      existingUser.orgEmail,
+      {
+        expiresIn: "1d",
+      }
+    );
+    await User.findByIdAndUpdate(existingUser._id, { accessToken });
+    res.status(200).json({
+      data: {
+        id: existingUser._id,
+        email: existingUser.orgEmail,
+        Name: existingUser.orgName,
+        phone: existingUser.phone,
+      },
+      success: true,
+      code: 200,
+      message: "You have logged in successfully",
+      token: accessToken,
+    });
+  } catch (error) {
+    res.status(404).json({ message: "Something went wrong" });
   }
 };
