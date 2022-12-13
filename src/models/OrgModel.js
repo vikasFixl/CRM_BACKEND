@@ -19,15 +19,15 @@ const OrgSchema = new mongoose.Schema(
       required: false,
     },
     orgDept: {
-      type: String,
+      type: Array,
       required: false,
     },
     orgLeadStages: {
-      type: String,
+      type: Array,
       required: false,
     },
     orgLeadStatus: {
-      type: String,
+      type: Array,
       required: false,
     },
   },

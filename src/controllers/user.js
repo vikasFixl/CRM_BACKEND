@@ -49,7 +49,7 @@ exports.signin = async (req, res) => {
       message: "You have logged in successfully",
       // result: existingUser,
       // userProfile,
-      accessToken,
+      token: accessToken,
     });
   } catch (error) {
     res.status(404).json({ message: "Something went wrong" });
