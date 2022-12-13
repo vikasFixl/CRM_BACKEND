@@ -23,7 +23,7 @@ const OrgSchema = new mongoose.Schema(
       required: false,
     },
     orgLeadStages: {
-      type: Array,
+      type: Object,
       required: false,
     },
     orgLeadStatus: {
