@@ -1,4 +1,6 @@
 const Org = require("../models/OrgModel");
+const User = require("../models/userModel");
+const bcrypt = require("bcrypt");
 
 exports.getOrgData = async (req, res) => {
   try {
@@ -82,14 +84,49 @@ exports.updateOrgData = async (req, res) => {
 exports.addOrg = async (req, res) => {
   try {
     const data = req.body;
-    const org = new Org(data);
-    await org.save();
-    res.json({
-      success: true,
-      message: "Org saved successfully",
-      status: 201,
-    });
+    const emailChk = req.body.orgEmail;
+    const chkEmail = await Org.findOne({ emailChk });
+    if (!chkEmail) {
+      try {
+        const org = new Org({
+          orgName: data.orgName,
+          orgEmail: data.orgEmail,
+          orgPhone: data.orgPhone,
+        });
+        const salt = await bcrypt.genSalt(10);
+        const password = await bcrypt.hash(data.orgPassword, salt);
+        const user = new User({
+          firstName: data.orgName,
+          email: data.orgEmail,
+          phone: data.orgPhone,
+          role: "Admin",
+          department: "Admin",
+          password: password,
+        });
+        await org.save();
+        await user.save();
+        res.json({
+          success: true,
+          message: "Org saved successfully",
+          status: 201,
+        });
+      } catch (err) {
+        console.log(err);
+        res.json({
+          message: "Someting went wrong!",
+          status: 400,
+          success: false,
+        });
+      }
+    } else {
+      res.json({
+        message: `Org with ${emailChk} already in DB.`,
+        status: 400,
+        success: false,
+      });
+    }
   } catch (err) {
+    console.log(err);
     res.json({
       message: "Someting went wrong!",
       status: 400,
