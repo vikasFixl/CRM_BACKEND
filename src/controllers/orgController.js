@@ -5,7 +5,13 @@ const bcrypt = require("bcrypt");
 exports.getOrgData = async (req, res) => {
   try {
     const data = await Org.findById(req.params.id);
-    if (data.length === 0) {
+    if (data === null) {
+      res.json({
+        success: true,
+        message: "Data not found.",
+        status: 200,
+      });
+    } else if (data.length === 0) {
       res.json({
         success: true,
         message: "Org data not found.",
@@ -20,6 +26,7 @@ exports.getOrgData = async (req, res) => {
       });
     }
   } catch (err) {
+    // console.log(err);
     res.json({
       message: "Someting went wrong !",
       success: false,
@@ -30,14 +37,19 @@ exports.getOrgData = async (req, res) => {
 exports.getOrgDeprt = async (req, res) => {
   try {
     const data = await Org.findById(req.params.id);
-    if (data.length === 0) {
+    if (data === null) {
+      res.json({
+        success: true,
+        message: "Data not found.",
+        status: 200,
+      });
+    } else if (data.length === 0) {
       res.json({
         success: true,
         message: "Org data not found.",
         status: 200,
       });
     } else {
-      // console.log(data.orgDept)
       res.json({
         data: data.orgDept,
         success: true,
