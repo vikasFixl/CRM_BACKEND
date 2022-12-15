@@ -97,7 +97,7 @@ exports.addOrg = async (req, res) => {
   try {
     const data = req.body;
     const emailChk = req.body.orgEmail;
-    const chkEmail = await Org.findOne({ emailChk });
+    const chkEmail = await Org.findOne({ orgEmail: emailChk });
     if (!chkEmail) {
       try {
         const org = new Org({
