@@ -3,6 +3,7 @@ const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
+const mongoose = require("mongoose");
 
 dotenv.config();
 const SECRET = process.env.JWT_SECRET;
@@ -164,4 +165,64 @@ exports.resetPassword = (req, res) => {
     .catch((err) => {
       console.log(err);
     });
+};
+
+exports.getUser=async(req,res)=>{
+  try {
+    const _id=req.params.id;
+    const user=await User.findById(_id)
+    res.status(200).json({
+    data:{
+      firstName:user.firstName,
+      lastName:user.lastName,
+      email:user.email,
+      role:user.role,
+      department:user.department,
+      phone:user.phone,
+      permissions:user.permissions
+    },
+    success:true,
+    code: 200,
+    message: "single user fetch!!"
+  })
+  } catch (error) {
+    res.status(409).json({ message: error.message });
+  }
+}
+
+exports.getAllusers=async(req,res)=>{
+  try {
+    const userAll = await User.find({}).select("-password").sort({ _id: -1 });
+    res.status(200).json({
+      data: userAll,
+      success: true,
+      code: 200,
+      message: "all users get here!!"
+    });
+  } catch (error) {
+    res.status(409).json(error.message);
+  }
+}
+
+exports.delete=async(req,res)=>{
+  const _id=req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(_id))
+    return res.status(404).send("   No user with that id. ");
+  await User.findByIdAndRemove(_id);
+
+  res.json({ message: "User deleted successfully!" });
+};
+
+exports.updateUser = async (req, res) => {
+  const { id: _id } = req.params;
+  const user = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(_id))
+    return res.status(404).send("No User with that id. ");
+  const updatedUser = await User.findByIdAndUpdate(
+    _id,
+    { ...user, _id },
+    { new: true }
+  );
+  res.json(updatedUser);
 };

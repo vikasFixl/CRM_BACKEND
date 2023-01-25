@@ -16,6 +16,7 @@ const searchRoutes = require("./src/routes/searchRoute");
 const firmRoutes = require("./src/routes/firmRoute");
 const leadRoutes = require("./src/routes/leadRoute");
 const orgRoutes = require("./src/routes/orgRoute");
+const roleRoutes=require("./src/routes/roleNpermissionRoute");
 
 require("dotenv").config({
   path: path.join(__dirname, "./.env"),
@@ -76,6 +77,7 @@ app.use("/api/search", searchRoutes);
 app.use("/api/firm", firmRoutes);
 app.use("/api/lead", leadRoutes);
 app.use("/api/org", orgRoutes);
+app.use("/api/role",roleRoutes);
 
 app.use(async (req, res, next) => {
   if (req.headers["x-access-token"]) {

@@ -7,6 +7,11 @@ const InvoiceSchema = new mongoose.Schema({
       itemName: { type: String },
       unitPrice: { type: String },
       quantity: { type: String },
+      amount: { type: Number },
+      gst: { type: Number },
+      cgst:{type:Number},
+      sgst:{type:Number},
+      igst:{type:Number},
     },
   ],
   gstn: { type: String },
@@ -19,16 +24,28 @@ const InvoiceSchema = new mongoose.Schema({
     address: { type: String },
   },
 
-  vat: { type: Number },
+  gst: { type: Number },
+  cgst:{type:Number},
+  sgst:{type:Number},
+  igst:{type:Number},
   subTotal: { type: Number },
   total: { type: Number },
-  amount: { type: Number },
   invoiceDate: { type: Date },
   dueDate: { type: Date },
   status: { type: String },
 
   delete: { type: Boolean },
   invoiceNumber: { type: Number },
+  
+  selectFirm:{type:String},
+  firmEmail:{type:String},
+  payment:[{
+    amountPaid:{type:Number},
+    datePaid:{type:Date},
+    paymentMethod:{type:String},
+    transId:{type:String},
+    notes:{type:String}
+  }]
 });
 
 const InvoiceModel = mongoose.model("InvoiceModel", InvoiceSchema);

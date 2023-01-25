@@ -55,7 +55,9 @@ exports.createInvoice = async (req, res) => {
     amount,
     dueDate,
     invoiceDate,
-    status
+    status,
+    selectFirm,
+    firmEmail
   } = req.body;
   // const newInvoice = new InvoiceModel(invoice);
   try {
@@ -73,7 +75,9 @@ exports.createInvoice = async (req, res) => {
       dueDate,
       invoiceDate: invoiceDate,
       client: client,
-      status: status
+      status: status,
+      selectFirm:selectFirm,
+      firmEmail:firmEmail
     });
     await newInvoice.save();
     res.status(201).json({
@@ -124,3 +128,22 @@ exports.deleteInvoice = async (req, res) => {
 
   res.json({ message: "Invoice deleted successfully" });
 }; 
+
+exports.payment=async(req,res)=>{
+  try {
+    const _id=req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(_id)) 
+    return res.status(404).send("No invoice with that id");
+    const newPay=await InvoiceModel.findByIdAndUpdate(_id,{payment:req.body,status:req.body.status},{
+      new:true
+    })
+    res.status(201).json({
+      data: newPay,
+      success: true,
+      code: 201,
+      message: "Payment Record Inserted Succesfully!",
+    });
+  } catch (error) {
+    res.status(409).json({ message: "something went wrong." });
+  }
+}

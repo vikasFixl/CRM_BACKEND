@@ -7,7 +7,9 @@ const firmSchema = new mongoose.Schema({
     phone: String,
     add: Object,
     webiste: String,
-    gst_no: String
+    gst_no: String,
+    logo:String,
+    uin:String
 });
 
 const Firm = mongoose.model('Firm', firmSchema);

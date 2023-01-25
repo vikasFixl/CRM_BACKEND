@@ -184,3 +184,20 @@ exports.signin = async (req, res) => {
     res.status(404).json({ message: "Something went wrong" });
   }
 };
+
+exports.logo=async(req,res)=>{
+  try {
+    const _id=req.params.id;
+    const image=await Org.findByIdAndUpdate(_id,{orgLogo:req.file.path},{
+      new:true
+    })
+    res.status(201).json({
+      "orgLogo":image.path,
+      code: 201,
+      success: true,
+      message: "logo Updated successfully!",
+    })
+  } catch (error) {
+    res.status(400).json({ message: "something went wrong! " });
+  }
+}

@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const FirmModel = require("../models/FirmModel");
 
 exports.createFirm = async (req, res) => {
-  const { name, email, phone, add, website, gst_no } = req.body;
+  const { name, email, phone, add, website, gst_no,uin } = req.body;
 
   try {
     const newFirm = new FirmModel({
@@ -13,6 +13,7 @@ exports.createFirm = async (req, res) => {
       add: add,
       website: website,
       gst_no: gst_no,
+      uin:uin
     });
     await newFirm.save();
     res.status(201).json({
@@ -80,3 +81,20 @@ exports.getAllFirm = async (req, res) => {
     res.status(409).json(err.message);
   }
 };
+
+exports.logo=async(req,res)=>{
+  try {
+    const _id=req.params.id;
+    const image=await FirmModel.findByIdAndUpdate(_id,{logo:req.file.path},{
+      new:true
+    })
+    res.status(201).json({
+      "logo":image.path,
+      code: 201,
+      success: true,
+      message: "logo Updated successfully!",
+    })
+  } catch (error) {
+    res.status(400).json({ message: "something went wrong! " });
+  }
+}
