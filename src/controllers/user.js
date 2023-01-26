@@ -179,7 +179,8 @@ exports.getUser=async(req,res)=>{
       role:user.role,
       department:user.department,
       phone:user.phone,
-      permissions:user.permissions
+      permissions:user.permissions,
+      password:user.password
     },
     success:true,
     code: 200,

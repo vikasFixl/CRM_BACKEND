@@ -198,6 +198,6 @@ exports.logo=async(req,res)=>{
       message: "logo Updated successfully!",
     })
   } catch (error) {
-    res.status(400).json({ message: "something went wrong! " });
+    res.status(400).json({ message: "Something Went wrong! " });
   }
 }
