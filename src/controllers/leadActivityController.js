@@ -56,8 +56,22 @@ exports.getActivityByType = async (req, res) => {
 };
 exports.createLeadActivity = async (req, res) => {
   try {
-    const data = req.body;
-    const activity = new LeadActivity(data);
+    const url = req.protocol + '://' + req.get('host')
+    var im=null;
+    //const data = req.body;
+    //console.log(req.file.filename);
+    if(req.body.type==="Attachment"){
+      if(req.file!=undefined){
+         im = url + '/public/activity/' + req.file.filename
+      }
+    }
+    const activity = new LeadActivity({
+      leadId:req.body.leadId,
+      title:req.body.title,
+      desc:req.body.desc,
+      type:req.body.type,
+      image:im
+    });
     await activity.save();
     res.status(201).json({
       message: "Saved Successfully.",
@@ -65,6 +79,7 @@ exports.createLeadActivity = async (req, res) => {
       status: 201,
     });
   } catch (err) {
+    console.log(err);
     res.status(400).json({
       message: "Someting went wrong!",
       success: false,
@@ -128,3 +143,33 @@ exports.deleteLeadActivity = async (req, res) => {
     });
   }
 };
+
+exports.updateAttachment=async(req,res)=>{
+  try {
+  const _id=req.params.id;
+  const url = req.protocol + '://' + req.get('host')
+  if(req.file!=undefined){
+   var im = url + '/public/activity/' + req.file.filename
+    await LeadActivity.findByIdAndUpdate(_id,{title:req.body.title,desc:req.body.desc,image:im},{
+      new:true
+    })
+  }
+  else{
+    await LeadActivity.findByIdAndUpdate(_id,{desc:req.body.desc},{
+      new:true
+    })
+  }
+  res.json({
+    success: true,
+    status: 201,
+    message: "Attachment Updated Successfully.",
+  })
+}
+ catch (error) {
+  res.status(400).json({
+    message: "Someting went wrong!",
+    success: false,
+    status: 400,
+  });
+}
+}
