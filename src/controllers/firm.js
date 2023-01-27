@@ -3,17 +3,17 @@ const mongoose = require("mongoose");
 const FirmModel = require("../models/FirmModel");
 
 exports.createFirm = async (req, res) => {
-  const { name, email, phone, add, website, gst_no,uin } = req.body;
-
   try {
+    const url = req.protocol + '://' + req.get('host')
     const newFirm = new FirmModel({
-      name: name,
-      email: email,
-      phone: phone,
-      add: add,
-      website: website,
-      gst_no: gst_no,
-      uin:uin
+      logo:url + '/public/firm/' + req.file.filename,
+      name: req.body.name,
+      email: req.body.email,
+      phone: req.body.phone,
+      add: req.body.add,
+      website: req.body.website,
+      gst_no: req.body.gst_no,
+      uin:req.body.uin
     });
     await newFirm.save();
     res.status(201).json({
@@ -84,8 +84,9 @@ exports.getAllFirm = async (req, res) => {
 
 exports.logo=async(req,res)=>{
   try {
+    const url = req.protocol + '://' + req.get('host')
     const _id=req.params.id;
-    const image=await FirmModel.findByIdAndUpdate(_id,{logo:req.file.path},{
+    const image=await FirmModel.findByIdAndUpdate(_id,{logo:url + '/public/firm/' + req.file.filename},{
       new:true
     })
     res.status(201).json({
