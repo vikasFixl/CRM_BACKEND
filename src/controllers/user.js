@@ -75,10 +75,21 @@ exports.signup = async (req, res) => {
   const form = req.body;
   const { email } = req.body;
   try {
+    const url = req.protocol + '://' + req.get('host')
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(403).json({ message: "User already exist" });
-    const user = new User(form);
+    const user = new User({
+      firstName:req.body.firstName,
+      lastName:req.body.lastName,
+      email:req.body.email,
+      role:req.body.email,
+      department:req.body.department,
+      phone:req.body.phone,
+      password:req.body.password,
+      permissions:req.body.permissions,
+      profilePhoto:url + '/public/user/' + req.file.filename
+    });
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(user.password, salt);
     await user.save();
@@ -227,3 +238,21 @@ exports.updateUser = async (req, res) => {
   );
   res.json(updatedUser);
 };
+
+exports.updateProfileimage=async(req,res)=>{
+  try {
+    const url = req.protocol + '://' + req.get('host')
+    const _id=req.params.id;
+    const image=await FirmModel.findByIdAndUpdate(_id,{profilePhoto:url + '/public/user/' + req.file.filename},{
+      new:true
+    })
+    res.status(201).json({
+      "profilePhoto":image.path,
+      code: 201,
+      success: true,
+      message: "Profile Photo Updated successfully!",
+    })
+  } catch (error) {
+    res.status(400).json({ message: "something went wrong! " });
+  }
+}

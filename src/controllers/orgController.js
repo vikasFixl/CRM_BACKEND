@@ -95,6 +95,7 @@ exports.updateOrgData = async (req, res) => {
 };
 exports.addOrg = async (req, res) => {
   try {
+    const url = req.protocol + '://' + req.get('host')
     const data = req.body;
     const emailChk = req.body.orgEmail;
     const chkEmail = await Org.findOne({ orgEmail: emailChk });
@@ -104,6 +105,7 @@ exports.addOrg = async (req, res) => {
           orgName: data.orgName,
           orgEmail: data.orgEmail,
           orgPhone: data.orgPhone,
+          orgLogo:url + '/public/org/' + req.file.filename
         });
         const salt = await bcrypt.genSalt(10);
         const password = await bcrypt.hash(data.orgPassword, salt);
@@ -114,6 +116,7 @@ exports.addOrg = async (req, res) => {
           role: "Admin",
           department: "Admin",
           password: password,
+          profilePhoto:url + '/public/org/' + req.file.filename
         });
         await org.save();
         await user.save();
@@ -187,8 +190,9 @@ exports.signin = async (req, res) => {
 
 exports.logo=async(req,res)=>{
   try {
+    const url = req.protocol + '://' + req.get('host')
     const _id=req.params.id;
-    const image=await Org.findByIdAndUpdate(_id,{orgLogo:req.file.path},{
+    const image=await Org.findByIdAndUpdate(_id,{orgLogo:url + '/public/org/' + req.file.filename},{
       new:true
     })
     res.status(201).json({
