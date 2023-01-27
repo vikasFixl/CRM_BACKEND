@@ -167,46 +167,46 @@ exports.resetPassword = (req, res) => {
     });
 };
 
-exports.getUser=async(req,res)=>{
+exports.getUser = async (req, res) => {
   try {
-    const _id=req.params.id;
-    const user=await User.findById(_id)
+    const _id = req.params.id;
+    const user = await User.findById(_id);
     res.status(200).json({
-    data:{
-      firstName:user.firstName,
-      lastName:user.lastName,
-      email:user.email,
-      role:user.role,
-      department:user.department,
-      phone:user.phone,
-      permissions:user.permissions,
-      password:user.password
-    },
-    success:true,
-    code: 200,
-    message: "single user fetch!!"
-  })
+      data: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        phone: user.phone,
+        permissions: user.permissions,
+        password: user.password,
+      },
+      success: true,
+      code: 200,
+      message: "single user fetch!!",
+    });
   } catch (error) {
     res.status(409).json({ message: error.message });
   }
-}
+};
 
-exports.getAllusers=async(req,res)=>{
+exports.getAllusers = async (req, res) => {
   try {
     const userAll = await User.find({}).select("-password").sort({ _id: -1 });
     res.status(200).json({
       data: userAll,
       success: true,
       code: 200,
-      message: "all users get here!!"
+      message: "all users get here!!",
     });
   } catch (error) {
     res.status(409).json(error.message);
   }
-}
+};
 
-exports.delete=async(req,res)=>{
-  const _id=req.params.id;
+exports.delete = async (req, res) => {
+  const _id = req.params.id;
   if (!mongoose.Types.ObjectId.isValid(_id))
     return res.status(404).send("   No user with that id. ");
   await User.findByIdAndRemove(_id);

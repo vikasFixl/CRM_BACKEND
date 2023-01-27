@@ -16,7 +16,8 @@ const searchRoutes = require("./src/routes/searchRoute");
 const firmRoutes = require("./src/routes/firmRoute");
 const leadRoutes = require("./src/routes/leadRoute");
 const orgRoutes = require("./src/routes/orgRoute");
-const roleRoutes=require("./src/routes/roleNpermissionRoute");
+const roleRoutes = require("./src/routes/roleNpermissionRoute");
+const leadActivityRoutes = require("./src/routes/leadActivityRoute");
 
 require("dotenv").config({
   path: path.join(__dirname, "./.env"),
@@ -62,13 +63,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(cors());
 app.use(express.json());
-// app.use("/", async (req, res) => {
-//   try {
-//     res.status(200).json({ message: "Hello World!" });
-//   } catch (error) {
-//     res.status(404).json({ message: error.message });
-//   }
-// });
+
 app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
 app.use("/api/profile", profileRoutes);
@@ -77,7 +72,8 @@ app.use("/api/search", searchRoutes);
 app.use("/api/firm", firmRoutes);
 app.use("/api/lead", leadRoutes);
 app.use("/api/org", orgRoutes);
-app.use("/api/role",roleRoutes);
+app.use("/api/role", roleRoutes);
+app.use("/api/leadActivity", leadActivityRoutes);
 
 app.use(async (req, res, next) => {
   if (req.headers["x-access-token"]) {
