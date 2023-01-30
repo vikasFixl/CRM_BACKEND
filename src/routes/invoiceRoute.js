@@ -9,6 +9,6 @@ router.put("/delete/:id", invoiceController.deleteInvoice);
 router.get("/count", invoiceController.getTotalCount);
 router.get("/user", invoiceController.getInvoicesByUser);
 router.get("/all", invoiceController.getAllInvoices);
-router.post('/payment/:id',invoiceController.payment);
+router.patch('/payment/:id',invoiceController.payment);
 
 module.exports = router;

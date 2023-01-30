@@ -33,18 +33,20 @@ const InvoiceSchema = new mongoose.Schema({
   invoiceDate: { type: Date },
   dueDate: { type: Date },
   status: { type: String },
-
+  amountPaid:{type:Number,default:0},
+  dueAmount:{type:Number,default:0},
   delete: { type: Boolean },
   invoiceNumber: { type: Number },
   
   selectFirm:{type:String},
   firmEmail:{type:String},
   payment:[{
-    amountPaid:{type:Number},
+    amountPaidpayment:{type:Number},
     datePaid:{type:Date},
     paymentMethod:{type:String},
     transId:{type:String},
-    notes:{type:String}
+    notes:{type:String},
+    chequeNo:{type:Number}
   }]
 });
 

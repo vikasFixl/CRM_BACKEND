@@ -77,7 +77,8 @@ exports.createInvoice = async (req, res) => {
       client: client,
       status: status,
       selectFirm:selectFirm,
-      firmEmail:firmEmail
+      firmEmail:firmEmail,
+      //dueAmount:total
     });
     await newInvoice.save();
     res.status(201).json({
@@ -134,9 +135,15 @@ exports.payment=async(req,res)=>{
     const _id=req.params.id;
     if (!mongoose.Types.ObjectId.isValid(_id)) 
     return res.status(404).send("No invoice with that id");
-    const newPay=await InvoiceModel.findByIdAndUpdate(_id,{payment:req.body,status:req.body.status},{
-      new:true
-    })
+    const details=await InvoiceModel.findById(_id)
+    const newPay=await InvoiceModel.findByIdAndUpdate(_id,{$push:{payment:req.body},$set:{status:req.body.status,amountPaid:parseFloat(details.amountPaid)+parseFloat(req.body.amountPaidpayment),dueAmount:parseFloat(details.total)-parseFloat(details.amountPaid)-parseFloat(req.body.amountPaidpayment)}},{
+        new:true
+      })
+      console.log(newPay.amountPaid);
+      if(newPay.dueAmount<0){
+        amount=newPay.dueAmount
+        return res.json({msg:"OverPaid!",amount})
+      }
     res.status(201).json({
       data: newPay,
       success: true,
@@ -144,6 +151,7 @@ exports.payment=async(req,res)=>{
       message: "Payment Record Inserted Succesfully!",
     });
   } catch (error) {
+    console.log(error);
     res.status(409).json({ message: "something went wrong." });
   }
 }
