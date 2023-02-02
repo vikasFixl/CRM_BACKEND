@@ -14,6 +14,7 @@ const PASS = process.env.SMTP_PASS;
 
 const User = require("../models/userModel.js");
 const Org = require("../models/OrgModel");
+const Employee = require("../models/employeeModel");
 
 exports.signin = async (req, res) => {
   const { email, password } = req.body;
@@ -79,16 +80,29 @@ exports.signup = async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(403).json({ message: "User already exist" });
+    const emp=new Employee({
+        eid:"F"+Math.random(),
+        //userid:user._id,
+        gender:req.body.gender,
+        dob:req.body.dob,
+        doj:req.body.doj,
+        //dol:req.body.dol,
+        designation:req.body.designation,
+        panno:req.body.panno,
+        bankDetails:req.body.bankDetails
+    })
+    await emp.save();
     const user = new User({
       firstName:req.body.firstName,
       lastName:req.body.lastName,
       email:req.body.email,
-      role:req.body.email,
+      role:req.body.role,
       department:req.body.department,
       phone:req.body.phone,
       password:req.body.password,
       permissions:req.body.permissions,
-      profilePhoto:url + '/public/user/' + req.file.filename
+      profilePhoto:url + '/public/user/' + req.file.filename,
+      eid:emp.eid
     });
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(user.password, salt);

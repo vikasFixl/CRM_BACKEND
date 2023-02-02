@@ -22,6 +22,7 @@ const LeadActivitySchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    comment:{type:Array}
   },
   {
     timestamps: true,

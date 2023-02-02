@@ -35,7 +35,8 @@ const userSchema = new mongoose.Schema(
     resetToken: String,
     expireToken: Date,
     permissions:[{}],
-    profilePhoto:{type:String}
+    profilePhoto:{type:String},
+    eid:{type:String}
   },
   {
     timestamps: true,
