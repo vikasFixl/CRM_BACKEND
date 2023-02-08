@@ -257,7 +257,7 @@ exports.updateProfileimage=async(req,res)=>{
   try {
     const url = req.protocol + '://' + req.get('host')
     const _id=req.params.id;
-    const image=await FirmModel.findByIdAndUpdate(_id,{profilePhoto:url + '/public/user/' + req.file.filename},{
+    const image=await User.findByIdAndUpdate(_id,{profilePhoto:url + '/public/user/' + req.file.filename},{
       new:true
     })
     res.status(201).json({

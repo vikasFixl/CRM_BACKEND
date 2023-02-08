@@ -71,8 +71,6 @@ exports.paySlipgen = async (req, res) => {
 }
 
 
-
-
 exports.postSaldetails = async (req, res) => {
     try {
         const empid = req.params.eid;
