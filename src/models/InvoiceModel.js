@@ -8,20 +8,28 @@ const InvoiceSchema = new mongoose.Schema({
       unitPrice: { type: String },
       quantity: { type: String },
       amount: { type: Number },
-      gst: { type: Number },
-      cgst:{type:Number},
-      sgst:{type:Number},
-      igst:{type:Number},
+      // gst: { type: Number },
+      // cgst:{type:Number},
+      // sgst:{type:Number},
+      // igst:{type:Number},
     },
   ],
   gstn: { type: String },
   notes: { type: String },
   remark: { type: String },
   client: {
-    name: {type: String},
+    firstName: {type: String},
+    lastName: {type: String},
     email: { type: String },
     phone: { type: Number },
-    address: { type: String },
+    address:{
+      address1:{type:String},
+      address2:{type:String},
+      city:{type:String},
+      state:{type:String},
+      country:{type:String},
+      pinCode:{type:Number},
+    }
   },
 
   gst: { type: Number },
@@ -38,8 +46,18 @@ const InvoiceSchema = new mongoose.Schema({
   delete: { type: Boolean },
   invoiceNumber: { type: Number },
   
-  selectFirm:{type:String},
-  firmEmail:{type:String},
+ firm:{
+  name: {type: String},
+  phone:{ttpe:Number},
+  address:{
+    address1:{type:String},
+    address2:{type:String},
+    city:{type:String},
+    state:{type:String},
+    country:{type:String},
+    pinCode:{type:Number},
+  }
+ },
   payment:[{
     amountPaidpayment:{type:Number},
     datePaid:{type:Date},
@@ -47,7 +65,11 @@ const InvoiceSchema = new mongoose.Schema({
     transId:{type:String},
     notes:{type:String},
     chequeNo:{type:Number}
-  }]
+  }],
+  termsNcondition:[],
+  currency:{type:String},
+  partialPay:{type:Boolean},
+  allowTip:{type:Boolean}
 });
 
 const InvoiceModel = mongoose.model("InvoiceModel", InvoiceSchema);

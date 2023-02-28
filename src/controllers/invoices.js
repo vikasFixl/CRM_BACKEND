@@ -56,8 +56,11 @@ exports.createInvoice = async (req, res) => {
     dueDate,
     invoiceDate,
     status,
-    selectFirm,
-    firmEmail
+    firm,
+    termsNcondition,
+    currency,
+    partialPay,
+    allowTip
   } = req.body;
   // const newInvoice = new InvoiceModel(invoice);
   try {
@@ -76,9 +79,11 @@ exports.createInvoice = async (req, res) => {
       invoiceDate: invoiceDate,
       client: client,
       status: status,
-      selectFirm:selectFirm,
-      firmEmail:firmEmail,
-      //dueAmount:total
+      firm:firm,
+      termsNcondition:termsNcondition,
+      currency:currency,
+      partialPay:partialPay,
+      allowTip:allowTip
     });
     await newInvoice.save();
     res.status(201).json({
@@ -155,3 +160,68 @@ exports.payment=async(req,res)=>{
     res.status(409).json({ message: "something went wrong." });
   }
 }
+
+exports.saveDraftIn = async (req, res) => {
+  const {
+    items,
+    subTotal, 
+    vat,
+    total,
+    notes,
+    remark,
+    client,
+    amount,
+    dueDate,
+    invoiceDate,
+    status,
+    firm,
+    termsNcondition,
+    currency,
+    partialPay,
+    allowTip
+  } = req.body;
+  // const newInvoice = new InvoiceModel(invoice);
+  try {
+    const allInvoice = await InvoiceModel.find();
+    const newInvoice = new InvoiceModel({
+      items: items,
+      subTotal: subTotal,
+      vat: vat,
+      total: total,
+      notes: notes,
+      remark: remark,
+      amount: amount,
+      invoiceNumber:
+        !allInvoice || allInvoice.length < 1 ? 1 : allInvoice.length + 1,
+      dueDate,
+      invoiceDate: invoiceDate,
+      client: client,
+      status: status,
+      firm:firm,
+      termsNcondition:termsNcondition,
+      currency:currency,
+      partialPay:partialPay,
+      allowTip:allowTip
+    });
+    await newInvoice.save();
+    res.status(201).json({
+      data: newInvoice,
+      success: true,
+      code: 201,
+      message: "Invoice created successfully!",
+    });
+  } catch (error) {
+    res.status(409).json({ message: "something went wrong." });
+  }
+};
+
+exports.updateDraftIn = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No invoice with that id");
+
+  await InvoiceModel.findByIdAndUpdate(id,req.body);
+
+  res.json({message: " Updated successfully!!"});
+};
