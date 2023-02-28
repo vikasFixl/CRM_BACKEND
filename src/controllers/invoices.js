@@ -208,7 +208,7 @@ exports.saveDraftIn = async (req, res) => {
       data: newInvoice,
       success: true,
       code: 201,
-      message: "Invoice created successfully!",
+      message: "Draft Saved successfully!",
     });
   } catch (error) {
     res.status(409).json({ message: "something went wrong." });

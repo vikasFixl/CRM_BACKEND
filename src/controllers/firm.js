@@ -23,6 +23,7 @@ exports.createFirm = async (req, res) => {
       message: "Firm created successfully!",
     });
   } catch (err) {
+    console.log(err);
     res.status(400).json({ message: "something went wrong! " });
   }
 };
