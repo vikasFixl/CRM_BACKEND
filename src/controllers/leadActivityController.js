@@ -173,3 +173,23 @@ exports.updateAttachment=async(req,res)=>{
   });
 }
 }
+
+exports.getbyId = async (req, res) => {
+  try {
+    const LId = req.params.LId;
+    const _id=req.params.id;
+    const data = await LeadActivity.find({ _id });
+    res.status(200).json({
+      data: data,
+      message: "Fetched Successfully.",
+      success: true,
+      status: 200,
+    });
+  } catch (err) {
+    res.status(400).json({
+      message: "Someting went wrong !",
+      success: false,
+      status: 400,
+    });
+  }
+};

@@ -33,5 +33,6 @@ router.delete("/deleteLeadActivity/:id", LeadActivityController.deleteLeadActivi
 
 router.patch("/updateAttachment/:id",upload.single("image"),LeadActivityController.updateAttachment)
 
+router.get("/getLeadActivityById/:LId/:id",LeadActivityController.getbyId);
 
 module.exports = router;
