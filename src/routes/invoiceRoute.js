@@ -12,5 +12,7 @@ router.get("/all", invoiceController.getAllInvoices);
 router.patch('/payment/:id',invoiceController.payment);
 router.post('/saveDraft',invoiceController.saveDraftIn);
 router.patch('/updateDraft/:id',invoiceController.updateDraftIn);
+router.get('/drafts',invoiceController.getDrafts);
+router.get('/draftById/:id',invoiceController.getDraftByid);
 
 module.exports = router;

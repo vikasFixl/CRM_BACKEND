@@ -1,3 +1,4 @@
+const { boolean } = require("joi");
 const mongoose = require("mongoose");
 const { stringify } = require("querystring");
 
@@ -31,7 +32,6 @@ const InvoiceSchema = new mongoose.Schema({
       pinCode:{type:Number},
     }
   },
-
   gst: { type: Number },
   cgst:{type:Number},
   sgst:{type:Number},
@@ -69,7 +69,9 @@ const InvoiceSchema = new mongoose.Schema({
   termsNcondition:[],
   currency:{type:String},
   partialPay:{type:Boolean},
-  allowTip:{type:Boolean}
+  allowTip:{type:Boolean},
+  draft:{type:Boolean,
+  default:false}
 });
 
 const InvoiceModel = mongoose.model("InvoiceModel", InvoiceSchema);

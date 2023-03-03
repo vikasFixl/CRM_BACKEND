@@ -30,7 +30,7 @@ exports.getTotalCount = async (req, res) => {
 
 exports.getAllInvoices = async (req, res) => {
   try {
-    const allInvoices = await InvoiceModel.find({}).sort({ _id: -1 });
+    const allInvoices = await InvoiceModel.find({draft:false}).sort({ _id: -1 });
 
     res.status(200).json({
       data: allInvoices,
@@ -201,7 +201,8 @@ exports.saveDraftIn = async (req, res) => {
       termsNcondition:termsNcondition,
       currency:currency,
       partialPay:partialPay,
-      allowTip:allowTip
+      allowTip:allowTip,
+      draft:true
     });
     await newInvoice.save();
     res.status(201).json({
@@ -211,6 +212,7 @@ exports.saveDraftIn = async (req, res) => {
       message: "Draft Saved successfully!",
     });
   } catch (error) {
+    console.log(error);
     res.status(409).json({ message: "something went wrong." });
   }
 };
@@ -219,9 +221,36 @@ exports.updateDraftIn = async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No invoice with that id");
+    return res.status(404).send("No Draft with that id");
 
   await InvoiceModel.findByIdAndUpdate(id,req.body);
 
   res.json({message: " Updated successfully!!"});
 };
+
+exports.getDrafts=async(req,res)=>{
+  try{
+    const data=await InvoiceModel.find({draft:true}).sort({ _id: -1 })
+    res.json({
+      data:data,
+      status:201
+    })
+  }
+  catch(error){
+    res.status(401).json({message:"Something went wrong"})
+  }
+}
+
+exports.getDraftByid=async(req,res)=>{
+  const id=req.params.id;
+  try{
+    const data=await InvoiceModel.findById(id)
+    res.json({
+      data:data,
+      status:201
+    })
+  }
+  catch(error){
+    res.status(401).json({message:"Something went wrong"})
+  }
+}
