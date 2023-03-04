@@ -60,7 +60,8 @@ exports.createInvoice = async (req, res) => {
     termsNcondition,
     currency,
     partialPay,
-    allowTip
+    allowTip,
+    draft
   } = req.body;
   // const newInvoice = new InvoiceModel(invoice);
   try {
@@ -83,7 +84,8 @@ exports.createInvoice = async (req, res) => {
       termsNcondition:termsNcondition,
       currency:currency,
       partialPay:partialPay,
-      allowTip:allowTip
+      allowTip:allowTip,
+      draft:draft
     });
     await newInvoice.save();
     res.status(201).json({
@@ -161,61 +163,6 @@ exports.payment=async(req,res)=>{
   }
 }
 
-exports.saveDraftIn = async (req, res) => {
-  const {
-    items,
-    subTotal, 
-    vat,
-    total,
-    notes,
-    remark,
-    client,
-    amount,
-    dueDate,
-    invoiceDate,
-    status,
-    firm,
-    termsNcondition,
-    currency,
-    partialPay,
-    allowTip
-  } = req.body;
-  // const newInvoice = new InvoiceModel(invoice);
-  try {
-    const allInvoice = await InvoiceModel.find();
-    const newInvoice = new InvoiceModel({
-      items: items,
-      subTotal: subTotal,
-      vat: vat,
-      total: total,
-      notes: notes,
-      remark: remark,
-      amount: amount,
-      invoiceNumber:
-        !allInvoice || allInvoice.length < 1 ? 1 : allInvoice.length + 1,
-      dueDate,
-      invoiceDate: invoiceDate,
-      client: client,
-      status: status,
-      firm:firm,
-      termsNcondition:termsNcondition,
-      currency:currency,
-      partialPay:partialPay,
-      allowTip:allowTip,
-      draft:true
-    });
-    await newInvoice.save();
-    res.status(201).json({
-      data: newInvoice,
-      success: true,
-      code: 201,
-      message: "Draft Saved successfully!",
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(409).json({ message: "something went wrong." });
-  }
-};
 
 exports.updateDraftIn = async (req, res) => {
   const { id } = req.params;
