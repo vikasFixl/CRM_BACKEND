@@ -1,6 +1,17 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const InvoiceModel = require("../models/InvoiceModel.js");
+const cron = require('node-cron');
+const moment = require('moment');
+const RecurringInvoiceModel = require("../models/RecurringInvoiceModel.js");
+const winston = require('winston');
+const schedule=require('node-schedule')
+
+const logger = winston.createLogger({
+  transports: [
+    new winston.transports.File({ filename: 'invoices.json' })
+  ]
+});
 
 exports.getInvoicesByUser = async (req, res) => {
   const { searchQuery } = req.query;
@@ -61,8 +72,25 @@ exports.createInvoice = async (req, res) => {
     currency,
     partialPay,
     allowTip,
-    draft
+    draft,
+    recurringInvoice
   } = req.body;
+  // if(recurringInvoice.isEnabled==true){
+  //   const newRecurr=new RecurringInvoiceModel({
+  //     details:req.body,
+  //     amount:total,
+  //     frequency:recurringInvoice.frequency,
+  //     start_date:invoiceDate,
+  //     customer_id:client.client_id,
+  //     end_date:recurringInvoice.end_date,
+  //     invoice_id:newInvoice._id
+  //   })
+  //   await newRecurr.save();
+  //   const job = schedule.scheduleJob(`0 0 */${newRecurr.frequency} * * *`, () => {
+  //     const now = new Date();
+  //     const data= InvoiceModel.findById(invoice_id)
+  //     data.save();
+  //   })
   // const newInvoice = new InvoiceModel(invoice);
   try {
     const allInvoice = await InvoiceModel.find();
@@ -85,16 +113,18 @@ exports.createInvoice = async (req, res) => {
       currency:currency,
       partialPay:partialPay,
       allowTip:allowTip,
-      draft:draft
+      draft:draft,
+      recurringInvoice:recurringInvoice
     });
     await newInvoice.save();
-    res.status(201).json({
+      res.status(201).json({
       data: newInvoice,
       success: true,
       code: 201,
       message: "Invoice created successfully!",
     });
   } catch (error) {
+    console.log(error);
     res.status(409).json({ message: "something went wrong." });
   }
 };
@@ -122,20 +152,10 @@ exports.updateInvoice = async (req, res) => {
     return res.status(404).send("No invoice with that id");
 
   await InvoiceModel.findByIdAndUpdate(id,{ status: req.body.status });
-
+  logger.info(`Invoice created: ${JSON.stringify(invoice)}`);
   res.json({message: "Status Updated successfully!!"});
 };
 
-exports.deleteInvoice = async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) 
-    return res.status(404).send("No invoice with that id");
- 
-  await InvoiceModel.findByIdAndRemove(id, {delete: true});
-
-  res.json({ message: "Invoice deleted successfully" });
-}; 
 
 exports.payment=async(req,res)=>{
   try {

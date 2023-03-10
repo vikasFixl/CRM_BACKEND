@@ -5,13 +5,13 @@ const invoiceController = require("../controllers/invoices");
 router.post("/create", invoiceController.createInvoice);
 router.get("/singleInvoice/:id", invoiceController.getInvoice);
 router.put("/status/:id", invoiceController.updateInvoice);
-router.put("/delete/:id", invoiceController.deleteInvoice);
 router.get("/count", invoiceController.getTotalCount);
 router.get("/user", invoiceController.getInvoicesByUser);
 router.get("/all", invoiceController.getAllInvoices);
-router.patch('/payment/:id',invoiceController.payment);
-router.patch('/updateDraft/:id',invoiceController.updateDraftIn);
-router.get('/drafts',invoiceController.getDrafts);
-router.get('/draftById/:id',invoiceController.getDraftByid);
+router.patch('/payment/:id', invoiceController.payment);
+router.patch('/updateDraft/:id', invoiceController.updateDraftIn);
+router.get("/drafts", invoiceController.getDrafts);
+router.post("/getdrafts",invoiceController.getDrafts);
+// router.get('/draftById/:id', invoiceController.getDraftByid);
 
 module.exports = router;

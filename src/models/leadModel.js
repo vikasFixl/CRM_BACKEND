@@ -90,6 +90,10 @@ const LeadSchema = new mongoose.Schema(
       required: true,
       default: false,
     },
+    randomLeadId:{
+      type: Number,
+      default:Math.floor(Math.random() * (10000 - 0)) + 0
+    }
   },
   {
     timestamps: true,

@@ -259,3 +259,31 @@ exports.getByStatus = async (req, res) => {
     });
   }
 };
+
+exports.transferLead=async(req,res)=>{
+  try {
+    const id = req.params.id;
+    const data = await Lead.findById(id);
+    if (data === null) {
+      res.json({
+        success: true,
+        status: 404,
+        message: "Lead not found!",
+      });
+    } else {
+      const options = { new: true };
+      await Lead.findByIdAndUpdate(id, {assignTo:req.body.assignTo}, options);
+      res.json({
+        success: true,
+        status: 201,
+        message: "Lead Transferred Successfully.",
+      });
+    }
+  } catch (err) {
+    res.json({
+      message: "Something went wrong!",
+      status: 400,
+      success: false,
+    });
+  }
+}

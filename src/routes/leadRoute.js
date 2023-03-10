@@ -12,5 +12,6 @@ router.patch("/update-lead/:id", leadController.updateLead);
 router.patch("/status-lead/:id/:status", leadController.statusLead);
 router.patch("/stage-lead/:id/:stage", leadController.stageLead);
 router.patch("/delete-lead/:id", leadController.deleteLead);
+router.patch("/transferlead/:id",leadController.transferLead);
 
 module.exports = router

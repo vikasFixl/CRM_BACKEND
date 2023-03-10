@@ -22,6 +22,7 @@ const attendenceRoutes=require("./src/routes/empAttendenceRoute");
 const dedRoutes=require("./src/routes/dedRoute");
 const salRoutes=require("./src/routes/salRoute");
 const employeeRoutes=require("./src/routes/empRoute");
+const taxRoutes=require("./src/routes/taxRoutes");
 
 require("dotenv").config({
   path: path.join(__dirname, "./.env"),
@@ -82,6 +83,7 @@ app.use("/api/attendence",attendenceRoutes);
 app.use("/api/ded",dedRoutes);
 app.use("/api/sal",salRoutes);
 app.use("/api/employee",employeeRoutes);
+app.use("/api/taxRates",taxRoutes);
 
 app.use(async (req, res, next) => {
   if (req.headers["x-access-token"]) {

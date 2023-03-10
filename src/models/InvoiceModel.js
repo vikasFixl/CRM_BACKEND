@@ -19,61 +19,66 @@ const InvoiceSchema = new mongoose.Schema({
   notes: { type: String },
   remark: { type: String },
   client: {
-    firstName: {type: String},
-    lastName: {type: String},
+    firstName: { type: String },
+    lastName: { type: String },
     email: { type: String },
     phone: { type: Number },
-    address:{
-      address1:{type:String},
-      address2:{type:String},
-      city:{type:String},
-      state:{type:String},
-      country:{type:String},
-      pinCode:{type:Number},
-    }
+    address: {
+      address1: { type: String },
+      address2: { type: String },
+      city: { type: String },
+      state: { type: String },
+      country: { type: String },
+      pinCode: { type: Number },
+    },
+    client_id: { type: String }
   },
   gst: { type: Number },
-  cgst:{type:Number},
-  sgst:{type:Number},
-  igst:{type:Number},
+  cgst: { type: Number },
+  sgst: { type: Number },
+  igst: { type: Number },
   subTotal: { type: Number },
   total: { type: Number },
   invoiceDate: { type: Date },
   dueDate: { type: Date },
   status: { type: String },
-  amountPaid:{type:Number,default:0},
-  dueAmount:{type:Number,default:0},
+  amountPaid: { type: Number, default: 0 },
+  dueAmount: { type: Number, default: 0 },
   delete: { type: Boolean },
   invoiceNumber: { type: Number },
-  
- firm:{
-  name: {type: String},
-  phone:{type:Number},
-  address:{
-    address1:{type:String},
-    address2:{type:String},
-    city:{type:String},
-    state:{type:String},
-    country:{type:String},
-    pinCode:{type:Number},
-  }
- },
-  payment:[{
-    amountPaidpayment:{type:Number},
-    datePaid:{type:Date},
-    paymentMethod:{type:String},
-    transId:{type:String},
-    notes:{type:String},
-    chequeNo:{type:Number}
+
+  firm: {
+    name: { type: String },
+    phone: { type: Number },
+    address: {
+      address1: { type: String },
+      address2: { type: String },
+      city: { type: String },
+      state: { type: String },
+      country: { type: String },
+      pinCode: { type: Number },
+    }
+  },
+  payment: [{
+    amountPaidpayment: { type: Number },
+    datePaid: { type: Date },
+    paymentMethod: { type: String },
+    transId: { type: String },
+    notes: { type: String },
+    chequeNo: { type: Number }
   }],
-  termsNcondition:[],
-  currency:{type:String},
-  partialPay:{type:Boolean},
-  allowTip:{type:Boolean},
-  draft:{type:Boolean,
-  default:false}
+  termsNcondition: [],
+  currency: { type: String },
+  partialPay: { type: Boolean },
+  allowTip: { type: Boolean },
+  recurringInvoice: {
+    isEnabled: { type: Boolean },
+    frequncy: { type: Number },
+    end_date: { type: Date }
+  },
+  draft: { type: Boolean }
 });
 
-const InvoiceModel = mongoose.model("InvoiceModel", InvoiceSchema);
+module.exports = mongoose.model("InvoiceModel", InvoiceSchema);
 
-module.exports = InvoiceModel;
+
