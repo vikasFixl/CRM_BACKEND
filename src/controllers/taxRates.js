@@ -27,8 +27,8 @@ exports.firsttaxrates=async(req,res)=>{
 
 exports.gettaxrates=async(req,res)=>{
     try {
-        const _id = req.params.id;
-        const data = await taxModel.find({}).sort({ _id: -1 });
+        const id = req.params.Fid;
+        const data = await taxModel.find({firm_id:id}).sort({ id: -1 });
         res.status(200).json({
           data: data,
           code: 200,

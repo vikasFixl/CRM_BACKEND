@@ -6,11 +6,7 @@ const taxSchema=mongoose.Schema({
         ref: "FIRM",
         required: true,
     },
-    taxRates:[{
-        cgst:{type:Number},
-        sgst:{type:Number},
-        igst:{type:Number}
-    }]
+    taxRates:[{}]
 })
 
 module.exports=mongoose.model("TAXRATES",taxSchema);
