@@ -12,6 +12,8 @@ router.patch('/payment/:id', invoiceController.payment);
 router.patch('/updateDraft/:id', invoiceController.updateDraftIn);
 router.get("/drafts", invoiceController.getDrafts);
 router.post("/getdrafts",invoiceController.getDrafts);
-// router.get('/draftById/:id', invoiceController.getDraftByid);
+router.get('/draftById/:id', invoiceController.getDraftByid);
+router.post('/checkout-stripe',invoiceController.paymnetlink1);
+
 
 module.exports = router;
