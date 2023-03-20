@@ -4,9 +4,7 @@ const FirmModel = require("../models/FirmModel");
 
 exports.createFirm = async (req, res) => {
   try {
-    // const url = req.protocol + '://' + req.get('host')
     const newFirm = new FirmModel({
-      // logo:url + '/public/firm/' + req.file.filename,
       name: req.body.name,
       email: req.body.email,
       phone: req.body.phone,
@@ -87,11 +85,11 @@ exports.logo=async(req,res)=>{
   try {
     const url = req.protocol + '://' + req.get('host')
     const _id=req.params.id;
-    const image=await FirmModel.findByIdAndUpdate(_id,{logo:url + '/public/firm/' + req.file.filename},{
+    const image=await FirmModel.findByIdAndUpdate(_id,{logo:req.file.location},{
       new:true
     })
     res.status(201).json({
-      "logo":image.path,
+      "logo":image,
       code: 201,
       success: true,
       message: "logo Updated successfully!",
