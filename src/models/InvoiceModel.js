@@ -54,6 +54,7 @@ const InvoiceSchema = new mongoose.Schema({
       state: { type: String },
       country: { type: String },
       pinCode: { type: Number },
+      email:{type:String}
     }
   },
   payment: [{
