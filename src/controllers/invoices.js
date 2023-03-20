@@ -75,23 +75,23 @@ exports.createInvoice = async (req, res) => {
     draft,
     recurringInvoice
   } = req.body;
-  if(recurringInvoice.isEnabled==true){
-    const newRecurr=new RecurringInvoiceModel({
-      details:req.body,
-      amount:total,
-      frequency:recurringInvoice.frequency,
-      start_date:invoiceDate,
-      customer_id:client.client_id,
-      end_date:recurringInvoice.end_date,
-      invoice_id:newInvoice._id
-    })
-    await newRecurr.save();
-    const job = schedule.scheduleJob(`0 0 */${newRecurr.frequency} * * *`, () => {
-      const now = new Date();
-      const data= InvoiceModel.findById(invoice_id)
-      data.save();
-    })
-  const newInvoice = new InvoiceModel(invoice);
+  // if(recurringInvoice.isEnabled==true){
+  //   const newRecurr=new RecurringInvoiceModel({
+  //     details:req.body,
+  //     amount:total,
+  //     frequency:recurringInvoice.frequency,
+  //     start_date:invoiceDate,
+  //     customer_id:client.client_id,
+  //     end_date:recurringInvoice.end_date,
+  //     invoice_id:newInvoice._id
+  //   })
+  //   await newRecurr.save();
+  //   const job = schedule.scheduleJob(`0 0 */${newRecurr.frequency} * * *`, () => {
+  //     const now = new Date();
+  //     const data= InvoiceModel.findById(invoice_id)
+  //     data.save();
+  //   })
+  // const newInvoice = new InvoiceModel(invoice);
   try {
     const allInvoice = await InvoiceModel.find();
     const newInvoice = new InvoiceModel({
