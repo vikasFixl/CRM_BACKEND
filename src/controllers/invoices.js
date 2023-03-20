@@ -75,22 +75,6 @@ exports.createInvoice = async (req, res) => {
     draft,
     recurringInvoice
   } = req.body;
-  // if(recurringInvoice.isEnabled==true){
-  //   const newRecurr=new RecurringInvoiceModel({
-  //     details:req.body,
-  //     amount:total,
-  //     frequency:recurringInvoice.frequency,
-  //     start_date:invoiceDate,
-  //     customer_id:client.client_id,
-  //     end_date:recurringInvoice.end_date,
-  //     invoice_id:newInvoice._id
-  //   })
-  //   await newRecurr.save();
-  //   const job = schedule.scheduleJob(`0 0 */${newRecurr.frequency} * * *`, () => {
-  //     const now = new Date();
-  //     const data= InvoiceModel.findById(invoice_id)
-  //     data.save();
-  //   })
   // const newInvoice = new InvoiceModel(invoice);
   try {
     const allInvoice = await InvoiceModel.find();
@@ -117,6 +101,26 @@ exports.createInvoice = async (req, res) => {
       recurringInvoice:recurringInvoice
     });
     await newInvoice.save();
+    // if(recurringInvoice.isEnabled==true){
+    //   const newRecurr=new RecurringInvoiceModel({
+    //     details:req.body,
+    //     amount:total,
+    //     frequency:recurringInvoice.frequency,
+    //     start_date:invoiceDate,
+    //     customer_id:client.client_id,
+    //     end_date:recurringInvoice.end_date,
+    //     invoice_id:newInvoice._id
+    //   })
+    //   await newRecurr.save();
+    // }
+    //   const job = schedule.scheduleJob(`* * * * * *`, () => {
+    //     const now = new Date();
+    //     if(now===newRecurr.end_date){
+    //       const data= InvoiceModel.findById(invoice_id)
+    //       console.log("naman",data);
+    //       data.save();
+    //     }
+    //   })
       res.status(201).json({
       data: newInvoice,
       success: true,
