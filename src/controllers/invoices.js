@@ -73,7 +73,8 @@ exports.createInvoice = async (req, res) => {
     partialPay,
     allowTip,
     draft,
-    recurringInvoice
+    recurringInvoice,
+    tax
   } = req.body;
   // const newInvoice = new InvoiceModel(invoice);
   try {
@@ -98,7 +99,8 @@ exports.createInvoice = async (req, res) => {
       partialPay:partialPay,
       allowTip:allowTip,
       draft:draft,
-      recurringInvoice:recurringInvoice
+      recurringInvoice:recurringInvoice,
+      tax:tax
     });
     await newInvoice.save();
     // if(recurringInvoice.isEnabled==true){
