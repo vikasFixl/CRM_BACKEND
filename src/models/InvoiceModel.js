@@ -33,7 +33,7 @@ const InvoiceSchema = new mongoose.Schema({
     },
     client_id: { type: String }
   },
-  tax:{type:Object},
+  tax: { type: Object },
   subTotal: { type: Number },
   total: { type: Number },
   invoiceDate: { type: Date },

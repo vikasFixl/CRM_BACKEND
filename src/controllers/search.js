@@ -6,6 +6,7 @@ const Profile = require('../models/ProfileModel');
 const User = require('../models/userModel');
 
 exports.getResult =  async (req,res) => {
+    try{
     const search = req.body;
     const obj = Object.keys(search)[0];
     const obj_val = Object.values(search)[0];
@@ -20,4 +21,8 @@ exports.getResult =  async (req,res) => {
         // lastName: { $in: obj_val },
     });
     res.send(findResult);
+}
+catch(error){
+    res.json({message:"Something went wrong."})
+}
 };
