@@ -6,7 +6,8 @@ const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 
 dotenv.config();
-// const SECRET = process.env.JWT_SECRET;
+//const SECRET = process.env.JWT_SECRET;
+const SECRET = "123";
 const HOST = process.env.SMTP_HOST;
 const PORT = process.env.SMTP_PORT;
 const USER = process.env.SMTP_USER;
@@ -25,7 +26,7 @@ exports.signin = async (req, res) => {
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: "Invalid password credentials" });
     }
-    const accessToken = jwt.sign({ userId: user._id }, {
+    const accessToken = jwt.sign({ userId: user._id }, SECRET,{
       expiresIn: "1d",
     });
     await User.findByIdAndUpdate(user._id, { accessToken });
