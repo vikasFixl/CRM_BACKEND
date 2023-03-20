@@ -22,7 +22,7 @@ const upload = multer({
     storage:storage
 });
 
-router.post('/create',upload.single("logo"),firmController.createFirm);
+router.post('/create',firmController.createFirm);
 router.get('/:id', firmController.getFirm);
 router.patch('/update/:id', firmController.updateFirm);
 router.delete('/delete/:id', firmController.deleteFirm);

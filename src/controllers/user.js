@@ -31,7 +31,7 @@ exports.signin = async (req, res) => {
     await User.findByIdAndUpdate(user._id, { accessToken });
     if (user.role === "Admin") {
       const orgDetails = await Org.findOne({ orgEmail: email });
-      console.log(orgDetails);
+      //console.log(orgDetails);
       res.status(200).json({
         data: {
           orgID: orgDetails._id,

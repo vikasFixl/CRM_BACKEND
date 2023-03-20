@@ -4,9 +4,9 @@ const FirmModel = require("../models/FirmModel");
 
 exports.createFirm = async (req, res) => {
   try {
-    const url = req.protocol + '://' + req.get('host')
+    // const url = req.protocol + '://' + req.get('host')
     const newFirm = new FirmModel({
-      logo:url + '/public/firm/' + req.file.filename,
+      // logo:url + '/public/firm/' + req.file.filename,
       name: req.body.name,
       email: req.body.email,
       phone: req.body.phone,
