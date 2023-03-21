@@ -31,7 +31,7 @@ const InvoiceSchema = new mongoose.Schema({
       country: { type: String },
       pinCode: { type: Number },
     },
-    client_id: { type: String }
+    client_id: { type: String },
   },
   tax: { type: Object },
   subTotal: { type: Number },
@@ -55,16 +55,19 @@ const InvoiceSchema = new mongoose.Schema({
       country: { type: String },
       pinCode: { type: Number },
     },
-    email:{type:String}
+    email: { type: String },
+    logo: { type: String },
   },
-  payment: [{
-    amountPaidpayment: { type: Number },
-    datePaid: { type: Date },
-    paymentMethod: { type: String },
-    transId: { type: String },
-    notes: { type: String },
-    chequeNo: { type: Number }
-  }],
+  payment: [
+    {
+      amountPaidpayment: { type: Number },
+      datePaid: { type: Date },
+      paymentMethod: { type: String },
+      transId: { type: String },
+      notes: { type: String },
+      chequeNo: { type: Number },
+    },
+  ],
   termsNcondition: [],
   currency: { type: String },
   partialPay: { type: Boolean },
@@ -72,11 +75,9 @@ const InvoiceSchema = new mongoose.Schema({
   recurringInvoice: {
     isEnabled: { type: Boolean },
     frequncy: { type: Number },
-    end_date: { type: Date }
+    end_date: { type: Date },
   },
-  draft: { type: Boolean }
+  draft: { type: Boolean },
 });
 
 module.exports = mongoose.model("InvoiceModel", InvoiceSchema);
-
-
