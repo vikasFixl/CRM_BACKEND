@@ -1,24 +1,24 @@
-const { string, object } = require('joi');
-const mongoose = require('mongoose');
+const { string, object } = require("joi");
+const mongoose = require("mongoose");
 
 const firmSchema = new mongoose.Schema({
-    name: String,
-    email: String,
-    phone: String,
-    add: {
-      address1:{type:String},
-      address2:{type:String},
-      city:{type:String},
-      state:{type:String},
-      country:{type:String},
-      pinCode:{type:Number},
-    },
-    webiste: String,
-    gst_no: String,
-    logo:String,
-    uin:String
+  name: { type: String },
+  email: { type: String },
+  phone: { type: String },
+  add: {
+    address1: { type: String },
+    address2: { type: String },
+    city: { type: String },
+    state: { type: String },
+    country: { type: String },
+    pinCode: { type: Number },
+  },
+  website: { type: String },
+  gst_no: { type: String },
+  logo: { type: String },
+  uin: { type: String },
 });
 
-const Firm = mongoose.model('Firm', firmSchema);
+const Firm = mongoose.model("Firm", firmSchema);
 
 module.exports = Firm;
