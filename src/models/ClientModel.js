@@ -50,7 +50,7 @@ const ClientSchema = new mongoose.Schema(
         required: false,
       },
     },
-    taxId: { type: String, required: true },
+    taxId: { type: String, required: false },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
   },
   {
