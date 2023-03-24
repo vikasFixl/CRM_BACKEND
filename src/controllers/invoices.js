@@ -86,59 +86,50 @@ exports.createInvoice = async (req, res) => {
     orgId,
   } = req.body;
   try {
-    const allInvoice = await InvoiceModel.find();
-    const newInvoice = new InvoiceModel({
-      items: items,
-      subTotal: subTotal,
-      vat: vat,
-      total: total,
-      notes: notes,
-      remark: remark,
-      amount: amount,
-      invoiceNumber:
-        !allInvoice || allInvoice.length < 1 ? 1 : allInvoice.length + 1,
-      dueDate,
-      invoiceDate: invoiceDate,
-      client: client,
-      status: status,
-      firm: firm,
-      termsNcondition: termsNcondition,
-      currency: currency,
-      partialPay: partialPay,
-      allowTip: allowTip,
-      draft: draft,
-      recurringInvoice: recurringInvoice,
-      tax: tax,
-      desc: desc,
-      orgId: orgId,
-    });
-    await newInvoice.save();
-    // if(recurringInvoice.isEnabled==true){
-    //   const newRecurr=new RecurringInvoiceModel({
-    //     details:req.body,
-    //     amount:total,
-    //     frequency:recurringInvoice.frequency,
-    //     start_date:invoiceDate,
-    //     customer_id:client.client_id,
-    //     end_date:recurringInvoice.end_date,
-    //     invoice_id:newInvoice._id
-    //   })
-    //   await newRecurr.save();
-    // }
-    //   const job = schedule.scheduleJob(`* * * * * *`, () => {
-    //     const now = new Date();
-    //     if(now===newRecurr.end_date){
-    //       const data= InvoiceModel.findById(invoice_id)
-    //       console.log("naman",data);
-    //       data.save();
-    //     }
-    //   })
-    res.status(201).json({
-      data: newInvoice,
-      success: true,
-      code: 201,
-      message: "Invoice created successfully!",
-    });
+    if (draft == true) {
+      const newInvoice = new InvoiceModel(req.body);
+      const newData = await newInvoice.save();
+      res.status(201).json({
+        data: newData,
+        success: true,
+        code: 201,
+        message: "Invoice created successfully!",
+      });
+    } else {
+      const allInvoice = await InvoiceModel.find();
+      const newInvoice = new InvoiceModel({
+        items: items,
+        subTotal: subTotal,
+        vat: vat,
+        total: total,
+        notes: notes,
+        remark: remark,
+        amount: amount,
+        invoiceNumber:
+          !allInvoice || allInvoice.length < 1 ? 1 : allInvoice.length + 1,
+        dueDate,
+        invoiceDate: invoiceDate,
+        client: client,
+        status: status,
+        firm: firm,
+        termsNcondition: termsNcondition,
+        currency: currency,
+        partialPay: partialPay,
+        allowTip: allowTip,
+        draft: draft,
+        recurringInvoice: recurringInvoice,
+        tax: tax,
+        desc: desc,
+        orgId: orgId,
+      });
+      await newInvoice.save();
+      res.status(201).json({
+        data: newInvoice,
+        success: true,
+        code: 201,
+        message: "Invoice created successfully!",
+      });
+    }
   } catch (error) {
     console.log(error);
     res.status(409).json({ message: "something went wrong." });

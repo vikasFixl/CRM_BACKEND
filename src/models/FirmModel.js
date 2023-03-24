@@ -45,6 +45,14 @@ const firmSchema = new mongoose.Schema(
         type: String,
         required: false,
       },
+      email: {
+        type: String,
+        required: false,
+      },
+      address1: {
+        type: String,
+        required: false,
+      },
       address2: {
         type: String,
         required: false,
