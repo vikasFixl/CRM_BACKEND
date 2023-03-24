@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const taxController = require("../controllers/taxRates");
 
-router.post("/inserttaxRates/:Fid", taxController.firsttaxrates);
+router.post("/inserttaxRates", taxController.firsttaxrates);
 
 router.get("/gettaxRates/:Fid", taxController.gettaxrates);
 

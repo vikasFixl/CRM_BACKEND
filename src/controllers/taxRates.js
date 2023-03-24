@@ -2,13 +2,14 @@ const taxModel = require("../models/taxModel");
 
 exports.firsttaxrates = async (req, res) => {
   try {
-    const _id = req.params.Fid;
-    const data = req.body.taxRates;
-    const tax = new taxModel({
-      firm_id: _id,
-      taxRates: data,
-      orgId: orgId,
-    });
+    const data = req.body;
+    console.log(data, "data");
+    // const tax = new taxModel({
+    //   firmId: firmId,
+    //   orgId: orgId,
+    //   taxRates: taxRates,
+    // });
+    const tax = new taxModel(data);
     await tax.save();
     res.status(201).json({
       data: tax,

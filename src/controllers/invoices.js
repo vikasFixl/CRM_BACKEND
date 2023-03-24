@@ -84,9 +84,8 @@ exports.createInvoice = async (req, res) => {
     tax,
     orgId,
   } = req.body;
-  // const newInvoice = new InvoiceModel(invoice);
   try {
-    // const allInvoice = await InvoiceModel.find();
+    const allInvoice = await InvoiceModel.find();
     const newInvoice = new InvoiceModel({
       items: items,
       subTotal: subTotal,

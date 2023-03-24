@@ -2,13 +2,17 @@ const mongoose = require("mongoose");
 
 const taxSchema = new mongoose.Schema(
   {
-    firm_id: {
+    firmId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "FIRM",
       required: true,
     },
+    orgId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ORG",
+      required: true,
+    },
     taxRates: [{}],
-    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
   },
   {
     timestamps: true,

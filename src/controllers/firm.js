@@ -3,16 +3,8 @@ const FirmModel = require("../models/FirmModel");
 
 exports.createFirm = async (req, res) => {
   try {
-    const newFirm = new FirmModel({
-      name: req.body.name,
-      email: req.body.email,
-      phone: req.body.phone,
-      add: req.body.add,
-      website: req.body.website,
-      gst_no: req.body.gst_no,
-      uin: req.body.uin,
-      orgId: req.body.orgId,
-    });
+    const form = req.body;
+    const newFirm = new FirmModel(form);
     await newFirm.save();
     res.status(201).json({
       data: newFirm,
