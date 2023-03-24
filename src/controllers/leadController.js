@@ -2,10 +2,17 @@ const Lead = require("../models/leadModel");
 const Client = require("../models/ClientModel");
 
 exports.getList = async (req, res) => {
+  const { orgId } = req.params;
+  const newData = [];
   try {
-    const data = await Lead.find({ delete: false }).exec();
+    const lead = await Lead.find({ orgId: orgId });
+    lead.forEach((element) => {
+      if (element.delete == false) {
+        newData.push(element);
+      }
+    });
     res.json({
-      data: data,
+      data: newData,
       success: true,
       message: "List of all Leads.",
       status: 200,
@@ -20,9 +27,16 @@ exports.getList = async (req, res) => {
 };
 exports.getDeletedList = async (req, res) => {
   try {
-    const data = await Lead.find({ delete: true }).exec();
+    const newData = [];
+    const { orgId } = req.params;
+    const data = await Lead.find({ orgId: orgId });
+    data.forEach((element) => {
+      if (element.delete == true) {
+        newData.push(element);
+      }
+    });
     res.json({
-      data: data,
+      data: newData,
       success: true,
       message: "List of all Leads.",
       status: 200,
@@ -37,26 +51,33 @@ exports.getDeletedList = async (req, res) => {
 };
 exports.leadSearch = async (req, res) => {
   try {
-    const data = await Lead.find({
-      $or: [
-        { clientFName: req.body.clientFName },
-        { clientLName: req.body.clientLName },
-        { clientEmail: req.body.clientEmail },
-        { clientCity: req.body.clientCity },
-        { clientCountry: req.body.clientCountry },
-      ],
-    }).exec();
-    if (data.length === 0) {
+    const { clientFName, clientLName, clientEmail, clientCity, clientCountry } =
+      req.body;
+    const newData = [];
+    const { orgId } = req.params;
+    const data = await Lead.find({ orgId: orgId });
+    data.forEach((element) => {
+      if (
+        element.clientFName == clientFName ||
+        element.clientLName == clientLName ||
+        element.clientEmail == clientEmail ||
+        element.clientCity == clientCity ||
+        element.clientCountry == clientCountry
+      ) {
+        newData.push(element);
+      }
+    });
+    if (newData.length === 0) {
       res.json({
         success: true,
-        message: `No data found with - ${req.body.search}.`,
+        message: `No data found with - ${req.body}.`,
         status: 404,
       });
     } else {
       res.json({
-        data: data,
+        data: newData,
         success: true,
-        message: `Search res with - ${req.body.search}.`,
+        message: `Search res with - ${req.body}.`,
         status: 200,
       });
     }
@@ -243,10 +264,16 @@ exports.deleteLead = async (req, res) => {
 };
 exports.getByStatus = async (req, res) => {
   try {
-    let status = req.params.status;
-    const data = await Lead.find({ status: status, delete: false }).exec();
+    const newData = [];
+    const { status, orgId } = req.params;
+    const data = await Lead.find({ orgId: orgId });
+    data.forEach(element => {
+      if(element.status == status && element.delete == false){
+        newData.push(element);
+      }
+    });
     res.json({
-      data: data,
+      data: newData,
       success: true,
       status: 200,
       message: `List of Leads with status: ${status}`,
@@ -260,7 +287,7 @@ exports.getByStatus = async (req, res) => {
   }
 };
 
-exports.transferLead=async(req,res)=>{
+exports.transferLead = async (req, res) => {
   try {
     const id = req.params.id;
     const data = await Lead.findById(id);
@@ -272,7 +299,11 @@ exports.transferLead=async(req,res)=>{
       });
     } else {
       const options = { new: true };
-      await Lead.findByIdAndUpdate(id, {assignTo:req.body.assignTo}, options);
+      await Lead.findByIdAndUpdate(
+        id,
+        { assignTo: req.body.assignTo },
+        options
+      );
       res.json({
         success: true,
         status: 201,
@@ -286,4 +317,4 @@ exports.transferLead=async(req,res)=>{
       success: false,
     });
   }
-}
+};

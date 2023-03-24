@@ -90,10 +90,11 @@ const LeadSchema = new mongoose.Schema(
       required: true,
       default: false,
     },
-    randomLeadId:{
+    randomLeadId: {
       type: Number,
-      default:Math.floor(Math.random() * (10000 - 0)) + 0
-    }
+      default: Math.floor(Math.random() * (10000 - 0)) + 0,
+    },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
   },
   {
     timestamps: true,

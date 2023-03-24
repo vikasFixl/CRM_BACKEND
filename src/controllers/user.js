@@ -26,7 +26,7 @@ exports.signin = async (req, res) => {
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: "Invalid password credentials" });
     }
-    const accessToken = jwt.sign({ userId: user._id }, SECRET,{
+    const accessToken = jwt.sign({ userId: user._id }, SECRET, {
       expiresIn: "1d",
     });
     await User.findByIdAndUpdate(user._id, { accessToken });
@@ -77,33 +77,33 @@ exports.signup = async (req, res) => {
   const form = req.body;
   const { email } = req.body;
   try {
-    const url = req.protocol + '://' + req.get('host')
+    const url = req.protocol + "://" + req.get("host");
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(403).json({ message: "User already exist" });
-    const emp=new Employee({
-        eid:"F"+Math.random(),
-        //userid:user._id,
-        gender:req.body.gender,
-        dob:req.body.dob,
-        doj:req.body.doj,
-        //dol:req.body.dol,
-        designation:req.body.designation,
-        panno:req.body.panno,
-        bankDetails:req.body.bankDetails
-    })
+    const emp = new Employee({
+      eid: "F" + Math.random(),
+      //userid:user._id,
+      gender: req.body.gender,
+      dob: req.body.dob,
+      doj: req.body.doj,
+      //dol:req.body.dol,
+      designation: req.body.designation,
+      panno: req.body.panno,
+      bankDetails: req.body.bankDetails,
+    });
     await emp.save();
     const user = new User({
-      firstName:req.body.firstName,
-      lastName:req.body.lastName,
-      email:req.body.email,
-      role:req.body.role,
-      department:req.body.department,
-      phone:req.body.phone,
-      password:req.body.password,
-      permissions:req.body.permissions,
-      profilePhoto:url + '/public/user/' + req.file.filename,
-      eid:emp.eid
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email,
+      role: req.body.role,
+      department: req.body.department,
+      phone: req.body.phone,
+      password: req.body.password,
+      permissions: req.body.permissions,
+      profilePhoto: url + "/public/user/" + req.file.filename,
+      eid: emp.eid,
     });
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(user.password, salt);
@@ -219,9 +219,12 @@ exports.getUser = async (req, res) => {
 
 exports.getAllusers = async (req, res) => {
   try {
-    const userAll = await User.find({}).select("-password").sort({ _id: -1 });
+    const { orgId } = req.params;
+    const data = await User.find({ orgId: orgId })
+      .select("-password")
+      .sort({ _id: -1 });
     res.status(200).json({
-      data: userAll,
+      data: data,
       success: true,
       code: 200,
       message: "all users get here!!",
@@ -254,20 +257,24 @@ exports.updateUser = async (req, res) => {
   res.json(updatedUser);
 };
 
-exports.updateProfileimage=async(req,res)=>{
+exports.updateProfileimage = async (req, res) => {
   try {
-    const url = req.protocol + '://' + req.get('host')
-    const _id=req.params.id;
-    const image=await User.findByIdAndUpdate(_id,{profilePhoto:url + '/public/user/' + req.file.filename},{
-      new:true
-    })
+    const url = req.protocol + "://" + req.get("host");
+    const _id = req.params.id;
+    const image = await User.findByIdAndUpdate(
+      _id,
+      { profilePhoto: url + "/public/user/" + req.file.filename },
+      {
+        new: true,
+      }
+    );
     res.status(201).json({
-      "profilePhoto":image.path,
+      profilePhoto: image.path,
       code: 201,
       success: true,
       message: "Profile Photo Updated successfully!",
-    })
+    });
   } catch (error) {
     res.status(400).json({ message: "something went wrong! " });
   }
-}
+};

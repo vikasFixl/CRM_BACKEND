@@ -3,9 +3,16 @@ const LeadActivity = require("../models/LeadActivity");
 exports.getLeadActivity = async (req, res) => {
   try {
     const id = req.params.LId;
-    const data = await LeadActivity.find({ id });
+    const orgId = req.params.orgId;
+    const newData = [];
+    const data = await LeadActivity.find({ orgId: orgId });
+    data.forEach((element) => {
+      if (element._id == id) {
+        newData.push(element);
+      }
+    });
     res.status(200).json({
-      data: data,
+      data: newData,
       message: "Fetched Successfully.",
       success: true,
       status: 200,
@@ -23,8 +30,15 @@ exports.getActivityByType = async (req, res) => {
   try {
     const Type = req.params.type;
     const id = req.params.LId;
-    const data = await LeadActivity.find({ leadId: id }).exec();
-    if (data.length === 0) {
+    const orgId = req.params.orgId;
+    const newData = [];
+    const data = await LeadActivity.find({ orgId: orgId });
+    data.forEach(element => {
+      if(element.leadId == id){
+        newData.push(element);
+      }
+    });
+    if (newData.length === 0) {
       res.status(200).json({
         data: "No Data Found",
         message: "Fetched Successfully.",
@@ -33,7 +47,7 @@ exports.getActivityByType = async (req, res) => {
       });
     } else {
       let sendData = [];
-      data.forEach((element) => {
+      newData.forEach((element) => {
         if (element.type === Type) {
           sendData.push(element);
         }
@@ -56,21 +70,22 @@ exports.getActivityByType = async (req, res) => {
 };
 exports.createLeadActivity = async (req, res) => {
   try {
-    const url = req.protocol + '://' + req.get('host')
-    var im=null;
+    const url = req.protocol + "://" + req.get("host");
+    var im = null;
     //const data = req.body;
     //console.log(req.file.filename);
-    if(req.body.type==="Attachment"){
-      if(req.file!=undefined){
-         im = url + '/public/activity/' + req.file.filename
+    if (req.body.type === "Attachment") {
+      if (req.file != undefined) {
+        im = url + "/public/activity/" + req.file.filename;
       }
     }
     const activity = new LeadActivity({
-      leadId:req.body.leadId,
-      title:req.body.title,
-      desc:req.body.desc,
-      type:req.body.type,
-      image:im
+      leadId: req.body.leadId,
+      title: req.body.title,
+      desc: req.body.desc,
+      type: req.body.type,
+      image: im,
+      orgId: orgId,
     });
     await activity.save();
     res.status(201).json({
@@ -144,40 +159,46 @@ exports.deleteLeadActivity = async (req, res) => {
   }
 };
 
-exports.updateAttachment=async(req,res)=>{
+exports.updateAttachment = async (req, res) => {
   try {
-  const _id=req.params.id;
-  const url = req.protocol + '://' + req.get('host')
-  if(req.file!=undefined){
-   var im = url + '/public/activity/' + req.file.filename
-    await LeadActivity.findByIdAndUpdate(_id,{title:req.body.title,desc:req.body.desc,image:im},{
-      new:true
-    })
+    const _id = req.params.id;
+    const url = req.protocol + "://" + req.get("host");
+    if (req.file != undefined) {
+      var im = url + "/public/activity/" + req.file.filename;
+      await LeadActivity.findByIdAndUpdate(
+        _id,
+        { title: req.body.title, desc: req.body.desc, image: im },
+        {
+          new: true,
+        }
+      );
+    } else {
+      await LeadActivity.findByIdAndUpdate(
+        _id,
+        { desc: req.body.desc },
+        {
+          new: true,
+        }
+      );
+    }
+    res.json({
+      success: true,
+      status: 201,
+      message: "Attachment Updated Successfully.",
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: "Someting went wrong!",
+      success: false,
+      status: 400,
+    });
   }
-  else{
-    await LeadActivity.findByIdAndUpdate(_id,{desc:req.body.desc},{
-      new:true
-    })
-  }
-  res.json({
-    success: true,
-    status: 201,
-    message: "Attachment Updated Successfully.",
-  })
-}
- catch (error) {
-  res.status(400).json({
-    message: "Someting went wrong!",
-    success: false,
-    status: 400,
-  });
-}
-}
+};
 
 exports.getbyId = async (req, res) => {
   try {
     const LId = req.params.LId;
-    const _id=req.params.id;
+    const _id = req.params.id;
     const data = await LeadActivity.find({ _id });
     res.status(200).json({
       data: data,

@@ -1,14 +1,17 @@
-const express = require("express");
 const mongoose = require("mongoose");
 
 const ClientModel = require("../models/ClientModel.js");
 
-exports.getClient = async (req, res) => {
+exports.getClientById = async (req, res) => {
   const { id } = req.params;
   try {
     const client = await ClientModel.findById(id);
-
-    res.status(200).json(client);
+    res.status(200).json({
+      data: client,
+      success: true,
+      code: 200,
+      message: "fetch client by id successfully!!",
+    });
   } catch (error) {
     res.status(404).json({ message: error.message });
   }
@@ -16,15 +19,15 @@ exports.getClient = async (req, res) => {
 
 exports.getClients = async (req, res) => {
   const { page } = req.query;
+  const { orgId } = req.params;
   try {
-    const LIMIT = 8;
+    const LIMIT = 10;
     const startIndex = (Number(page) - 1) * LIMIT; // get the starting index of every page
-    const total = await ClientModel.countDocuments({});
-    const clients = await ClientModel.find()
+    const total = await ClientModel.countDocuments({ orgId: orgId });
+    const clients = await ClientModel.find({ orgId: orgId })
       .sort({ _id: -1 })
       .limit(LIMIT)
       .skip(startIndex);
-
     res.json({
       data: clients,
       currentPage: Number(page),
@@ -37,37 +40,17 @@ exports.getClients = async (req, res) => {
 
 exports.createClient = async (req, res) => {
   const client = req.body;
-  const newClient = new ClientModel({
-    ...client,
-    createdAt: new Date().toISOString(),
-  });
-
   try {
-    await newClient.save();
+    const newClient = new ClientModel(client);
+    const data = await newClient.save();
     res.status(201).json({
-      data:newClient,
+      data: data,
       success: true,
-      code:201,
-      message:"Client added successfully!!"
+      code: 201,
+      message: "Client added successfully!!",
     });
   } catch (error) {
     res.status(409).json(error.message);
-  }
-};
-
-exports.getClientById = async (req, res) => {
-  const {id} = req.params;
-  try{
-    const client = await ClientModel.findById(id);
-
-    res.status(200).json({
-      data: client,
-      success: true,
-      code: 200,
-      message: "fetch client by id successfully!!"
-    });
-  } catch(error){
-    res.status(404).json({message: error.message});
   }
 };
 

@@ -1,4 +1,3 @@
-const express = require("express");
 const mongoose = require("mongoose");
 const FirmModel = require("../models/FirmModel");
 
@@ -11,7 +10,8 @@ exports.createFirm = async (req, res) => {
       add: req.body.add,
       website: req.body.website,
       gst_no: req.body.gst_no,
-      uin:req.body.uin
+      uin: req.body.uin,
+      orgId: req.body.orgId,
     });
     await newFirm.save();
     res.status(201).json({
@@ -27,12 +27,19 @@ exports.createFirm = async (req, res) => {
 };
 
 exports.getFirm = async (req, res) => {
+  const { org } = req.params;
   const { id } = req.params;
   try {
-    const firm = await FirmModel.findById(id);
+    const newData = [];
+    const firm = await FirmModel.find({ orgId: org });
+    firm.forEach((element) => {
+      if (element._id == id) {
+        newData.push(element);
+      }
+    });
 
     res.status(200).json({
-      data: firm,
+      data: newData,
       success: true,
       code: 200,
       message: "single firm fetch!!",
@@ -67,8 +74,9 @@ exports.deleteFirm = async (req, res) => {
 };
 
 exports.getAllFirm = async (req, res) => {
+  const { org } = req.params;
   try {
-    const firmAll = await FirmModel.find({}).sort({ _id: -1 });
+    const firmAll = await FirmModel.find({ orgId: org }).sort({ _id: -1 });
 
     res.status(200).json({
       data: firmAll,
@@ -81,20 +89,24 @@ exports.getAllFirm = async (req, res) => {
   }
 };
 
-exports.logo=async(req,res)=>{
+exports.logo = async (req, res) => {
   try {
-    const url = req.protocol + '://' + req.get('host')
-    const _id=req.params.id;
-    const image=await FirmModel.findByIdAndUpdate(_id,{logo:req.file.location},{
-      new:true
-    })
+    const url = req.protocol + "://" + req.get("host");
+    const _id = req.params.id;
+    const image = await FirmModel.findByIdAndUpdate(
+      _id,
+      { logo: req.file.location },
+      {
+        new: true,
+      }
+    );
     res.status(201).json({
-      "logo":image,
+      logo: image,
       code: 201,
       success: true,
       message: "logo Updated successfully!",
-    })
+    });
   } catch (error) {
     res.status(400).json({ message: "something went wrong! " });
   }
-}
+};

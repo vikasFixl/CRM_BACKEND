@@ -25,10 +25,13 @@ const upload = multer({
 });
 
 router.post('/create',firmController.createFirm);
-router.get('/:id', firmController.getFirm);
-router.patch('/update/:id', firmController.updateFirm);
+
 router.delete('/delete/:id', firmController.deleteFirm);
-router.get('/', firmController.getAllFirm);
+
+router.get('/:org/:id', firmController.getFirm);
+router.get('/:org', firmController.getAllFirm);
+
+router.patch('/update/:id', firmController.updateFirm);
 router.patch('/insertlogo/:id',upload.single("logo"),firmController.logo);
 
 module.exports = router; 

@@ -2,18 +2,30 @@ const express = require("express");
 const router = express.Router();
 const invoiceController = require("../controllers/invoices");
 
-router.post("/create", invoiceController.createInvoice);
-router.get("/singleInvoice/:id", invoiceController.getInvoice);
+/// get routes
+
+router.get('/draftById/:id', invoiceController.getDraftByid);
+router.get("/drafts", invoiceController.getDrafts);
+router.get("/all/:orgId", invoiceController.getAllInvoices);
+router.get("/singleInvoice/:orgId/:id", invoiceController.getInvoice);
+router.get("/getdrafts/:orgId",invoiceController.getDrafts);
+
+/// post routes
+
+router.post('/checkout-stripe',invoiceController.paymnetlink1);
+router.post("/create/:orgId", invoiceController.createInvoice);
+
+/// patch routes
+
+router.patch('/updateDraft/:id', invoiceController.updateDraftIn);
+router.patch('/payment/:id', invoiceController.payment);
+
+/// put routes
 router.put("/status/:id", invoiceController.updateInvoice);
+
+/// not in use
+
 router.get("/count", invoiceController.getTotalCount);
 router.get("/user", invoiceController.getInvoicesByUser);
-router.get("/all", invoiceController.getAllInvoices);
-router.patch('/payment/:id', invoiceController.payment);
-router.patch('/updateDraft/:id', invoiceController.updateDraftIn);
-router.get("/drafts", invoiceController.getDrafts);
-router.post("/getdrafts",invoiceController.getDrafts);
-router.get('/draftById/:id', invoiceController.getDraftByid);
-router.post('/checkout-stripe',invoiceController.paymnetlink1);
-
 
 module.exports = router;

@@ -1,6 +1,4 @@
-const mongoose = require("mongoose");
 const dedModel=require("../models/dedModel");
-
 
 exports.postDedDetails=async(req,res)=>{
     try {

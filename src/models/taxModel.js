@@ -1,12 +1,18 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const taxSchema=mongoose.Schema({
-    firm_id:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "FIRM",
-        required: true,
+const taxSchema = new mongoose.Schema(
+  {
+    firm_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FIRM",
+      required: true,
     },
-    taxRates:[{}]
-})
+    taxRates: [{}],
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-module.exports=mongoose.model("TAXRATES",taxSchema);
+module.exports = mongoose.model("TAXRATES", taxSchema);

@@ -22,7 +22,8 @@ const LeadActivitySchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    comment:{type:Array}
+    comment: { type: Array },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
   },
   {
     timestamps: true,

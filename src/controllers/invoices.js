@@ -1,16 +1,14 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const InvoiceModel = require("../models/InvoiceModel.js");
-const cron = require('node-cron');
-const moment = require('moment');
+const cron = require("node-cron");
+const moment = require("moment");
 const RecurringInvoiceModel = require("../models/RecurringInvoiceModel.js");
-const winston = require('winston');
-const schedule=require('node-schedule')
+const winston = require("winston");
+const schedule = require("node-schedule");
 
 const logger = winston.createLogger({
-  transports: [
-    new winston.transports.File({ filename: 'invoices.json' })
-  ]
+  transports: [new winston.transports.File({ filename: "invoices.json" })],
 });
 
 exports.getInvoicesByUser = async (req, res) => {
@@ -40,11 +38,20 @@ exports.getTotalCount = async (req, res) => {
 };
 
 exports.getAllInvoices = async (req, res) => {
+  const { orgId } = req.params;
+  const newData = [];
   try {
-    const allInvoices = await InvoiceModel.find({draft:false}).sort({ _id: -1 });
+    const Invoice = await InvoiceModel.find({ orgId: orgId }).sort({
+      _id: -1,
+    });
+    Invoice.forEach((element) => {
+      if (element.draft == false) {
+        newData.push(element);
+      }
+    });
 
     res.status(200).json({
-      data: allInvoices,
+      data: newData,
       success: true,
       code: 200,
       message: "all invoices get here!!",
@@ -57,7 +64,7 @@ exports.getAllInvoices = async (req, res) => {
 exports.createInvoice = async (req, res) => {
   const {
     items,
-    subTotal, 
+    subTotal,
     vat,
     total,
     notes,
@@ -74,7 +81,8 @@ exports.createInvoice = async (req, res) => {
     allowTip,
     draft,
     recurringInvoice,
-    tax
+    tax,
+    orgId,
   } = req.body;
   // const newInvoice = new InvoiceModel(invoice);
   try {
@@ -93,14 +101,15 @@ exports.createInvoice = async (req, res) => {
       invoiceDate: invoiceDate,
       client: client,
       status: status,
-      firm:firm,
-      termsNcondition:termsNcondition,
-      currency:currency,
-      partialPay:partialPay,
-      allowTip:allowTip,
-      draft:draft,
-      recurringInvoice:recurringInvoice,
-      tax:tax
+      firm: firm,
+      termsNcondition: termsNcondition,
+      currency: currency,
+      partialPay: partialPay,
+      allowTip: allowTip,
+      draft: draft,
+      recurringInvoice: recurringInvoice,
+      tax: tax,
+      orgId: orgId,
     });
     await newInvoice.save();
     // if(recurringInvoice.isEnabled==true){
@@ -123,7 +132,7 @@ exports.createInvoice = async (req, res) => {
     //       data.save();
     //     }
     //   })
-      res.status(201).json({
+    res.status(201).json({
       data: newInvoice,
       success: true,
       code: 201,
@@ -137,11 +146,17 @@ exports.createInvoice = async (req, res) => {
 
 exports.getInvoice = async (req, res) => {
   const { id } = req.params;
+  const { orgId } = req.params;
+  const newData = [];
   try {
-    const invoice = await InvoiceModel.findById(id);
-
+    const invoice = await InvoiceModel.find({ orgId: orgId });
+    invoice.forEach((element) => {
+      if (element._id == id) {
+        newData.push(element);
+      }
+    });
     res.status(200).json({
-      data: invoice,
+      data: newData,
       success: true,
       code: 200,
       message: "single invoice get",
@@ -157,26 +172,41 @@ exports.updateInvoice = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No invoice with that id");
 
-  await InvoiceModel.findByIdAndUpdate(id,{ status: req.body.status });
+  await InvoiceModel.findByIdAndUpdate(id, { status: req.body.status });
   logger.info(`Invoice created: ${JSON.stringify(invoice)}`);
-  res.json({message: "Status Updated successfully!!"});
+  res.json({ message: "Status Updated successfully!!" });
 };
 
-
-exports.payment=async(req,res)=>{
+exports.payment = async (req, res) => {
   try {
-    const _id=req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(_id)) 
-    return res.status(404).send("No invoice with that id");
-    const details=await InvoiceModel.findById(_id)
-    const newPay=await InvoiceModel.findByIdAndUpdate(_id,{$push:{payment:req.body},$set:{status:req.body.status,amountPaid:parseFloat(details.amountPaid)+parseFloat(req.body.amountPaidpayment),dueAmount:parseFloat(details.total)-parseFloat(details.amountPaid)-parseFloat(req.body.amountPaidpayment)}},{
-        new:true
-      })
-      console.log(newPay.amountPaid);
-      if(newPay.dueAmount<0){
-        amount=newPay.dueAmount
-        return res.json({msg:"OverPaid!",amount})
+    const _id = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(_id))
+      return res.status(404).send("No invoice with that id");
+    const details = await InvoiceModel.findById(_id);
+    const newPay = await InvoiceModel.findByIdAndUpdate(
+      _id,
+      {
+        $push: { payment: req.body },
+        $set: {
+          status: req.body.status,
+          amountPaid:
+            parseFloat(details.amountPaid) +
+            parseFloat(req.body.amountPaidpayment),
+          dueAmount:
+            parseFloat(details.total) -
+            parseFloat(details.amountPaid) -
+            parseFloat(req.body.amountPaidpayment),
+        },
+      },
+      {
+        new: true,
       }
+    );
+    console.log(newPay.amountPaid);
+    if (newPay.dueAmount < 0) {
+      amount = newPay.dueAmount;
+      return res.json({ msg: "OverPaid!", amount });
+    }
     res.status(201).json({
       data: newPay,
       success: true,
@@ -187,8 +217,7 @@ exports.payment=async(req,res)=>{
     console.log(error);
     res.status(409).json({ message: "something went wrong." });
   }
-}
-
+};
 
 exports.updateDraftIn = async (req, res) => {
   const { id } = req.params;
@@ -196,59 +225,63 @@ exports.updateDraftIn = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No Draft with that id");
 
-  await InvoiceModel.findByIdAndUpdate(id,req.body);
+  await InvoiceModel.findByIdAndUpdate(id, req.body);
 
-  res.json({message: " Updated successfully!!"});
+  res.json({ message: " Updated successfully!!" });
 };
 
-exports.getDrafts=async(req,res)=>{
-  try{
-    const data=await InvoiceModel.find({draft:true}).sort({ _id: -1 })
+exports.getDrafts = async (req, res) => {
+  try {
+    const newData = await InvoiceModel.find({ orgId: orgId }).sort({ _id: -1 });
+    const Data = [];
+    newData.forEach(element => {
+      if(element.draft == true){
+        Data.push(element);
+      }
+    });
     res.json({
-      data:data,
-      status:201
-    })
+      data: Data,
+      status: 201,
+    });
+  } catch (error) {
+    res.status(401).json({ message: "Something went wrong" });
   }
-  catch(error){
-    res.status(401).json({message:"Something went wrong"})
-  }
-}
+};
 
-exports.getDraftByid=async(req,res)=>{
-  const id=req.params.id;
-  try{
-    const data=await InvoiceModel.findById(id)
+exports.getDraftByid = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const data = await InvoiceModel.findById(id);
     res.json({
-      data:data,
-      status:201
-    })
+      data: data,
+      status: 201,
+    });
+  } catch (error) {
+    res.status(401).json({ message: "Something went wrong" });
   }
-  catch(error){
-    res.status(401).json({message:"Something went wrong"})
-  }
-}
+};
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY); 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-exports.paymnetlink1= async (req, res) => { 
-  const { product } = req.body; 
-  const session = await stripe.checkout.sessions.create({ 
-    payment_method_types: ["card"], 
-    line_items: [ 
-      { 
-        price_data: { 
-          currency: "inr", 
-          product_data: { 
-            name: product.name, 
-          }, 
-          unit_amount: product.price * 100, 
-        }, 
-        quantity: product.quantity, 
-      }, 
-    ], 
-    mode: "payment", 
-    success_url: "http://localhost:3000/success", 
-    cancel_url: "http://localhost:3000/cancel", 
-  }); 
-  res.json({ id: session.id }); 
-} 
+exports.paymnetlink1 = async (req, res) => {
+  const { product } = req.body;
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price_data: {
+          currency: "inr",
+          product_data: {
+            name: product.name,
+          },
+          unit_amount: product.price * 100,
+        },
+        quantity: product.quantity,
+      },
+    ],
+    mode: "payment",
+    success_url: "http://localhost:3000/success",
+    cancel_url: "http://localhost:3000/cancel",
+  });
+  res.json({ id: session.id });
+};

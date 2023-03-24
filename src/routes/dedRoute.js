@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const dedController = require('../controllers/deduction');
+const dedController = require("../controllers/deduction");
 
-router.post('/postDeductionDetails/:eid',dedController.postDedDetails);
+router.post("/postDeductionDetails/:eid", dedController.postDedDetails);
 
 module.exports = router;

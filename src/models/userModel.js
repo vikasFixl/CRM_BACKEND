@@ -32,15 +32,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
     resetToken: String,
     expireToken: Date,
-    permissions:[{}],
-    profilePhoto:{type:String},
-    eid:{type:String}
+    permissions: [{}],
+    profilePhoto: { type: String },
+    eid: { type: String },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 const User = mongoose.model("User", userSchema);

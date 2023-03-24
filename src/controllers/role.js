@@ -1,12 +1,12 @@
-const mongoose = require("mongoose");
 const roleModel = require("../models/roleNpermissionModel");
 
 exports.createRole = async (req, res) => {
-  const { role, permission } = req.body;
+  const { role, permission, orgId } = req.body;
   try {
     const newRole = new roleModel({
       role: role,
       permission: permission,
+      orgId: orgId,
     });
     await newRole.save();
     res.status(201).json({
@@ -23,8 +23,8 @@ exports.createRole = async (req, res) => {
 
 exports.getRole = async (req, res) => {
   try {
-    const _id = req.params.id;
-    const data = await roleModel.find({}).sort({ _id: -1 });
+    const { orgId } = req.params;
+    const data = await roleModel.find({ orgId: orgId }).sort({ _id: -1 });
     res.status(200).json({
       data: data,
       code: 200,

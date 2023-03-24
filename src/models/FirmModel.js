@@ -1,4 +1,3 @@
-const { string, object } = require("joi");
 const mongoose = require("mongoose");
 
 const firmSchema = new mongoose.Schema({
@@ -17,6 +16,7 @@ const firmSchema = new mongoose.Schema({
   gst_no: { type: String },
   logo: { type: String },
   uin: { type: String },
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
 });
 
 const Firm = mongoose.model("Firm", firmSchema);

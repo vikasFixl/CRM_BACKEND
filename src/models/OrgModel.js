@@ -18,6 +18,10 @@ const OrgSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    password: {
+      type: String,
+      required: true,
+    },
     orgDept: {
       type: Array,
       required: false,

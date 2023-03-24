@@ -9,10 +9,6 @@ const InvoiceSchema = new mongoose.Schema({
       unitPrice: { type: String },
       quantity: { type: String },
       amount: { type: Number },
-      // gst: { type: Number },
-      // cgst:{type:Number},
-      // sgst:{type:Number},
-      // igst:{type:Number},
     },
   ],
   gstn: { type: String },
@@ -78,6 +74,7 @@ const InvoiceSchema = new mongoose.Schema({
     end_date: { type: Date },
   },
   draft: { type: Boolean },
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
 });
 
 module.exports = mongoose.model("InvoiceModel", InvoiceSchema);
