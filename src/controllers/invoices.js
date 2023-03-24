@@ -82,6 +82,7 @@ exports.createInvoice = async (req, res) => {
     draft,
     recurringInvoice,
     tax,
+    desc,
     orgId,
   } = req.body;
   try {
@@ -108,6 +109,7 @@ exports.createInvoice = async (req, res) => {
       draft: draft,
       recurringInvoice: recurringInvoice,
       tax: tax,
+      desc: desc,
       orgId: orgId,
     });
     await newInvoice.save();
@@ -233,8 +235,8 @@ exports.getDrafts = async (req, res) => {
   try {
     const newData = await InvoiceModel.find({ orgId: orgId }).sort({ _id: -1 });
     const Data = [];
-    newData.forEach(element => {
-      if(element.draft == true){
+    newData.forEach((element) => {
+      if (element.draft == true) {
         Data.push(element);
       }
     });

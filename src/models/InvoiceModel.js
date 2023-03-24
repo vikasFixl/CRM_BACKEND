@@ -9,6 +9,7 @@ const InvoiceSchema = new mongoose.Schema({
       unitPrice: { type: String },
       quantity: { type: String },
       amount: { type: Number },
+      desc: { type: String },
     },
   ],
   gstn: { type: String },
