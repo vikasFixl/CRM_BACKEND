@@ -13,7 +13,7 @@ router.get("/getdrafts/:orgId",invoiceController.getDrafts);
 /// post routes
 
 router.post('/checkout-stripe',invoiceController.paymnetlink1);
-router.post("/create/:orgId", invoiceController.createInvoice);
+router.post("/create", invoiceController.createInvoice);
 
 /// patch routes
 

@@ -71,19 +71,21 @@ app.use(express.json());
 
 app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
-app.use("/api/profile", profileRoutes);
 app.use("/api/client", clientRoutes);
-app.use("/api/search", searchRoutes);
 app.use("/api/firm", firmRoutes);
 app.use("/api/lead", leadRoutes);
 app.use("/api/org", orgRoutes);
-app.use("/api/role", roleRoutes);
 app.use("/api/leadActivity", leadActivityRoutes);
+app.use("/api/taxRates",taxRoutes);
+
+app.use("/api/profile", profileRoutes);
+app.use("/api/search", searchRoutes);
+app.use("/api/role", roleRoutes);
 app.use("/api/attendence",attendenceRoutes);
 app.use("/api/ded",dedRoutes);
 app.use("/api/sal",salRoutes);
 app.use("/api/employee",employeeRoutes);
-app.use("/api/taxRates",taxRoutes);
+
 
 app.use(async (req, res, next) => {
   if (req.headers["x-access-token"]) {
