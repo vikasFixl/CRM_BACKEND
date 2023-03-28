@@ -8,7 +8,7 @@ router.post("/addTaxInFirm", taxController.addTaxInFirm);
 router.get("/gettaxRates/:firmId", taxController.gettaxrates);
 router.get("/getGlobalTaxs/:orgId", taxController.getGlobalTaxs);
 
-router.patch("/updateRates/:id/:tid", taxController.updatetaxrates);
+router.patch("/updateRates/:id", taxController.updatetaxrates);
 
 router.delete("/delete/:id/:oid", taxController.deletetaxRate);
 

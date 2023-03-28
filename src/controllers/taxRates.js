@@ -99,20 +99,39 @@ exports.getGlobalTaxs = async (req, res) => {
 
 exports.updatetaxrates = async (req, res) => {
   try {
-    const _id = req.params.id;
-    const taxid = req.params.tid;
-    const data = await taxModel.update(
-      { _id, "taxRates._id": taxid },
-      {
-        $set: {
-          "taxRates.$.cgst": req.body.cgst,
-          "taxRates.$.sgst": req.body.sgst,
-          "taxRates.$.igst": req.body.igst,
-        },
-      }
-    );
+    const id = req.params.id;
+    const { oldRate, newRate } = req.body;
+    console.log(newRate, "newRate");
+    const data = await taxModel.findById(id);
+    // console.log(data, "data");
+    console.log(oldRate, "oldRate");
+    // const res = data.taxRates.includes(oldRate);
+    const res = data.taxRates.filter(function (entry) {
+      return Object.keys(oldRate).every(async function (key) {
+        if (entry[key] == oldRate[key]) {
+          console.log(Object.keys(entry), "entry[key]")
+          console.log("Here");
+          const data = await taxModel.updateOne(
+            {}, { $set: { [Object.keys(entry)] : newRate } }
+          );
+          console.log(data)
+        }
+      });
+    });
+    // console.log(res, "res");
+
+    // const taxid = req.params.tid;
+    // const data = await taxModel.update(
+    //   { _id, "taxRates._id": taxid },
+    //   {
+    //     $set: {
+    //       "taxRates.$.cgst": req.body.cgst,
+    //       "taxRates.$.sgst": req.body.sgst,
+    //       "taxRates.$.igst": req.body.igst,
+    //     },
+    //   }
+    // );
     res.status(200).json({
-      data: data,
       code: 200,
       success: true,
       message: "updated",
