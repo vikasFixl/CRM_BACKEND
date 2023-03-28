@@ -234,6 +234,7 @@ exports.getDrafts = async (req, res) => {
     res.json({
       data: Data,
       status: 201,
+      message: "Drafts."
     });
   } catch (error) {
     res.status(401).json({ message: "Something went wrong" });

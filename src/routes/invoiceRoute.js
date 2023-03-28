@@ -5,7 +5,7 @@ const invoiceController = require("../controllers/invoices");
 /// get routes
 
 router.get('/draftById/:id', invoiceController.getDraftByid);
-router.get("/drafts", invoiceController.getDrafts);
+router.get("/drafts/:orgId", invoiceController.getDrafts);
 router.get("/all/:orgId", invoiceController.getAllInvoices);
 router.get("/singleInvoice/:orgId/:id", invoiceController.getInvoice);
 router.get("/getdrafts/:orgId",invoiceController.getDrafts);

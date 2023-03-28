@@ -1,16 +1,60 @@
 const taxModel = require("../models/taxModel");
 
-exports.firsttaxrates = async (req, res) => {
+exports.addTaxInFirm = async (req, res) => {
   try {
-    const data = req.body;
-    console.log(data, "data");
-      const newTax = new taxModel(data);
-      await newTax.save(newTax);
-    res.status(201).json({
-      code: 201,
-      success: true,
-      message: "tax Rate inserted successfully!",
-    });
+    const tax = req.body;
+    const data = await taxModel.findOne({ firmId: tax.firmId });
+    console.log(data, "DATA");
+    if (data === null) {
+      const newTax = new taxModel(tax);
+      newTax.save();
+      res.status(201).json({
+        code: 201,
+        success: true,
+        message: "Firm tax created successfully!",
+      });
+    } else {
+      const tax = await taxModel.updateOne(
+        { _id: data._id },
+        { $push: { taxRates: req.body.taxRates } }
+      );
+      console.log(tax, "TAX");
+      res.status(201).json({
+        code: 201,
+        success: true,
+        message: "Firm tax updated successfully!",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ message: "something went wrong! " });
+  }
+};
+
+exports.postGlobalTax = async (req, res) => {
+  try {
+    const tax = req.body;
+    const data = await taxModel.findOne({ globalTax: true });
+    if (data === null) {
+      const newTax = new taxModel(tax);
+      newTax.save();
+      res.status(201).json({
+        code: 201,
+        success: true,
+        message: "Global tax created successfully!",
+      });
+    } else {
+      const tax = await taxModel.updateOne(
+        { _id: data._id },
+        { $push: { taxRates: req.body.taxRates } }
+      );
+      console.log(tax, "TAX");
+      res.status(201).json({
+        code: 201,
+        success: true,
+        message: "Global tax updated successfully!",
+      });
+    }
   } catch (error) {
     console.log(error);
     res.status(400).json({ message: "something went wrong! " });
@@ -37,8 +81,8 @@ exports.getGlobalTaxs = async (req, res) => {
     const newData = [];
     const orgId = req.params.orgId;
     const data = await taxModel.find({ orgId: orgId });
-    data.forEach(element => {
-      if(element.globalTax === true){
+    data.forEach((element) => {
+      if (element.globalTax === true) {
         newData.push(element);
       }
     });
@@ -72,24 +116,6 @@ exports.updatetaxrates = async (req, res) => {
       code: 200,
       success: true,
       message: "updated",
-    });
-  } catch (error) {
-    res.status(409).send("Some error has occured while updating.");
-  }
-};
-
-exports.uaddtaxrates = async (req, res) => {
-  const _id = req.params.id;
-  try {
-    const tax = await taxModel.updateOne(
-      { _id: _id },
-      { $push: { taxRates: req.body.taxRates } }
-    );
-    res.status(200).json({
-      data: tax,
-      code: 200,
-      success: true,
-      message: "all data get here!!",
     });
   } catch (error) {
     res.status(409).send("Some error has occured while updating.");
