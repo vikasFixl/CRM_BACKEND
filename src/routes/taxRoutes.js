@@ -4,7 +4,8 @@ const taxController = require("../controllers/taxRates");
 
 router.post("/inserttaxRates", taxController.firsttaxrates);
 
-router.get("/gettaxRates/:Fid", taxController.gettaxrates);
+router.get("/gettaxRates/:firmId", taxController.gettaxrates);
+router.get("/getGlobalTaxs/:orgId", taxController.getGlobalTaxs);
 
 router.patch("/updateRates/:id/:tid", taxController.updatetaxrates);
 router.patch("/addtaxRate/:id", taxController.uaddtaxrates);

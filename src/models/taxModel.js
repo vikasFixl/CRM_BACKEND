@@ -5,7 +5,7 @@ const taxSchema = new mongoose.Schema(
     firmId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "FIRM",
-      required: true,
+      required: false,
     },
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -13,6 +13,7 @@ const taxSchema = new mongoose.Schema(
       required: true,
     },
     taxRates: [{}],
+    globalTax: { type: Boolean, required: true },
   },
   {
     timestamps: true,

@@ -4,15 +4,9 @@ exports.firsttaxrates = async (req, res) => {
   try {
     const data = req.body;
     console.log(data, "data");
-    // const tax = new taxModel({
-    //   firmId: firmId,
-    //   orgId: orgId,
-    //   taxRates: taxRates,
-    // });
-    const tax = new taxModel(data);
-    await tax.save();
+      const newTax = new taxModel(data);
+      await newTax.save(newTax);
     res.status(201).json({
-      data: tax,
       code: 201,
       success: true,
       message: "tax Rate inserted successfully!",
@@ -25,10 +19,31 @@ exports.firsttaxrates = async (req, res) => {
 
 exports.gettaxrates = async (req, res) => {
   try {
-    const id = req.params.Fid;
-    const data = await taxModel.find({ firm_id: id }).sort({ id: -1 });
+    const firmId = req.params.firmId;
+    const data = await taxModel.find({ firmId: firmId }).sort({ id: -1 });
     res.status(200).json({
       data: data,
+      code: 200,
+      success: true,
+      message: "all data get here!!",
+    });
+  } catch (error) {
+    res.status(409).json(err.message);
+  }
+};
+
+exports.getGlobalTaxs = async (req, res) => {
+  try {
+    const newData = [];
+    const orgId = req.params.orgId;
+    const data = await taxModel.find({ orgId: orgId });
+    data.forEach(element => {
+      if(element.globalTax === true){
+        newData.push(element);
+      }
+    });
+    res.status(200).json({
+      data: newData,
       code: 200,
       success: true,
       message: "all data get here!!",
