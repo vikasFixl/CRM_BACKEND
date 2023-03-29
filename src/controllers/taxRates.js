@@ -3,9 +3,8 @@ const taxModel = require("../models/taxModel");
 exports.addTaxInFirm = async (req, res) => {
   try {
     const tax = req.body;
-    const data = await taxModel.findOne({ firmId: tax.firmId });
-    console.log(data, "DATA");
-    if (data === null) {
+    const data = await taxModel.find({ firmId: tax.firmId });
+    if (data.length === 0) {
       const newTax = new taxModel(tax);
       newTax.save();
       res.status(201).json({
@@ -14,11 +13,14 @@ exports.addTaxInFirm = async (req, res) => {
         message: "Firm tax created successfully!",
       });
     } else {
-      const tax = await taxModel.updateOne(
-        { _id: data._id },
-        { $push: { taxRates: req.body.taxRates } }
-      );
-      console.log(tax, "TAX");
+      data.forEach((element1) => {
+        req.body.taxRates.forEach(async (element) => {
+          await taxModel.updateOne(
+            { _id: element1._id },
+            { $push: { taxRates: element } }
+          );
+        });
+      });
       res.status(201).json({
         code: 201,
         success: true,
@@ -34,8 +36,8 @@ exports.addTaxInFirm = async (req, res) => {
 exports.postGlobalTax = async (req, res) => {
   try {
     const tax = req.body;
-    const data = await taxModel.findOne({ globalTax: true });
-    if (data === null) {
+    const orgData = await taxModel.find({ orgId: tax.orgId });
+    if (orgData.length === 0) {
       const newTax = new taxModel(tax);
       newTax.save();
       res.status(201).json({
@@ -44,11 +46,20 @@ exports.postGlobalTax = async (req, res) => {
         message: "Global tax created successfully!",
       });
     } else {
-      const tax = await taxModel.updateOne(
-        { _id: data._id },
-        { $push: { taxRates: req.body.taxRates } }
-      );
-      console.log(tax, "TAX");
+      orgData.forEach((element1) => {
+        console.log(element1.firmId, "E1");
+        console.log(tax.firmId, "E2");
+        if (element1.firmId === undefined) {
+          req.body.taxRates.forEach(async (element) => {
+            await taxModel.updateOne(
+              { _id: element1._id },
+              { $push: { taxRates: element } }
+            );
+          });
+        } else {
+          console.log("Fail");
+        }
+      });
       res.status(201).json({
         code: 201,
         success: true,
@@ -102,35 +113,19 @@ exports.updatetaxrates = async (req, res) => {
     const id = req.params.id;
     const { oldRate, newRate } = req.body;
     console.log(newRate, "newRate");
-    const data = await taxModel.findById(id);
-    // console.log(data, "data");
     console.log(oldRate, "oldRate");
-    // const res = data.taxRates.includes(oldRate);
-    const res = data.taxRates.filter(function (entry) {
-      return Object.keys(oldRate).every(async function (key) {
-        if (entry[key] == oldRate[key]) {
-          console.log(Object.keys(entry), "entry[key]")
-          console.log("Here");
-          const data = await taxModel.updateOne(
-            {}, { $set: { [Object.keys(entry)] : newRate } }
-          );
-          console.log(data)
-        }
+    const data = await taxModel.findById(id);
+
+    const i = data.taxRates.findIndex(function (entry) {
+      return Object.keys(oldRate).every(function (key) {
+        return entry[key] === oldRate[key];
       });
     });
-    // console.log(res, "res");
+    console.log(i, "I");
+    var deleted = delete data.taxRates[i];
+    console.log(deleted, "deleted");
+    console.log(data.taxRates, "data.taxRates");
 
-    // const taxid = req.params.tid;
-    // const data = await taxModel.update(
-    //   { _id, "taxRates._id": taxid },
-    //   {
-    //     $set: {
-    //       "taxRates.$.cgst": req.body.cgst,
-    //       "taxRates.$.sgst": req.body.sgst,
-    //       "taxRates.$.igst": req.body.igst,
-    //     },
-    //   }
-    // );
     res.status(200).json({
       code: 200,
       success: true,
