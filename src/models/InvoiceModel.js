@@ -1,6 +1,4 @@
-const { boolean } = require("joi");
 const mongoose = require("mongoose");
-const { stringify } = require("querystring");
 
 const InvoiceSchema = new mongoose.Schema({
   items: [
@@ -20,6 +18,7 @@ const InvoiceSchema = new mongoose.Schema({
     lastName: { type: String },
     email: { type: String },
     phone: { type: Number },
+    taxId: { type: String },
     address: {
       address1: { type: String },
       address2: { type: String },
@@ -44,6 +43,7 @@ const InvoiceSchema = new mongoose.Schema({
   firm: {
     name: { type: String },
     phone: { type: Number },
+    taxId: { type: String },
     address: {
       address1: { type: String },
       address2: { type: String },
