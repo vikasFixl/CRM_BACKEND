@@ -225,7 +225,7 @@ exports.updateDraftIn = async (req, res) => {
 exports.getDrafts = async (req, res) => {
   try {
     const { orgId } = req.params;
-    console.log(orgId)
+    // console.log(orgId)
     const newData = await InvoiceModel.find({ orgId: orgId }).sort({ _id: -1 });
     // console.log(newData)
     const Data = [];
