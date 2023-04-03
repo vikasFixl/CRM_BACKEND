@@ -224,6 +224,7 @@ exports.updateDraftIn = async (req, res) => {
 
 exports.getDrafts = async (req, res) => {
   try {
+    const { orgId } = req.params.orgId;
     const newData = await InvoiceModel.find({ orgId: orgId }).sort({ _id: -1 });
     const Data = [];
     newData.forEach((element) => {
@@ -234,7 +235,7 @@ exports.getDrafts = async (req, res) => {
     res.json({
       data: Data,
       status: 201,
-      message: "Drafts."
+      message: "Drafts.",
     });
   } catch (error) {
     res.status(401).json({ message: "Something went wrong" });
