@@ -158,6 +158,21 @@ exports.getInvoice = async (req, res) => {
   }
 };
 
+exports.getSingleInvoice = async (req, res) => {
+  const { id } = req.body;
+  try {
+    const invoice = await InvoiceModel.findById(id);
+    res.status(200).json({
+      data: invoice,
+      success: true,
+      code: 200,
+      message: "Single invoice for share",
+    });
+  } catch (error) {
+    res.status(409).json({ message: error.message });
+  }
+};
+
 exports.updateInvoice = async (req, res) => {
   const { id } = req.params;
 

@@ -14,6 +14,7 @@ router.get("/getdrafts/:orgId",invoiceController.getDrafts);
 
 router.post('/checkout-stripe',invoiceController.paymnetlink1);
 router.post("/create", invoiceController.createInvoice);
+router.post("/getSingleInvoice", invoiceController.getSingleInvoice);
 
 /// patch routes
 
