@@ -61,6 +61,54 @@ exports.getAllInvoices = async (req, res) => {
   }
 };
 
+exports.getAllDeletedInvoices = async (req, res) => {
+  const { orgId } = req.params;
+  const newData = [];
+  try {
+    const Invoice = await InvoiceModel.find({ orgId: orgId }).sort({
+      _id: -1,
+    });
+    Invoice.forEach((element) => {
+      if (element.delete == true) {
+        newData.push(element);
+      }
+    });
+
+    res.status(200).json({
+      data: newData,
+      success: true,
+      code: 200,
+      message: "all invoices get here!!",
+    });
+  } catch (error) {
+    res.status(409).json(error.message);
+  }
+};
+
+exports.getAllCancelInvoices = async (req, res) => {
+  const { orgId } = req.params;
+  const newData = [];
+  try {
+    const Invoice = await InvoiceModel.find({ orgId: orgId }).sort({
+      _id: -1,
+    });
+    Invoice.forEach((element) => {
+      if (element.cancel == true) {
+        newData.push(element);
+      }
+    });
+
+    res.status(200).json({
+      data: newData,
+      success: true,
+      code: 200,
+      message: "all invoices get here!!",
+    });
+  } catch (error) {
+    res.status(409).json(error.message);
+  }
+};
+
 exports.createInvoice = async (req, res) => {
   const {
     items,
@@ -182,6 +230,78 @@ exports.updateInvoice = async (req, res) => {
   await InvoiceModel.findByIdAndUpdate(id, { status: req.body.status });
   logger.info(`Invoice created: ${JSON.stringify(invoice)}`);
   res.json({ message: "Status Updated successfully!!" });
+};
+
+exports.softDeleteInvoice = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No invoice with that id");
+
+  await InvoiceModel.findByIdAndUpdate(id, { delete: true });
+  logger.info(`Invoice moved to delete: ${JSON.stringify(invoice)}`);
+  res.json({
+    message: "Invoice moved to delete successfully!!",
+    success: true,
+    code: 200,
+  });
+};
+
+exports.restoreInvoice = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No invoice with that id");
+
+  await InvoiceModel.findByIdAndUpdate(id, { delete: false });
+  logger.info(`Invoice restored: ${JSON.stringify(invoice)}`);
+  res.json({
+    message: "Invoice restored successfully!!",
+    success: true,
+    code: 200,
+  });
+};
+
+exports.cancelInvoice = async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No invoice with that id");
+  await InvoiceModel.findByIdAndUpdate(id, { cancel: true });
+  logger.info(`Invoice canceled delete: ${JSON.stringify(invoice)}`);
+  res.json({
+    message: "Invoice canceled successfully!!",
+    success: true,
+    code: 200,
+  });
+};
+
+exports.restoreCancelInvoice = async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No invoice with that id");
+
+  await InvoiceModel.findByIdAndUpdate(id, { cancel: false });
+  logger.info(`Cancel invoice restored: ${JSON.stringify(invoice)}`);
+  res.json({
+    message: "Cancel invoice restored successfully!!",
+    success: true,
+    code: 200,
+  });
+};
+
+exports.deleteInvoice = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No invoice with that id");
+
+  await InvoiceModel.findByIdAndDelete(id);
+  logger.info(`Invoice deleted: ${JSON.stringify(invoice)}`);
+  res.json({
+    message: "Invoice deleted successfully!!",
+    success: true,
+    code: 200,
+  });
 };
 
 exports.payment = async (req, res) => {

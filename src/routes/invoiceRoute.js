@@ -4,11 +4,11 @@ const invoiceController = require("../controllers/invoices");
 
 /// get routes
 
-router.get('/draftById/:id', invoiceController.getDraftByid);
 router.get("/drafts/:orgId", invoiceController.getDrafts);
 router.get("/all/:orgId", invoiceController.getAllInvoices);
 router.get("/singleInvoice/:orgId/:id", invoiceController.getInvoice);
-router.get("/getdrafts/:orgId",invoiceController.getDrafts);
+router.get("/getAllCancelInvoices/:orgId",invoiceController.getAllCancelInvoices);
+router.get("/getAllDeletedInvoices/:orgId",invoiceController.getAllDeletedInvoices);
 
 /// post routes
 
@@ -20,9 +20,18 @@ router.post("/getSingleInvoice", invoiceController.getSingleInvoice);
 
 router.patch('/updateDraft/:id', invoiceController.updateDraftIn);
 router.patch('/payment/:id', invoiceController.payment);
+router.patch('/softDeleteInvoice/:id', invoiceController.softDeleteInvoice);
+router.patch('/restoreInvoice/:id', invoiceController.restoreInvoice);
+router.patch('/cancelInvoice/:id', invoiceController.cancelInvoice);
+router.patch('/restoreCancelInvoice/:id', invoiceController.restoreCancelInvoice);
 
 /// put routes
+
 router.put("/status/:id", invoiceController.updateInvoice);
+
+/// delete routes
+
+router.delete("/deleteInvoice/:id", invoiceController.deleteInvoice);
 
 /// not in use
 
