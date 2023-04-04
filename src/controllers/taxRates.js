@@ -83,7 +83,7 @@ exports.gettaxrates = async (req, res) => {
       message: "all data get here!!",
     });
   } catch (error) {
-    res.status(409).json(err.message);
+    res.status(409).json(error.message);
   }
 };
 
@@ -104,7 +104,7 @@ exports.getGlobalTaxs = async (req, res) => {
       message: "all data get here!!",
     });
   } catch (error) {
-    res.status(409).json(err.message);
+    res.status(409).json(error.message);
   }
 };
 
