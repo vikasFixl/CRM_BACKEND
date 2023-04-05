@@ -39,19 +39,16 @@ exports.getTotalCount = async (req, res) => {
 
 exports.getAllInvoices = async (req, res) => {
   const { orgId } = req.params;
-  const newData = [];
   try {
-    const Invoice = await InvoiceModel.find({ orgId: orgId }).sort({
+    const Invoice = await InvoiceModel.find({
+      orgId: { $in: [orgId] },
+      draft: { $in: [false] },
+      delete: { $in: [false] },
+    }).sort({
       _id: -1,
     });
-    Invoice.forEach((element) => {
-      if (element.draft == false) {
-        newData.push(element);
-      }
-    });
-
     res.status(200).json({
-      data: newData,
+      data: Invoice,
       success: true,
       code: 200,
       message: "all invoices get here!!",
@@ -63,19 +60,16 @@ exports.getAllInvoices = async (req, res) => {
 
 exports.getAllDeletedInvoices = async (req, res) => {
   const { orgId } = req.params;
-  const newData = [];
   try {
-    const Invoice = await InvoiceModel.find({ orgId: orgId }).sort({
+    const Invoice = await InvoiceModel.find({
+      orgId: { $in: [orgId] },
+      draft: { $in: [false] },
+      delete: { $in: [true] },
+    }).sort({
       _id: -1,
     });
-    Invoice.forEach((element) => {
-      if (element.delete == true) {
-        newData.push(element);
-      }
-    });
-
     res.status(200).json({
-      data: newData,
+      data: Invoice,
       success: true,
       code: 200,
       message: "all invoices get here!!",
@@ -87,19 +81,16 @@ exports.getAllDeletedInvoices = async (req, res) => {
 
 exports.getAllCancelInvoices = async (req, res) => {
   const { orgId } = req.params;
-  const newData = [];
   try {
-    const Invoice = await InvoiceModel.find({ orgId: orgId }).sort({
+    const Invoice = await InvoiceModel.find({
+      orgId: { $in: [orgId] },
+      cancel: { $in: [true] },
+      delete: { $in: [false] },
+    }).sort({
       _id: -1,
     });
-    Invoice.forEach((element) => {
-      if (element.cancel == true) {
-        newData.push(element);
-      }
-    });
-
     res.status(200).json({
-      data: newData,
+      data: Invoice,
       success: true,
       code: 200,
       message: "all invoices get here!!",
@@ -228,7 +219,7 @@ exports.updateInvoice = async (req, res) => {
     return res.status(404).send("No invoice with that id");
 
   await InvoiceModel.findByIdAndUpdate(id, { status: req.body.status });
-  logger.info(`Invoice created: ${JSON.stringify(invoice)}`);
+  // logger.info(`Invoice created: ${JSON.stringify(invoice)}`);
   res.json({ message: "Status Updated successfully!!" });
 };
 
@@ -239,7 +230,7 @@ exports.softDeleteInvoice = async (req, res) => {
     return res.status(404).send("No invoice with that id");
 
   await InvoiceModel.findByIdAndUpdate(id, { delete: true });
-  logger.info(`Invoice moved to delete: ${JSON.stringify(invoice)}`);
+  // logger.info(`Invoice moved to delete: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Invoice moved to delete successfully!!",
     success: true,
@@ -254,7 +245,7 @@ exports.restoreInvoice = async (req, res) => {
     return res.status(404).send("No invoice with that id");
 
   await InvoiceModel.findByIdAndUpdate(id, { delete: false });
-  logger.info(`Invoice restored: ${JSON.stringify(invoice)}`);
+  // logger.info(`Invoice restored: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Invoice restored successfully!!",
     success: true,
@@ -267,7 +258,7 @@ exports.cancelInvoice = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No invoice with that id");
   await InvoiceModel.findByIdAndUpdate(id, { cancel: true });
-  logger.info(`Invoice canceled delete: ${JSON.stringify(invoice)}`);
+  // logger.info(`Invoice canceled delete: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Invoice canceled successfully!!",
     success: true,
@@ -281,7 +272,7 @@ exports.restoreCancelInvoice = async (req, res) => {
     return res.status(404).send("No invoice with that id");
 
   await InvoiceModel.findByIdAndUpdate(id, { cancel: false });
-  logger.info(`Cancel invoice restored: ${JSON.stringify(invoice)}`);
+  // logger.info(`Cancel invoice restored: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Cancel invoice restored successfully!!",
     success: true,
@@ -296,7 +287,7 @@ exports.deleteInvoice = async (req, res) => {
     return res.status(404).send("No invoice with that id");
 
   await InvoiceModel.findByIdAndDelete(id);
-  logger.info(`Invoice deleted: ${JSON.stringify(invoice)}`);
+  // logger.info(`Invoice deleted: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Invoice deleted successfully!!",
     success: true,
@@ -360,22 +351,21 @@ exports.updateDraftIn = async (req, res) => {
 exports.getDrafts = async (req, res) => {
   try {
     const { orgId } = req.params;
-    // console.log(orgId)
-    const newData = await InvoiceModel.find({ orgId: orgId }).sort({ _id: -1 });
-    // console.log(newData)
-    const Data = [];
-    newData.forEach((element) => {
-      if (element.draft == true) {
-        Data.push(element);
-      }
-    });
+    const newData = await InvoiceModel.find({
+      orgId: { $in: [orgId] },
+      draft: { $in: [true] },
+      delete: { $in: [false] },
+    }).sort({ _id: -1 });
     res.json({
-      data: Data,
+      data: newData,
       status: 201,
+      success: true,
       message: "Drafts.",
     });
   } catch (error) {
-    res.status(401).json({ message: "Something went wrong" });
+    res
+      .status(401)
+      .json({ message: "Something went wrong", status: 401, success: false });
   }
 };
 

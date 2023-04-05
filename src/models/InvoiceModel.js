@@ -37,7 +37,7 @@ const InvoiceSchema = new mongoose.Schema({
   status: { type: String },
   amountPaid: { type: Number, default: 0 },
   dueAmount: { type: Number, default: 0 },
-  delete: { type: Boolean },
+  delete: { type: Boolean, default: false },
   cancel: { type: Boolean },
   invoiceNumber: { type: Number },
   firm: {
