@@ -18,11 +18,11 @@ const leadRoutes = require("./src/routes/leadRoute");
 const orgRoutes = require("./src/routes/orgRoute");
 const roleRoutes = require("./src/routes/roleNpermissionRoute");
 const leadActivityRoutes = require("./src/routes/leadActivityRoute");
-const attendenceRoutes=require("./src/routes/empAttendenceRoute");
-const dedRoutes=require("./src/routes/dedRoute");
-const salRoutes=require("./src/routes/salRoute");
-const employeeRoutes=require("./src/routes/empRoute");
-const taxRoutes=require("./src/routes/taxRoutes");
+const attendenceRoutes = require("./src/routes/empAttendenceRoute");
+const dedRoutes = require("./src/routes/dedRoute");
+const salRoutes = require("./src/routes/salRoute");
+const employeeRoutes = require("./src/routes/empRoute");
+const taxRoutes = require("./src/routes/taxRoutes");
 
 require("dotenv").config({
   path: path.join(__dirname, "./.env"),
@@ -76,16 +76,15 @@ app.use("/api/firm", firmRoutes);
 app.use("/api/lead", leadRoutes);
 app.use("/api/org", orgRoutes);
 app.use("/api/leadActivity", leadActivityRoutes);
-app.use("/api/taxRates",taxRoutes);
+app.use("/api/taxRates", taxRoutes);
 
 app.use("/api/profile", profileRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/role", roleRoutes);
-app.use("/api/attendence",attendenceRoutes);
-app.use("/api/ded",dedRoutes);
-app.use("/api/sal",salRoutes);
-app.use("/api/employee",employeeRoutes);
-
+app.use("/api/attendence", attendenceRoutes);
+app.use("/api/ded", dedRoutes);
+app.use("/api/sal", salRoutes);
+app.use("/api/employee", employeeRoutes);
 
 app.use(async (req, res, next) => {
   if (req.headers["x-access-token"]) {

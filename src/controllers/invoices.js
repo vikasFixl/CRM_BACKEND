@@ -79,6 +79,48 @@ exports.getAllDeletedInvoices = async (req, res) => {
   }
 };
 
+exports.getInvoiceByClient = async (req, res) => {
+  const { orgId, clientId } = req.body;
+  try {
+    const Invoice = await InvoiceModel.find({
+      orgId: { $in: [orgId] },
+      "client.client_id": clientId,
+      delete: { $in: [false] },
+    }).sort({
+      _id: -1,
+    });
+    res.status(200).json({
+      data: Invoice,
+      success: true,
+      code: 200,
+      message: "all invoices get here!!",
+    });
+  } catch (error) {
+    res.status(409).json(error.message);
+  }
+};
+
+exports.getInvoiceByFirm = async (req, res) => {
+  const { orgId, firmID } = req.body;
+  try {
+    const Invoice = await InvoiceModel.find({
+      orgId: { $in: [orgId] },
+      "firm.firmID": firmID,
+      delete: { $in: [false] },
+    }).sort({
+      _id: -1,
+    });
+    res.status(200).json({
+      data: Invoice,
+      success: true,
+      code: 200,
+      message: "all invoices get here!!",
+    });
+  } catch (error) {
+    res.status(409).json(error.message);
+  }
+};
+
 exports.getAllCancelInvoices = async (req, res) => {
   const { orgId } = req.params;
   try {
