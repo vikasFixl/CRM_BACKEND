@@ -14,6 +14,10 @@ const firmSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    invoicePrefix: {
+      type: String,
+      required: true,
+    },
     add: {
       address1: {
         type: String,

@@ -175,7 +175,6 @@ exports.createInvoice = async (req, res) => {
         message: "Invoice created successfully!",
       });
     } else {
-      const allInvoice = await InvoiceModel.find();
       const newInvoice = new InvoiceModel({
         items: items,
         subTotal: subTotal,
@@ -184,10 +183,9 @@ exports.createInvoice = async (req, res) => {
         notes: notes,
         remark: remark,
         amount: amount,
-        invoiceNumber:
-          !allInvoice || allInvoice.length < 1 ? 1 : allInvoice.length + 1,
-        dueDate,
+        invoiceNumber: invoiceNumber,
         invoiceDate: invoiceDate,
+        dueDate: dueDate,
         client: client,
         status: status,
         firm: firm,
@@ -234,6 +232,39 @@ exports.getInvoice = async (req, res) => {
     });
   } catch (error) {
     res.status(409).json({ message: error.message });
+  }
+};
+
+exports.lastInvoiceNo = async (req, res) => {
+  const { orgId, firmId } = req.body;
+  try {
+    const Invoice = await InvoiceModel.find({
+      orgId: { $in: [orgId] },
+      "firm.firmID": firmId,
+    }).sort({
+      _id: -1,
+    });
+    console.log(Invoice[0].invoiceNumber);
+    if (Invoice.length == 0) {
+      res.status(200).json({
+        data: 0,
+        success: true,
+        code: 200,
+        message: "single invoice get",
+      });
+    } else {
+      res.status(200).json({
+        data: Invoice[0].invoiceNumber,
+        success: true,
+        code: 200,
+        message: "single invoice get",
+      });
+    }
+  } catch (error) {
+    res.status(401).json({
+      message: error.message,
+      success: false,
+    });
   }
 };
 

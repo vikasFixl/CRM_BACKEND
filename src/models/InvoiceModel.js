@@ -40,7 +40,7 @@ const InvoiceSchema = new mongoose.Schema({
   dueAmount: { type: Number, default: 0 },
   delete: { type: Boolean, default: false },
   cancel: { type: Boolean },
-  invoiceNumber: { type: Number },
+  invoiceNumber: { type: String, required: true },
   firm: {
     name: { type: String },
     phone: { type: Number },
