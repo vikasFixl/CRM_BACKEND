@@ -244,7 +244,6 @@ exports.lastInvoiceNo = async (req, res) => {
     }).sort({
       _id: -1,
     });
-    console.log(Invoice[0].invoiceNumber);
     if (Invoice.length == 0) {
       res.status(200).json({
         data: 0,
