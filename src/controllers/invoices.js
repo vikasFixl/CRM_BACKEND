@@ -85,7 +85,6 @@ exports.getInvoiceByClient = async (req, res) => {
     const Invoice = await InvoiceModel.find({
       orgId: { $in: [orgId] },
       "client.client_id": clientId,
-      delete: { $in: [false] },
     }).sort({
       _id: -1,
     });
@@ -106,7 +105,6 @@ exports.getInvoiceByFirm = async (req, res) => {
     const Invoice = await InvoiceModel.find({
       orgId: { $in: [orgId] },
       "firm.firmID": firmID,
-      delete: { $in: [false] },
     }).sort({
       _id: -1,
     });
