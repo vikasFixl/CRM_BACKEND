@@ -388,6 +388,21 @@ exports.updateDraftIn = async (req, res) => {
   res.json({ message: " Updated successfully!!" });
 };
 
+exports.drafttoinvoice = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send("No Draft with that id");
+
+  await InvoiceModel.findByIdAndUpdate(id, { draft: false });
+
+  res.status(201).json({
+    message: " Updated successfully!!",
+    success: true,
+    status: 201,
+  });
+};
+
 exports.getDrafts = async (req, res) => {
   try {
     const { orgId } = req.params;

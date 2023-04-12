@@ -26,6 +26,7 @@ router.post("/getInvoiceByFirm", invoiceController.getInvoiceByFirm);
 
 /// patch routes
 
+router.patch("/drafttoinvoice/:id", invoiceController.drafttoinvoice);
 router.patch("/updateDraft/:id", invoiceController.updateDraftIn);
 router.patch("/payment/:id", invoiceController.payment);
 router.patch("/softDeleteInvoice/:id", invoiceController.softDeleteInvoice);
