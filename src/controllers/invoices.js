@@ -151,6 +151,7 @@ exports.createInvoice = async (req, res) => {
     client,
     amount,
     dueDate,
+    invoiceNumber,
     invoiceDate,
     status,
     firm,
