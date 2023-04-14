@@ -13,13 +13,11 @@ exports.addTaxInFirm = async (req, res) => {
         message: "Firm tax created successfully!",
       });
     } else {
-      data.forEach((element1) => {
-        req.body.taxRates.forEach(async (element) => {
-          await taxModel.updateOne(
-            { _id: element1._id },
-            { $push: { taxRates: element } }
-          );
-        });
+      req.body.taxRates.forEach(async (element) => {
+        await taxModel.updateOne(
+          { _id: data[0]._id },
+          { $push: { taxRates: element } }
+        );
       });
       res.status(201).json({
         code: 201,
@@ -27,16 +25,37 @@ exports.addTaxInFirm = async (req, res) => {
         message: "Firm tax updated successfully!",
       });
     }
+    // else {
+    //   data.forEach((element1) => {
+    //     req.body.taxRates.forEach(async (element) => {
+    //       await taxModel.updateOne(
+    //         { _id: element1._id },
+    //         { $push: { taxRates: element } }
+    //       );
+    //     });
+    //   });
+    //   res.status(201).json({
+    //     code: 201,
+    //     success: true,
+    //     message: "Firm tax updated successfully!",
+    //   });
+    // }
   } catch (error) {
     console.log(error);
-    res.status(400).json({ message: "something went wrong! " });
+    res.status(400).json({
+      message: "something went wrong! ",
+      success: false,
+    });
   }
 };
 
 exports.postGlobalTax = async (req, res) => {
   try {
     const tax = req.body;
-    const orgData = await taxModel.find({ orgId: tax.orgId });
+    const orgData = await taxModel.find({
+      orgId: tax.orgId,
+      firmId: undefined,
+    });
     if (orgData.length === 0) {
       const newTax = new taxModel(tax);
       newTax.save();
@@ -46,19 +65,11 @@ exports.postGlobalTax = async (req, res) => {
         message: "Global tax created successfully!",
       });
     } else {
-      orgData.forEach((element1) => {
-        console.log(element1.firmId, "E1");
-        console.log(tax.firmId, "E2");
-        if (element1.firmId === undefined) {
-          req.body.taxRates.forEach(async (element) => {
-            await taxModel.updateOne(
-              { _id: element1._id },
-              { $push: { taxRates: element } }
-            );
-          });
-        } else {
-          console.log("Fail");
-        }
+      req.body.taxRates.forEach(async (element) => {
+        await taxModel.updateOne(
+          { _id: orgData[0]._id },
+          { $push: { taxRates: element } }
+        );
       });
       res.status(201).json({
         code: 201,
@@ -68,7 +79,10 @@ exports.postGlobalTax = async (req, res) => {
     }
   } catch (error) {
     console.log(error);
-    res.status(400).json({ message: "something went wrong! " });
+    res.status(400).json({
+      message: "something went wrong! ",
+      success: false,
+    });
   }
 };
 
