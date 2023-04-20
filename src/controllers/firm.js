@@ -130,7 +130,7 @@ exports.logo = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      message: err.message,
+      message: error.message,
       code: 400,
       success: false,
     });
