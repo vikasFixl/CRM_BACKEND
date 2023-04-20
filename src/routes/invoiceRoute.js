@@ -23,7 +23,7 @@ router.post("/create", invoiceController.createInvoice);
 router.post("/getSingleInvoice", invoiceController.getSingleInvoice);
 router.post("/getInvoiceByClient", invoiceController.getInvoiceByClient);
 router.post("/getInvoiceByFirm", invoiceController.getInvoiceByFirm);
-router.post("/lastInvoiceNo", invoiceController.lastInvoiceNo);
+router.post("/listInvoiceNo", invoiceController.listInvoiceNo);
 
 /// patch routes
 

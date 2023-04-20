@@ -236,8 +236,9 @@ exports.getInvoice = async (req, res) => {
   }
 };
 
-exports.lastInvoiceNo = async (req, res) => {
+exports.listInvoiceNo = async (req, res) => {
   const { orgId, firmId } = req.body;
+  const no = []
   try {
     const Invoice = await InvoiceModel.find({
       orgId: { $in: [orgId] },
@@ -250,14 +251,17 @@ exports.lastInvoiceNo = async (req, res) => {
         data: 0,
         success: true,
         code: 200,
-        message: "single invoice get",
+        message: "0 invoice in this firm.",
       });
     } else {
+      Invoice.forEach(element => {
+        no.push(element.invoiceNumber)
+      });
       res.status(200).json({
-        data: Invoice[0].invoiceNumber,
+        data: no,
         success: true,
         code: 200,
-        message: "single invoice get",
+        message: "Invoice number list",
       });
     }
   } catch (error) {
