@@ -39,18 +39,30 @@ exports.getClients = async (req, res) => {
 };
 
 exports.createClient = async (req, res) => {
-  const client = req.body;
   try {
-    const newClient = new ClientModel(client);
-    const data = await newClient.save();
-    res.status(201).json({
-      data: data,
-      success: true,
-      code: 201,
-      message: "Client added successfully!!",
+    const client = req.body;
+    const data = await ClientModel.findOne({ email: client.email });
+    if (data) {
+      res.status(400).json({
+        code: 400,
+        success: false,
+        message: `Client already registered with ${client.email}.`,
+      });
+    } else {
+      const newClient = new ClientModel(client);
+      await newClient.save();
+      res.status(201).json({
+        code: 201,
+        success: true,
+        message: "Client created successfully!",
+      });
+    }
+  } catch (err) {
+    res.status(400).json({
+      message: err,
+      code: 400,
+      success: false,
     });
-  } catch (error) {
-    res.status(409).json(error.message);
   }
 };
 
