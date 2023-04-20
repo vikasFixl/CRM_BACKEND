@@ -15,6 +15,7 @@ exports.createFirm = async (req, res) => {
       const newFirm = new FirmModel(form);
       await newFirm.save();
       res.status(201).json({
+        data: newFirm,
         code: 201,
         success: true,
         message: "Firm created successfully!",
