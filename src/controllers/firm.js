@@ -4,17 +4,29 @@ const FirmModel = require("../models/FirmModel");
 exports.createFirm = async (req, res) => {
   try {
     const form = req.body;
-    const newFirm = new FirmModel(form);
-    await newFirm.save();
-    res.status(201).json({
-      data: newFirm,
-      code: 201,
-      success: true,
-      message: "Firm created successfully!",
-    });
+    const data = await FirmModel.findOne({ email: form.email });
+    if (data) {
+      res.status(400).json({
+        code: 400,
+        success: false,
+        message: `Firm already registered with ${form.email}.`,
+      });
+    } else {
+      const newFirm = new FirmModel(form);
+      await newFirm.save();
+      res.status(201).json({
+        code: 201,
+        success: true,
+        message: "Firm created successfully!",
+      });
+    }
   } catch (err) {
     console.log(err);
-    res.status(400).json({ message: "something went wrong! " });
+    res.status(400).json({
+      message: err,
+      code: 400,
+      success: false,
+    });
   }
 };
 
@@ -37,7 +49,11 @@ exports.getFirm = async (req, res) => {
       message: "single firm fetch!!",
     });
   } catch (err) {
-    res.status(409).json({ message: err.message });
+    res.status(409).json({
+      message: err.message,
+      code: 400,
+      success: false,
+    });
   }
 };
 
@@ -52,7 +68,12 @@ exports.updateFirm = async (req, res) => {
     { ...firm, _id },
     { new: true }
   );
-  res.json(updatedFirm);
+  res.status(200).json({
+    data: updatedFirm,
+    success: true,
+    code: 201,
+    message: "Firm updated!",
+  });
 };
 
 exports.deleteFirm = async (req, res) => {
@@ -62,7 +83,11 @@ exports.deleteFirm = async (req, res) => {
     return res.status(404).send(" no firm with that id. ");
   await FirmModel.findByIdAndRemove(id);
 
-  res.json({ message: "Firm deleted successfully!" });
+  res.json({
+    message: "Firm deleted successfully!",
+    code: 200,
+    success: true,
+  });
 };
 
 exports.getAllFirm = async (req, res) => {
@@ -77,7 +102,11 @@ exports.getAllFirm = async (req, res) => {
       message: "all firms get here!!",
     });
   } catch (err) {
-    res.status(409).json(err.message);
+    res.status(409).json({
+      message: err.message,
+      code: 409,
+      success: false,
+    });
   }
 };
 
@@ -99,6 +128,10 @@ exports.logo = async (req, res) => {
       message: "logo Updated successfully!",
     });
   } catch (error) {
-    res.status(400).json({ message: "something went wrong! " });
+    res.status(400).json({
+      message: err.message,
+      code: 400,
+      success: false,
+    });
   }
 };
