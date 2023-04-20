@@ -77,24 +77,30 @@ exports.updateClient = async (req, res) => {
     { ...client, _id },
     { new: true }
   );
-  res.json(updatedClient);
+  res.json({
+    data: updatedClient,
+    code: 201,
+    success: true,
+    message: "Client updated successfully!",
+  });
 };
 
 exports.deleteClient = async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No Client with that id");
-
   await ClientModel.findByIdAndRemove(id);
-
-  res.json({ message: "Client deleted successfully" });
+  res.json({
+    code: 201,
+    success: true,
+    message: "Client deleted successfully",
+  });
 };
 
 exports.getClientsByUser = async (req, res) => {
   const { searchQuery } = req.query;
   try {
     const clients = await ClientModel.find({ userId: searchQuery });
-
     res.json({ data: clients });
   } catch (error) {
     res.status(404).json({ message: error.message });
