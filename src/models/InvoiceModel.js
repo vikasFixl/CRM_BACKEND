@@ -1,3 +1,4 @@
+const { number } = require("joi");
 const mongoose = require("mongoose");
 
 const InvoiceSchema = new mongoose.Schema({
@@ -39,6 +40,7 @@ const InvoiceSchema = new mongoose.Schema({
   amountPaid: { type: Number, default: 0 },
   dueAmount: { type: Number, default: 0 },
   delete: { type: Boolean, default: false },
+  roundOff: { type: Number },
   cancel: { type: Boolean },
   invoiceNumber: { type: String, required: true },
   firm: {
