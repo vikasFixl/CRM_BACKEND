@@ -348,7 +348,7 @@ exports.restoreCancelInvoice = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No invoice with that id");
 
-  await InvoiceModel.findByIdAndUpdate(id, { cancel: false });
+  await InvoiceModel.findByIdAndUpdate(id, { cancel: false, status: "Pending" });
   // logger.info(`Cancel invoice restored: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Cancel invoice restored successfully!!",
