@@ -119,6 +119,42 @@ exports.getInvoiceByFirm = async (req, res) => {
   }
 };
 
+exports.listInvoiceNo = async (req, res) => {
+  const { orgId, firmId } = req.body;
+  const no = []
+  try {
+    const Invoice = await InvoiceModel.find({
+      orgId: { $in: [orgId] },
+      "firm.firmID": firmId,
+    }).sort({
+      _id: -1,
+    });
+    if (Invoice.length == 0) {
+      res.status(200).json({
+        data: 0,
+        success: true,
+        code: 200,
+        message: "0 invoice in this firm.",
+      });
+    } else {
+      Invoice.forEach(element => {
+        no.push(element.invoiceNumber)
+      });
+      res.status(200).json({
+        data: no,
+        success: true,
+        code: 200,
+        message: "Invoice number list",
+      });
+    }
+  } catch (error) {
+    res.status(401).json({
+      message: error.message,
+      success: false,
+    });
+  }
+};
+
 exports.getAllCancelInvoices = async (req, res) => {
   const { orgId } = req.params;
   try {
@@ -151,15 +187,16 @@ exports.createInvoice = async (req, res) => {
     client,
     amount,
     dueDate,
-    invoiceNumber,
     invoiceDate,
     status,
     firm,
+    invoiceNumber,
     termsNcondition,
     currency,
     partialPay,
     allowTip,
     draft,
+    roundOff,
     recurringInvoice,
     tax,
     desc,
@@ -185,8 +222,8 @@ exports.createInvoice = async (req, res) => {
         remark: remark,
         amount: amount,
         invoiceNumber: invoiceNumber,
-        invoiceDate: invoiceDate,
         dueDate: dueDate,
+        invoiceDate: invoiceDate,
         client: client,
         status: status,
         firm: firm,
@@ -197,6 +234,7 @@ exports.createInvoice = async (req, res) => {
         draft: draft,
         recurringInvoice: recurringInvoice,
         tax: tax,
+        roundOff: roundOff,
         desc: desc,
         orgId: orgId,
       });
@@ -233,42 +271,6 @@ exports.getInvoice = async (req, res) => {
     });
   } catch (error) {
     res.status(409).json({ message: error.message });
-  }
-};
-
-exports.listInvoiceNo = async (req, res) => {
-  const { orgId, firmId } = req.body;
-  const no = []
-  try {
-    const Invoice = await InvoiceModel.find({
-      orgId: { $in: [orgId] },
-      "firm.firmID": firmId,
-    }).sort({
-      _id: -1,
-    });
-    if (Invoice.length == 0) {
-      res.status(200).json({
-        data: 0,
-        success: true,
-        code: 200,
-        message: "0 invoice in this firm.",
-      });
-    } else {
-      Invoice.forEach(element => {
-        no.push(element.invoiceNumber)
-      });
-      res.status(200).json({
-        data: no,
-        success: true,
-        code: 200,
-        message: "Invoice number list",
-      });
-    }
-  } catch (error) {
-    res.status(401).json({
-      message: error.message,
-      success: false,
-    });
   }
 };
 
@@ -332,7 +334,7 @@ exports.cancelInvoice = async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No invoice with that id");
-  await InvoiceModel.findByIdAndUpdate(id, { cancel: true });
+  await InvoiceModel.findByIdAndUpdate(id, { cancel: true, status: "Cancel"});
   // logger.info(`Invoice canceled delete: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Invoice canceled successfully!!",
@@ -429,7 +431,7 @@ exports.drafttoinvoice = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No Draft with that id");
 
-  await InvoiceModel.findByIdAndUpdate(id, { draft: false });
+  await InvoiceModel.findByIdAndUpdate(id, { draft: false, status: "Pending"});
 
   res.status(201).json({
     message: " Updated successfully!!",
