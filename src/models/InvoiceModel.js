@@ -36,7 +36,10 @@ const InvoiceSchema = new mongoose.Schema({
   total: { type: Number },
   invoiceDate: { type: Date },
   dueDate: { type: Date },
-  status: { type: String },
+  status: {
+    type: String,
+    enum: ["Pending", "Paid", "Overdue", "Partial Paid", "Draft", "Canceled"],
+  },
   amountPaid: { type: Number, default: 0 },
   dueAmount: { type: Number, default: 0 },
   delete: { type: Boolean, default: false },
