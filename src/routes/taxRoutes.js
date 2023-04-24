@@ -7,6 +7,7 @@ router.post("/addTaxInFirm", taxController.addTaxInFirm);
 
 router.get("/gettaxRates/:firmId", taxController.gettaxrates);
 router.get("/getGlobalTaxs/:orgId", taxController.getGlobalTaxs);
+router.get("/getAllTaxes/:orgId", taxController.getAllTaxes);
 
 router.patch("/updateRates/:id", taxController.updatetaxrates);
 

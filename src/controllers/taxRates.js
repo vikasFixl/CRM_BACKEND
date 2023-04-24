@@ -122,6 +122,30 @@ exports.getGlobalTaxs = async (req, res) => {
   }
 };
 
+exports.getAllTaxes = async (req, res) => {
+  try {
+    const newData = [];
+    const orgId = req.params.orgId;
+    const data = await taxModel.find({ orgId: orgId }).populate('firmId');
+    data.forEach((element) => {
+      console.log(element);
+      newData.push({
+        global: element.globalTax,
+        firmId: element.firmId,
+        taxRates: element.taxRates,
+      });
+    });
+    res.status(200).json({
+      data: newData,
+      code: 200,
+      success: true,
+      message: "all data get here!!",
+    });
+  } catch (error) {
+    res.status(409).json(error.message);
+  }
+};
+
 exports.updatetaxrates = async (req, res) => {
   try {
     const id = req.params.id;

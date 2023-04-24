@@ -4,7 +4,7 @@ const taxSchema = new mongoose.Schema(
   {
     firmId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "FIRM",
+      ref: "Firm",
       required: false,
     },
     orgId: {
