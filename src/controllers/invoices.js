@@ -121,7 +121,7 @@ exports.getInvoiceByFirm = async (req, res) => {
 
 exports.listInvoiceNo = async (req, res) => {
   const { orgId, firmId } = req.body;
-  const no = []
+  const no = [];
   try {
     const Invoice = await InvoiceModel.find({
       orgId: { $in: [orgId] },
@@ -137,8 +137,8 @@ exports.listInvoiceNo = async (req, res) => {
         message: "0 invoice in this firm.",
       });
     } else {
-      Invoice.forEach(element => {
-        no.push(element.invoiceNumber)
+      Invoice.forEach((element) => {
+        no.push(element.invoiceNumber);
       });
       res.status(200).json({
         data: no,
@@ -201,6 +201,7 @@ exports.createInvoice = async (req, res) => {
     tax,
     desc,
     orgId,
+    curConvert,
   } = req.body;
   try {
     if (draft == true) {
@@ -237,6 +238,7 @@ exports.createInvoice = async (req, res) => {
         roundOff: roundOff,
         desc: desc,
         orgId: orgId,
+        curConvert: curConvert,
       });
       await newInvoice.save();
       res.status(201).json({
@@ -334,7 +336,7 @@ exports.cancelInvoice = async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No invoice with that id");
-  await InvoiceModel.findByIdAndUpdate(id, { cancel: true, status: "Cancel"});
+  await InvoiceModel.findByIdAndUpdate(id, { cancel: true, status: "Cancel" });
   // logger.info(`Invoice canceled delete: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Invoice canceled successfully!!",
@@ -348,7 +350,10 @@ exports.restoreCancelInvoice = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No invoice with that id");
 
-  await InvoiceModel.findByIdAndUpdate(id, { cancel: false, status: "Pending" });
+  await InvoiceModel.findByIdAndUpdate(id, {
+    cancel: false,
+    status: "Pending",
+  });
   // logger.info(`Cancel invoice restored: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Cancel invoice restored successfully!!",
@@ -431,7 +436,7 @@ exports.drafttoinvoice = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No Draft with that id");
 
-  await InvoiceModel.findByIdAndUpdate(id, { draft: false, status: "Pending"});
+  await InvoiceModel.findByIdAndUpdate(id, { draft: false, status: "Pending" });
 
   res.status(201).json({
     message: " Updated successfully!!",

@@ -74,6 +74,7 @@ const InvoiceSchema = new mongoose.Schema({
   ],
   termsNcondition: [],
   currency: { type: String },
+  curConvert: { type: String },
   partialPay: { type: Boolean },
   allowTip: { type: Boolean },
   recurringInvoice: {
