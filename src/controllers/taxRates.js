@@ -274,13 +274,26 @@ exports.clientByTax = async (req, res) => {
 
 exports.invoiceByTax = async (req, res) => {
   try {
-    const { orgId, tax } = req.body;
+    const { orgId, tax, taxAmt } = req.body;
     const data = await InvoiceModel.find({
       orgId: orgId,
       tax: tax,
     }).select("invoiceNumber taxAmt -_id");
+    const result = [];
+    data.forEach((element) => {
+      element.taxAmt.forEach((element1) => {
+        if (Object.keys(element1).toString() === taxAmt) {
+          console.log(element)
+          console.log(element1)
+          result.push({
+            invoiceNo : element.invoiceNumber,
+            tax: element1
+          });
+        }
+      });
+    });
     res.status(200).json({
-      data: data,
+      data: result,
       success: true,
       code: 200,
     });
