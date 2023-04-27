@@ -1,4 +1,5 @@
 const taxModel = require("../models/taxModel");
+const InvoiceModel = require("../models/InvoiceModel");
 
 exports.addTaxInFirm = async (req, res) => {
   try {
@@ -126,7 +127,7 @@ exports.getAllTaxes = async (req, res) => {
   try {
     const newData = [];
     const orgId = req.params.orgId;
-    const data = await taxModel.find({ orgId: orgId }).populate('firmId');
+    const data = await taxModel.find({ orgId: orgId }).populate("firmId");
     data.forEach((element) => {
       console.log(element);
       newData.push({
@@ -194,5 +195,99 @@ exports.deletetaxRate = async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(409).send("Some error has occured while updating.");
+  }
+};
+
+exports.clientByTax = async (req, res) => {
+  try {
+    const { orgId, tax } = req.body;
+    const data = await InvoiceModel.find({
+      orgId: orgId,
+      tax: tax,
+    }).select("client taxAmt -_id");
+
+    // create a dictionary object to store the sum of taxAmt values
+    const taxAmtSumDict = {};
+
+    data.forEach((obj) => {
+      const clientId = obj.client.client_id;
+      const taxAmt = obj.taxAmt.length > 0 ? obj.taxAmt[0] : {}; // get the first taxAmt object, or an empty object if the array is empty
+      const taxAmtString = JSON.stringify(taxAmt); // convert the taxAmt object to a string to use it as a dictionary key
+
+      if (!taxAmtSumDict[clientId]) {
+        taxAmtSumDict[clientId] = {};
+      }
+
+      if (!taxAmtSumDict[clientId][taxAmtString]) {
+        taxAmtSumDict[clientId][taxAmtString] = 0;
+      }
+
+      for (const key in taxAmt) {
+        if (taxAmt.hasOwnProperty(key)) {
+          taxAmtSumDict[clientId][taxAmtString] += parseInt(taxAmt[key]);
+        }
+      }
+    });
+
+    // create a new array with the sum of taxAmt values for each taxAmt object and client_id
+    const result = [];
+
+    for (const clientId in taxAmtSumDict) {
+      if (taxAmtSumDict.hasOwnProperty(clientId)) {
+        for (const taxAmtString in taxAmtSumDict[clientId]) {
+          if (taxAmtSumDict[clientId].hasOwnProperty(taxAmtString)) {
+            const taxAmt = JSON.parse(taxAmtString);
+            const sum = taxAmtSumDict[clientId][taxAmtString];
+
+            const foundObj = data.find(
+              (obj) => obj.client.client_id.toString() === clientId
+            );
+            const firstName = foundObj?.client?.firstName;
+            const lastName = foundObj?.client?.lastName;
+            const clientFirmName = foundObj?.client?.clientFirmName;
+            result.push({
+              client_id: clientId,
+              taxAmt,
+              sum,
+              firstName,
+              lastName,
+              clientFirmName,
+            });
+          }
+        }
+      }
+    }
+    res.status(200).json({
+      data: result,
+      message: "List of clients according to tax.",
+      success: true,
+      code: 200,
+    });
+  } catch (err) {
+    res.status(400).json({
+      message: err,
+      success: false,
+      code: 400,
+    });
+  }
+};
+
+exports.invoiceByTax = async (req, res) => {
+  try {
+    const { orgId, tax } = req.body;
+    const data = await InvoiceModel.find({
+      orgId: orgId,
+      tax: tax,
+    }).select("invoiceNumber taxAmt -_id");
+    res.status(200).json({
+      data: data,
+      success: true,
+      code: 200,
+    });
+  } catch (err) {
+    res.status(400).json({
+      message: err,
+      success: false,
+    });
   }
 };

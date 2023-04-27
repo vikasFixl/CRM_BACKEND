@@ -336,7 +336,7 @@ exports.cancelInvoice = async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No invoice with that id");
-  await InvoiceModel.findByIdAndUpdate(id, { cancel: true, status: "Cancel" });
+  await InvoiceModel.findByIdAndUpdate(id, { cancel: true, status: "Canceled" });
   // logger.info(`Invoice canceled delete: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Invoice canceled successfully!!",
