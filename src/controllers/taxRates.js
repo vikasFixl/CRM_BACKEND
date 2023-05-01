@@ -283,11 +283,10 @@ exports.invoiceByTax = async (req, res) => {
     data.forEach((element) => {
       element.taxAmt.forEach((element1) => {
         if (Object.keys(element1).toString() === taxAmt) {
-          console.log(element)
-          console.log(element1)
           result.push({
-            invoiceNo : element.invoiceNumber,
-            tax: element1
+            invoiceId: element._id,
+            invoiceNo: element.invoiceNumber,
+            tax: element1,
           });
         }
       });
