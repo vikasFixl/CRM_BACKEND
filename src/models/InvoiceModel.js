@@ -42,7 +42,7 @@ const InvoiceSchema = new mongoose.Schema({
     enum: ["Pending", "Paid", "Overdue", "Partial Paid", "Draft", "Canceled"],
   },
   amountPaid: { type: Number, default: 0 },
-  dueAmount: { type: Number, default: 0 },
+  dueAmount: { type: Number },
   delete: { type: Boolean, default: false },
   roundOff: { type: Number },
   cancel: { type: Boolean },
