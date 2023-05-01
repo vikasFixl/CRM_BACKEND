@@ -278,7 +278,7 @@ exports.invoiceByTax = async (req, res) => {
     const data = await InvoiceModel.find({
       orgId: orgId,
       tax: tax,
-    }).select("invoiceNumber taxAmt -_id");
+    }).select("invoiceNumber taxAmt");
     const result = [];
     data.forEach((element) => {
       element.taxAmt.forEach((element1) => {
