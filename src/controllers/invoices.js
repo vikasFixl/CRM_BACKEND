@@ -336,7 +336,10 @@ exports.cancelInvoice = async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No invoice with that id");
-  await InvoiceModel.findByIdAndUpdate(id, { cancel: true, status: "Canceled" });
+  await InvoiceModel.findByIdAndUpdate(id, {
+    cancel: true,
+    status: "Canceled",
+  });
   // logger.info(`Invoice canceled delete: ${JSON.stringify(invoice)}`);
   res.json({
     message: "Invoice canceled successfully!!",
@@ -458,6 +461,27 @@ exports.getDrafts = async (req, res) => {
       status: 201,
       success: true,
       message: "Drafts.",
+    });
+  } catch (error) {
+    res
+      .status(401)
+      .json({ message: "Something went wrong", status: 401, success: false });
+  }
+};
+exports.getCancel = async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const newData = await InvoiceModel.find({
+      orgId: { $in: [orgId] },
+      cancel: { $in: [true] },
+      draft: { $in: [false] },
+      delete: { $in: [false] },
+    }).sort({ _id: -1 });
+    res.json({
+      data: newData,
+      status: 201,
+      success: true,
+      message: "Canceled invoices.",
     });
   } catch (error) {
     res
