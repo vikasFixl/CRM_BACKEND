@@ -1,16 +1,32 @@
 const mongoose = require("mongoose");
 
 const employeeSchema = new mongoose.Schema({
-  name: {
+  firstName: {
     type: String,
+    required: true,
+  },
+  lastName: {
+    type: String,
+    required: false,
   },
   orgId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "ORG",
   },
-  userid: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
+  },
+  firmId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Firm",
+  },
+  email: {
+    type: String,
+  },
+  eidPrefix: {
+    type: String,
+    unique: true,
   },
   eid: {
     type: String,
@@ -18,21 +34,31 @@ const employeeSchema = new mongoose.Schema({
   },
   gender: {
     type: String,
+    required: false,
+  },
+  skills: {
+    type: Array,
+    required: false,
   },
   dob: {
     type: String,
+    required: false,
   },
   doj: {
     type: String,
+    required: false,
   },
   dol: {
     type: Number,
+    required: false,
   },
   designation: {
     type: String,
+    required: false,
   },
-  panno: {
+  panNo: {
     type: String,
+    required: false,
   },
   bankDetails: {
     accno: {

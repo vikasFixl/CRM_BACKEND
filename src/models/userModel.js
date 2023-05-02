@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-// const { stringify } = require("querystring");
 
 const userSchema = new mongoose.Schema(
   {
@@ -20,6 +19,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    designation: {
+      type: String,
+      required: false,
+    },
     department: {
       type: String,
       required: true,
@@ -32,12 +35,27 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
-    resetToken: String,
-    expireToken: Date,
-    permissions: [{}],
+    permissions: {
+      type: Array,
+      required: false,
+    },
+    delete: {
+      type: String,
+      required: false,
+      default: false
+    },
     profilePhoto: { type: String },
     eid: { type: String },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
+    firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" },
+    resetToken: {
+      type: String,
+      required: false,
+    },
+    expireToken: {
+      type: String,
+      required: false,
+    },
   },
   {
     timestamps: true,
