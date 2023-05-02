@@ -1,7 +1,15 @@
 const vendorModel = require("../models/vendorModel");
+const mongoose = require("mongoose");
 
 exports.getAllVendor = async (req, res) => {
   const { orgId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(orgId))
+    return res.status(404).json({
+      message: "Wrong object id.",
+      success: false,
+    });
+
   const data = await vendorModel.find({ orgId: orgId }).sort("-1");
   if (data.length === 0) {
     res.status(200).json({
@@ -19,6 +27,13 @@ exports.getAllVendor = async (req, res) => {
 
 exports.getVendorById = async (req, res) => {
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({
+      message: "Wrong object id.",
+      success: false,
+    });
+
   const data = await vendorModel.findById(id);
   if (!data) {
     res.status(200).json({
@@ -36,6 +51,13 @@ exports.getVendorById = async (req, res) => {
 
 exports.getVendorByFirm = async (req, res) => {
   const { firmId } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(firmId))
+    return res.status(404).json({
+      message: "Wrong object id.",
+      success: false,
+    });
+
   const data = await vendorModel.find({ firmId: firmId }).sort("-1");
   if (data.length === 0) {
     res.status(200).json({
@@ -64,6 +86,13 @@ exports.createVendor = async (req, res) => {
 exports.updateVendor = async (req, res) => {
   const data = req.body;
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({
+      message: "Wrong object id.",
+      success: false,
+    });
+
   await vendorModel.findByIdAndUpdate(id, data, { new: true });
   res.status(201).json({
     success: true,
@@ -73,6 +102,13 @@ exports.updateVendor = async (req, res) => {
 
 exports.softDeleteVendor = async (req, res) => {
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({
+      message: "Wrong object id.",
+      success: false,
+    });
+
   await vendorModel.findByIdAndUpdate(id, { delete: true }, { new: true });
   res.status(201).json({
     success: true,
@@ -82,6 +118,13 @@ exports.softDeleteVendor = async (req, res) => {
 
 exports.restoreVendor = async (req, res) => {
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({
+      message: "Wrong object id.",
+      success: false,
+    });
+
   await vendorModel.findByIdAndUpdate(id, { delete: false }, { new: true });
   res.status(201).json({
     success: true,
@@ -91,6 +134,13 @@ exports.restoreVendor = async (req, res) => {
 
 exports.deleteVendor = async (req, res) => {
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).json({
+      message: "Wrong object id.",
+      success: false,
+    });
+
   await vendorModel.findByIdAndDelete(id);
   res.status(204).json({
     success: true,
