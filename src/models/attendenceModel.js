@@ -1,37 +1,15 @@
-const mongoose = require('mongoose');
+var mongoose = require("mongoose");
+var Schema = mongoose.Schema;
 
-const atdSchema = new mongoose.Schema({
-    eid:{
-        type : String
-    },
-    attendence:[{
-        status:{type:String},
-        date:{
-             type:Date,
-             default:Date.now,
-         },
-         entry:{type:Date,
-            default:Date.now},
-         exit:{type:Date},
-         duration:{type:String}
-        }],
-    leaves:[{
-        status:{type:String},
-        from:{
-            type:Date
-        },
-        to:{
-            type:Date
-        },
-        reason:{
-            type:String
-        },
-        adminStatus:{
-            type:String,
-            enum:["Accept","Reject"],
-        default:"Awaiting"}
-    }]
+var AttendanceSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  empId: { type: Schema.Types.ObjectId, ref: "Employee", required: true },
+  year: { type: Number, required: true },
+  month: { type: Number, required: true },
+  date: { type: Number, required: true },
+  chkIn: { type: String, required: true },
+  chkOut: { type: String, required: false },
+  present: { type: Boolean, required: true },
 });
 
-const atd = mongoose.model('atd',atdSchema);
-module.exports = atd;
+module.exports = mongoose.model("Attendance", AttendanceSchema);
