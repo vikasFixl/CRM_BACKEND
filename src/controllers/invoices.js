@@ -237,6 +237,7 @@ exports.createInvoice = async (req, res) => {
         currency: currency,
         partialPay: partialPay,
         allowTip: allowTip,
+        incluTax: incluTax,
         draft: draft,
         recurringInvoice: recurringInvoice,
         tax: tax,
@@ -244,11 +245,10 @@ exports.createInvoice = async (req, res) => {
         desc: desc,
         orgId: orgId,
         curConvert: curConvert,
-        incluTax: incluTax
       });
-      await newInvoice.save();
+     const bd2 =  await newInvoice.save();
       res.status(201).json({
-        data: newInvoice,
+        data: bd2,
         success: true,
         code: 201,
         message: "Invoice created successfully!",
