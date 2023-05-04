@@ -32,11 +32,11 @@ exports.createFirm = async (req, res) => {
 };
 
 exports.getFirm = async (req, res) => {
-  const { org } = req.params;
+  const { orgId } = req.params;
   const { id } = req.params;
   try {
     const newData = [];
-    const firm = await FirmModel.find({ orgId: org });
+    const firm = await FirmModel.find({ orgId: orgId });
     firm.forEach((element) => {
       if (element._id == id) {
         newData.push(element);
@@ -48,6 +48,25 @@ exports.getFirm = async (req, res) => {
       success: true,
       code: 200,
       message: "single firm fetch!!",
+    });
+  } catch (err) {
+    res.status(409).json({
+      message: err.message,
+      code: 400,
+      success: false,
+    });
+  }
+};
+
+exports.getFirmList = async (req, res) => {
+  const { orgId } = req.params;
+  try {
+    const firm = await FirmModel.find({ orgId: orgId }).select("name").sort("-1");
+    res.status(200).json({
+      data: firm,
+      success: true,
+      code: 200,
+      message: "Firm list fetch!!",
     });
   } catch (err) {
     res.status(409).json({
@@ -92,9 +111,9 @@ exports.deleteFirm = async (req, res) => {
 };
 
 exports.getAllFirm = async (req, res) => {
-  const { org } = req.params;
+  const { orgId } = req.params;
   try {
-    const firmAll = await FirmModel.find({ orgId: org }).sort({ _id: -1 });
+    const firmAll = await FirmModel.find({ orgId: orgId }).sort({ _id: -1 });
 
     res.status(200).json({
       data: firmAll,

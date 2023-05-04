@@ -28,8 +28,9 @@ router.post('/create',firmController.createFirm);
 
 router.delete('/delete/:id', firmController.deleteFirm);
 
-router.get('/:org/:id', firmController.getFirm);
-router.get('/:org', firmController.getAllFirm);
+router.get('/getFirm/:orgId/:id', firmController.getFirm);
+router.get('/getAllFirm/:orgId', firmController.getAllFirm);
+router.get('/getFirmList/:orgId', firmController.getFirmList);
 
 router.patch('/update/:id', firmController.updateFirm);
 router.patch('/insertlogo/:id',upload.single("logo"),firmController.logo);
