@@ -110,6 +110,8 @@ const firmSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    tinNo: { type: String, required: false },
+    cinNo: { type: String, required: false },
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ORG",

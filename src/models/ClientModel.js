@@ -60,6 +60,8 @@ const ClientSchema = new mongoose.Schema(
       },
     },
     taxId: { type: String, required: false },
+    tinNo: { type: String, required: false },
+    cinNo: { type: String, required: false },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
     firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" },
   },
