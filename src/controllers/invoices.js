@@ -204,7 +204,7 @@ exports.createInvoice = async (req, res) => {
     desc,
     orgId,
     curConvert,
-    incluTax
+    incluTax,
   } = req.body;
   try {
     if (draft == true) {
@@ -246,7 +246,7 @@ exports.createInvoice = async (req, res) => {
         orgId: orgId,
         curConvert: curConvert,
       });
-     const bd2 =  await newInvoice.save();
+      const bd2 = await newInvoice.save();
       res.status(201).json({
         data: bd2,
         success: true,
@@ -299,13 +299,13 @@ exports.getSingleInvoice = async (req, res) => {
 
 exports.updateInvoice = async (req, res) => {
   const { id } = req.params;
+  const data = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).send("No invoice with that id");
 
-  await InvoiceModel.findByIdAndUpdate(id, { status: req.body.status });
-  // logger.info(`Invoice created: ${JSON.stringify(invoice)}`);
-  res.json({ message: "Status Updated successfully!!" });
+  await InvoiceModel.findByIdAndUpdate(id, data, { new: true });
+  res.json({ message: "Invoice Updated successfully!!" });
 };
 
 exports.softDeleteInvoice = async (req, res) => {

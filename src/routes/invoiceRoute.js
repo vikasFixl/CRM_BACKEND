@@ -28,6 +28,7 @@ router.post("/listInvoiceNo", invoiceController.listInvoiceNo);
 
 /// patch routes
 
+router.patch("/updateInvoice/:id", invoiceController.updateInvoice);
 router.patch("/drafttoinvoice/:id", invoiceController.drafttoinvoice);
 router.patch("/updateDraft/:id", invoiceController.updateDraftIn);
 router.patch("/payment/:id", invoiceController.payment);
@@ -38,10 +39,6 @@ router.patch(
   "/restoreCancelInvoice/:id",
   invoiceController.restoreCancelInvoice
 );
-
-/// put routes
-
-router.put("/status/:id", invoiceController.updateInvoice);
 
 /// delete routes
 
