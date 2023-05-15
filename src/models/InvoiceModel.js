@@ -9,6 +9,7 @@ const InvoiceSchema = new mongoose.Schema({
       quantity: { type: String },
       amount: { type: Number },
       hsn: { type: String },
+      sac: { type: String },
       taxRate:{type: String},
       desc: { type: String },
     },

@@ -12,17 +12,20 @@ const userRoutes = require("./src/routes/userRoute");
 const invoiceRoutes = require("./src/routes/invoiceRoute");
 const clientRoutes = require("./src/routes/clientRoute");
 const profileRoutes = require("./src/routes/profileRoute");
-const searchRoutes = require("./src/routes/searchRoute");
 const firmRoutes = require("./src/routes/firmRoute");
-const leadRoutes = require("./src/routes/leadRoute");
+const taxRoutes = require("./src/routes/taxRoutes");
 const orgRoutes = require("./src/routes/orgRoute");
+const orgRoutes = require("./src/routes/orgRoute");
+const productRoutes = require("./src/routes/productRoutes.js");
+
+const searchRoutes = require("./src/routes/searchRoute");
+const leadRoutes = require("./src/routes/leadRoute");
 const roleRoutes = require("./src/routes/roleNpermissionRoute");
 const leadActivityRoutes = require("./src/routes/leadActivityRoute");
 const attendenceRoutes = require("./src/routes/empAttendenceRoute");
 const dedRoutes = require("./src/routes/dedRoute");
 const salRoutes = require("./src/routes/salRoute");
 const employeeRoutes = require("./src/routes/empRoute");
-const taxRoutes = require("./src/routes/taxRoutes");
 const vendorRoutes = require("./src/routes/vendorRoutes");
 
 require("dotenv").config({
@@ -78,6 +81,7 @@ app.use("/api/lead", leadRoutes);
 app.use("/api/org", orgRoutes);
 app.use("/api/leadActivity", leadActivityRoutes);
 app.use("/api/taxRates", taxRoutes);
+app.use("/api/productRoutes", productRoutes);
 
 app.use("/api/vendor", vendorRoutes);
 
