@@ -15,7 +15,6 @@ const profileRoutes = require("./src/routes/profileRoute");
 const firmRoutes = require("./src/routes/firmRoute");
 const taxRoutes = require("./src/routes/taxRoutes");
 const orgRoutes = require("./src/routes/orgRoute");
-const orgRoutes = require("./src/routes/orgRoute");
 const productRoutes = require("./src/routes/productRoutes.js");
 
 const searchRoutes = require("./src/routes/searchRoute");
