@@ -25,7 +25,7 @@ exports.getAllProducts = async (req, res) => {
 };
 exports.getProductDetails = async (req, res) => {
   const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(IdleDeadline)) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
       message: "Product id is not valid.",
       success: false,

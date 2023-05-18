@@ -80,7 +80,7 @@ app.use("/api/lead", leadRoutes);
 app.use("/api/org", orgRoutes);
 app.use("/api/leadActivity", leadActivityRoutes);
 app.use("/api/taxRates", taxRoutes);
-app.use("/api/productRoutes", productRoutes);
+app.use("/api/product", productRoutes);
 
 app.use("/api/vendor", vendorRoutes);
 
