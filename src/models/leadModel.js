@@ -1,22 +1,10 @@
 const mongoose = require("mongoose");
 const LeadSchema = new mongoose.Schema(
   {
-    clientFName: {
-      type: String,
-      required: true,
-    },
-    clientLName: {
-      type: String,
-      required: true,
-    },
-    clientEmail: {
-      type: String,
-      required: true,
-    },
-    clientPhone: {
-      type: String,
-      required: true,
-    },
+    clientFName: { type: String },
+    clientLName: { type: String },
+    clientEmail: { type: String },
+    clientPhone: { type: String },
     clientAddress: {
       lineOne: { type: String },
       lineTwo: { type: String },
@@ -25,42 +13,18 @@ const LeadSchema = new mongoose.Schema(
       city: { type: String },
       code: { type: String },
     },
-    timezone: {
-      type: String,
-      required: true,
-    },
-    stage: {
-      type: String,
-      required: true,
-    },
-    estimatedWorth: {
-      type: String,
-      required: true,
-    },
-    createdDate: {
-      type: String,
-      required: true,
-    },
-    title: {
-      type: String,
-      required: true,
-    },
-    closureDate: {
-      type: String,
-      required: true,
-    },
+    timezone: { type: String },
+    stage: { type: String },
+    estimatedWorth: { type: String },
+    createdDate: { type: String },
+    title: { type: String },
+    closureDate: { type: String },
     pipeline: {
-      department: {
-        type: String,
-        required: true,
-      },
+      department: { type: String },
       userType: { type: String },
       assignTo: { type: String },
     },
-    status: {
-      type: String,
-      required: true,
-    },
+    status: { type: String },
     orgDetails: {
       orgName: { type: String },
       orgEmail: { type: String },
@@ -77,7 +41,6 @@ const LeadSchema = new mongoose.Schema(
     description: { type: String },
     delete: {
       type: Boolean,
-      required: true,
       default: false,
     },
     randomLeadId: { type: String },
