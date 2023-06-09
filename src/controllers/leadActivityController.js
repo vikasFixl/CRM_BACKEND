@@ -1,18 +1,12 @@
+const { default: mongoose } = require("mongoose");
 const LeadActivity = require("../models/LeadActivity");
 
 exports.getLeadActivity = async (req, res) => {
   try {
-    const id = req.params.LId;
-    const orgId = req.params.orgId;
-    const newData = [];
-    const data = await LeadActivity.find({ orgId: orgId });
-    data.forEach((element) => {
-      if (element._id == id) {
-        newData.push(element);
-      }
-    });
+    const { leadId } = req.params;
+    const data = await LeadActivity.find({ leadId: leadId }).sort("-1");
     res.status(200).json({
-      data: newData,
+      data: data,
       message: "Fetched Successfully.",
       success: true,
       status: 200,
@@ -28,77 +22,34 @@ exports.getLeadActivity = async (req, res) => {
 
 exports.getActivityByType = async (req, res) => {
   try {
-    const Type = req.params.type;
-    const id = req.params.LId;
-    const orgId = req.params.orgId;
-    const newData = [];
-    const data = await LeadActivity.find({ orgId: orgId });
-    data.forEach(element => {
-      if(element.leadId == id){
-        newData.push(element);
-      }
-    });
-    if (newData.length === 0) {
-      res.status(200).json({
-        data: "No Data Found",
-        message: "Fetched Successfully.",
-        success: true,
-        status: 200,
+    const { type, leadId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(leadId)) {
+      return res.status(400).json({
+        message: "Invalid leadId.",
+        success: false,
+        code: 400,
+      });
+    }
+    const data = await LeadActivity.find({ leadId: leadId, type: type });
+    if (!data) {
+      return res.status(404).json({
+        message: "No data found.",
+        success: false,
+        code: 404,
       });
     } else {
-      let sendData = [];
-      newData.forEach((element) => {
-        if (element.type === Type) {
-          sendData.push(element);
-        }
-      });
       res.status(200).json({
-        data: sendData,
+        data: data,
         message: "Fetched Successfully.",
         success: true,
-        status: 200,
+        code: 200,
       });
     }
   } catch (err) {
-    console.log(err);
     res.status(400).json({
       message: "Someting went wrong!",
       success: false,
-      status: 400,
-    });
-  }
-};
-exports.createLeadActivity = async (req, res) => {
-  try {
-    const url = req.protocol + "://" + req.get("host");
-    var im = null;
-    //const data = req.body;
-    //console.log(req.file.filename);
-    if (req.body.type === "Attachment") {
-      if (req.file != undefined) {
-        im = url + "/public/activity/" + req.file.filename;
-      }
-    }
-    const activity = new LeadActivity({
-      leadId: req.body.leadId,
-      title: req.body.title,
-      desc: req.body.desc,
-      type: req.body.type,
-      image: im,
-      orgId: orgId,
-    });
-    await activity.save();
-    res.status(201).json({
-      message: "Saved Successfully.",
-      success: true,
-      status: 201,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(400).json({
-      message: "Someting went wrong!",
-      success: false,
-      status: 400,
+      code: 400,
     });
   }
 };
@@ -106,6 +57,13 @@ exports.createLeadActivity = async (req, res) => {
 exports.updateLeadActivity = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: `Invalid Id`,
+        success: false,
+        status: 400,
+      });
+    }
     const activity = await LeadActivity.findById(id);
     if (!activity) {
       res.status(404).json({
@@ -135,6 +93,13 @@ exports.updateLeadActivity = async (req, res) => {
 exports.deleteLeadActivity = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: `Invalid Id`,
+        success: false,
+        status: 400,
+      });
+    }
     const activity = await LeadActivity.findById(id);
     if (!activity) {
       res.status(404).json({
@@ -159,9 +124,75 @@ exports.deleteLeadActivity = async (req, res) => {
   }
 };
 
+exports.createLeadActivity = async (req, res) => {
+  try {
+    const url = req.protocol + "://" + req.get("host");
+    var im = null;
+    if (req.body.type === "Attachment") {
+      if (req.file != undefined) {
+        im = url + "/public/activity/" + req.file.filename;
+      }
+    }
+    const activity = new LeadActivity({
+      leadId: req.body.leadId,
+      title: req.body.title,
+      desc: req.body.desc,
+      type: req.body.type,
+      image: im,
+      orgId: req.body.orgId,
+      firmId: req.body.firmId,
+    });
+    await activity.save();
+    res.status(201).json({
+      message: "Saved Successfully.",
+      success: true,
+      status: 201,
+    });
+  } catch (err) {
+    res.status(400).json({
+      message: "Someting went wrong!",
+      success: false,
+      status: 400,
+    });
+  }
+};
+
+exports.getbyId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: `Invalid Id`,
+        success: false,
+        status: 400,
+      });
+    }
+    const data = await LeadActivity.find(id);
+    res.status(200).json({
+      data: data,
+      message: "Fetched Successfully.",
+      success: true,
+      status: 200,
+    });
+  } catch (err) {
+    res.status(400).json({
+      message: "Someting went wrong !",
+      success: false,
+      status: 400,
+    });
+  }
+};
+
 exports.updateAttachment = async (req, res) => {
   try {
     const _id = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(_id)) {
+      return res.status(400).json({
+        message: `Invalid Id`,
+        success: false,
+        status: 400,
+      });
+    }
     const url = req.protocol + "://" + req.get("host");
     if (req.file != undefined) {
       var im = url + "/public/activity/" + req.file.filename;
@@ -189,26 +220,6 @@ exports.updateAttachment = async (req, res) => {
   } catch (error) {
     res.status(400).json({
       message: "Someting went wrong!",
-      success: false,
-      status: 400,
-    });
-  }
-};
-
-exports.getbyId = async (req, res) => {
-  try {
-    const LId = req.params.LId;
-    const _id = req.params.id;
-    const data = await LeadActivity.find({ _id });
-    res.status(200).json({
-      data: data,
-      message: "Fetched Successfully.",
-      success: true,
-      status: 200,
-    });
-  } catch (err) {
-    res.status(400).json({
-      message: "Someting went wrong !",
       success: false,
       status: 400,
     });

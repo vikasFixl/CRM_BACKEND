@@ -29,12 +29,12 @@ const upload = multer({
   storage: storage,
 });
 
-router.get("/getAllActivities/:orgId/:LId", LeadActivityController.getLeadActivity);
+router.get("/getAllActivities/:leadId", LeadActivityController.getLeadActivity);
 router.get(
-  "/getActivitiesByType/:orgId/:type/:LId",
+  "/getActivitiesByType/:type/:leadId",
   LeadActivityController.getActivityByType
 );
-router.get("/getLeadActivityById/:LId/:id", LeadActivityController.getbyId);
+router.get("/getLeadActivityById/:id", LeadActivityController.getbyId);
 
 router.post(
   "/addLeadActivity",

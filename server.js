@@ -16,11 +16,11 @@ const firmRoutes = require("./src/routes/firmRoute");
 const taxRoutes = require("./src/routes/taxRoutes");
 const orgRoutes = require("./src/routes/orgRoute");
 const productRoutes = require("./src/routes/productRoutes.js");
+const leadRoutes = require("./src/routes/leadRoute");
+const leadActivityRoutes = require("./src/routes/leadActivityRoute");
 
 const searchRoutes = require("./src/routes/searchRoute");
-const leadRoutes = require("./src/routes/leadRoute");
 const roleRoutes = require("./src/routes/roleNpermissionRoute");
-const leadActivityRoutes = require("./src/routes/leadActivityRoute");
 const attendenceRoutes = require("./src/routes/empAttendenceRoute");
 const dedRoutes = require("./src/routes/dedRoute");
 const salRoutes = require("./src/routes/salRoute");
@@ -76,11 +76,11 @@ app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/firm", firmRoutes);
-app.use("/api/lead", leadRoutes);
 app.use("/api/org", orgRoutes);
-app.use("/api/leadActivity", leadActivityRoutes);
 app.use("/api/taxRates", taxRoutes);
 app.use("/api/product", productRoutes);
+app.use("/api/lead", leadRoutes);
+app.use("/api/leadActivity", leadActivityRoutes);
 
 app.use("/api/vendor", vendorRoutes);
 

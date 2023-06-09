@@ -17,17 +17,13 @@ const LeadSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    clientCountry: {
-      type: String,
-      required: true,
-    },
-    clientState: {
-      type: String,
-      required: true,
-    },
-    clientCity: {
-      type: String,
-      required: true,
+    clientAddress: {
+      lineOne: { type: String },
+      lineTwo: { type: String },
+      country: { type: String },
+      state: { type: String },
+      city: { type: String },
+      code: { type: String },
     },
     timezone: {
       type: String,
@@ -53,48 +49,40 @@ const LeadSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    userType: {
-      type: String,
-      required: true,
-    },
-    assignTo: {
-      type: String,
-      required: true,
+    pipeline: {
+      department: {
+        type: String,
+        required: true,
+      },
+      userType: { type: String },
+      assignTo: { type: String },
     },
     status: {
       type: String,
       required: true,
     },
-    orgName: {
-      type: String,
-      required: true,
+    orgDetails: {
+      orgName: { type: String },
+      orgEmail: { type: String },
+      orgPhone: { type: String },
+      orgAddress: {
+        orgLineOne: { type: String },
+        orgLineTwo: { type: String },
+        orgCountry: { type: String },
+        orgState: { type: String },
+        orgCity: { type: String },
+        orgCode: { type: String },
+      },
     },
-    orgState: {
-      type: String,
-      required: true,
-    },
-    orgDistrict: {
-      type: String,
-      required: true,
-    },
-    orgAddress: {
-      type: String,
-      required: true,
-    },
-    description: {
-      type: String,
-      required: true,
-    },
+    description: { type: String },
     delete: {
       type: Boolean,
       required: true,
       default: false,
     },
-    randomLeadId: {
-      type: Number,
-      default: Math.floor(Math.random() * (10000 - 0)) + 0,
-    },
+    randomLeadId: { type: String },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
+    firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" },
   },
   {
     timestamps: true,
