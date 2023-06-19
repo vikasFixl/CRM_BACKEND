@@ -22,7 +22,7 @@ const LeadSchema = new mongoose.Schema(
     pipeline: {
       department: { type: String },
       userType: { type: String },
-      assignTo: { type: String },
+      assignTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     },
     status: { type: String },
     orgDetails: {

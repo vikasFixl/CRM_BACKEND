@@ -26,9 +26,10 @@ router.post("/signin", userController.signin);
 router.post("/signup",upload.single("profilePhoto"),userController.signup);
 router.post("/forgot", userController.forgotPassword);
 router.post("/reset", userController.resetPassword);
+router.post('/getUsersByDept',userController.getUsersByDept);
 
-router.get('/:id',userController.getUser);
-router.get('/:orgId',userController.getAllusers);
+router.get('/getUser/:id',userController.getUser);
+router.get('/getAllusers/:orgId',userController.getAllusers);
 
 router.delete('/delete/:id',userController.delete);
 

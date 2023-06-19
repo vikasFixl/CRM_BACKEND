@@ -235,6 +235,23 @@ exports.getAllusers = async (req, res) => {
   }
 };
 
+exports.getUsersByDept = async (req, res) => {
+  try {
+    const { orgId, department } = req.body;
+    const data = await User.find({ orgId: orgId, department: department })
+      .select("firstName")
+      .sort({ _id: -1 });
+    res.status(200).json({
+      data: data,
+      success: true,
+      code: 200,
+      message: "all users get here!!",
+    });
+  } catch (error) {
+    res.status(409).json(error.message);
+  }
+};
+
 exports.delete = async (req, res) => {
   const _id = req.params.id;
   if (!mongoose.Types.ObjectId.isValid(_id))
