@@ -167,7 +167,7 @@ exports.getbyId = async (req, res) => {
         status: 400,
       });
     }
-    const data = await LeadActivity.find(id);
+    const data = await LeadActivity.findById(id);
     res.status(200).json({
       data: data,
       message: "Fetched Successfully.",
