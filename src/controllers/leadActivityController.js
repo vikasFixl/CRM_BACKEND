@@ -1,10 +1,23 @@
 const { default: mongoose } = require("mongoose");
 const LeadActivity = require("../models/LeadActivity");
 
+var ts = Date.now();
+var date_ob = new Date(ts);
+var date = date_ob.getDate();
+var month = date_ob.getMonth() + 1;
+var year = date_ob.getFullYear();
+var hours = date_ob.getHours();
+var minutes = date_ob.getMinutes();
+var seconds = date_ob.getSeconds();
+var dateAndTime =
+  year + "-" + month + "-" + date + " " + hours + ":" + minutes + ":" + seconds;
+
 exports.getLeadActivity = async (req, res) => {
   try {
     const { leadId } = req.params;
-    const data = await LeadActivity.find({ leadId: leadId }).sort("-1");
+    const data = await LeadActivity.find({ leadId: leadId })
+      .populate("comment.userID", "firstName")
+      .sort("-1");
     res.status(200).json({
       data: data,
       message: "Fetched Successfully.",
@@ -167,7 +180,10 @@ exports.getbyId = async (req, res) => {
         status: 400,
       });
     }
-    const data = await LeadActivity.findById(id);
+    const data = await LeadActivity.findById(id).populate(
+      "comment.userID",
+      "firstName"
+    );
     res.status(200).json({
       data: data,
       message: "Fetched Successfully.",
@@ -224,4 +240,38 @@ exports.updateAttachment = async (req, res) => {
       status: 400,
     });
   }
+};
+
+exports.addLeadActivityComment = async (req, res) => {
+  const { comment, id } = req.body;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: `Invalid Id`,
+      success: false,
+      status: 400,
+    });
+  }
+  comment.date = dateAndTime;
+  await LeadActivity.findByIdAndUpdate(
+    id,
+    { $push: { comment: comment } },
+    { new: true }
+  );
+  res.json({
+    success: true,
+    status: 201,
+    message: "Comment added successfully.",
+  });
+};
+
+exports.getLeadActivityComment = async (req, res) => {
+  const data = await LeadActivity.find({ _id: req.params.id })
+    .select("comment")
+    .populate("comment.userID", "firstName");
+  res.json({
+    data: data,
+    success: true,
+    status: 201,
+    message: "Comment added successfully.",
+  });
 };

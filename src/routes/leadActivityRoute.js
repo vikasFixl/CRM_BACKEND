@@ -36,10 +36,20 @@ router.get(
 );
 router.get("/getLeadActivityById/:id", LeadActivityController.getbyId);
 
+router.get(
+  "/getLeadActivityComment/:id",
+  LeadActivityController.getLeadActivityComment
+);
+
 router.post(
   "/addLeadActivity",
   upload.single("image"),
   LeadActivityController.createLeadActivity
+);
+
+router.post(
+  "/addLeadActivityComment",
+  LeadActivityController.addLeadActivityComment
 );
 
 router.patch(
