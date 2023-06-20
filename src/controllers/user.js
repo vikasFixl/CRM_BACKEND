@@ -34,6 +34,7 @@ exports.signin = async (req, res) => {
       const orgDetails = await Org.findOne({ orgEmail: email });
       res.status(200).json({
         data: {
+          user_id: user._id,
           orgID: orgDetails._id,
           orgEmail: orgDetails.orgEmail,
           orgName: orgDetails.orgName,
