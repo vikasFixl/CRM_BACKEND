@@ -106,6 +106,7 @@ const firmSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    registeredFirmName: { type: String, required: false },
     uin: {
       type: String,
       required: false,
