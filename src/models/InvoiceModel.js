@@ -37,6 +37,7 @@ const InvoiceSchema = new mongoose.Schema({
   tax: { type: Array },
   taxAmt: { type: Array },
   subTotal: { type: Number },
+  discount: { type: Number },
   total: { type: Number },
   invoiceDate: { type: Date },
   dueDate: { type: Date },
