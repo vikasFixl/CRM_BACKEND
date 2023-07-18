@@ -205,7 +205,6 @@ exports.createInvoice = async (req, res) => {
     orgId,
     curConvert,
     incluTax,
-    discount,
   } = req.body;
   try {
     if (draft == true) {
@@ -246,7 +245,6 @@ exports.createInvoice = async (req, res) => {
         desc: desc,
         orgId: orgId,
         curConvert: curConvert,
-        discount: discount,
       });
       const bd2 = await newInvoice.save();
       res.status(201).json({
