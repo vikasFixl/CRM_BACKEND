@@ -26,6 +26,7 @@ const dedRoutes = require("./src/routes/dedRoute");
 const salRoutes = require("./src/routes/salRoute");
 const employeeRoutes = require("./src/routes/empRoute");
 const vendorRoutes = require("./src/routes/vendorRoutes");
+const purchesRoutes =require("./src/routes/purchesRoute.js")
 
 require("dotenv").config({
   path: path.join(__dirname, "./.env"),
@@ -74,6 +75,7 @@ app.use(express.json());
 
 app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
+app.use("/api/purchase",purchesRoutes)
 app.use("/api/client", clientRoutes);
 app.use("/api/firm", firmRoutes);
 app.use("/api/org", orgRoutes);
