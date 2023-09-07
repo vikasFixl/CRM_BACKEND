@@ -184,7 +184,7 @@ exports.createInvoice = async (req, res) => {
     total,
     notes,
     remark,
-    vender,
+    vendor,
     amount,
     deliveryDate,
     orderDate,
@@ -224,7 +224,7 @@ exports.createInvoice = async (req, res) => {
         total: total,
         notes: notes,
         remark: remark,
-        vender:vender,
+        vendor:vendor,
         amount: amount,
         dueAmount: dueAmount,
         amountPaid: amountPaid,
@@ -536,10 +536,10 @@ exports.paymnetlink1 = async (req, res) => {
 
 exports.getPurchasebyVender = async (req,res)=>{
 
-    const {vender_id} = req.params
+    const {vendorId} = req.params
 
     try{
-        const purchase = await InvoiceModel.find({ "vender.vender_id": vender_id });
+        const purchase = await InvoiceModel.find({ "vendor.vendor_id": vendorId });
 
         if (!purchase) {
             return res.status(404).json({ message: "No purchases found for the specified vendor_id." });
