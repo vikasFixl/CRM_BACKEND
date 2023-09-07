@@ -533,3 +533,23 @@ exports.paymnetlink1 = async (req, res) => {
   });
   res.json({ id: session.id });
 };
+
+exports.getPurchasebyVender = async (req,res)=>{
+
+    const {vender_id} = req.params
+
+    try{
+        const purchase = await InvoiceModel.find({ "vender.vender_id": vender_id });
+
+        if (!purchase) {
+            return res.status(404).json({ message: "No purchases found for the specified vendor_id." });
+          }
+      else{
+          res.status(200).json(purchase);
+      }
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({ message: "Internal Server Error" });
+        }
+      
+}
