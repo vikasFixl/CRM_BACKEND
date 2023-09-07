@@ -37,8 +37,8 @@ const PurchesSchema = new mongoose.Schema({
   taxAmt: { type: Array },
   subTotal: { type: Number },
   total: { type: Number },
-  purchaseDate: { type: Date },
-  dueDate: { type: Date },
+  orderDate: { type: Date },
+  deliveryDate: { type: Date },
   status: {
     type: String,
     enum: ["Pending", "Paid", "Overdue", "Partial Paid", "Draft", "Canceled"],
