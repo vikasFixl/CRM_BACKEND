@@ -533,3 +533,30 @@ exports.paymnetlink1 = async (req, res) => {
   });
   res.json({ id: session.id });
 };
+exports.totalsell = async (req, res) => {
+  try {
+    const data = await InvoiceModel.find();
+
+    if (data.length === 0) {
+      return res.status(404).json({
+        message: "No Data found.",
+        success: true,
+      });
+    }
+
+    const totalAmount = data.reduce((total, purchase) => {
+      return total + purchase.total;
+    }, 0);
+
+    console.log("totalamount", totalAmount);
+
+    return res.status(200).json({
+      totalAmount: totalAmount,
+      message: "List of purchases with total amount.",
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Something Went Wrong" });
+  }
+};
