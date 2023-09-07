@@ -6,6 +6,7 @@ const moment = require("moment");
 const RecurringInvoiceModel = require("../models/RecurringInvoiceModel.js");
 const winston = require("winston");
 const schedule = require("node-schedule");
+const PurchesModel = require("../models/PurchesModel");
 
 const logger = winston.createLogger({
   transports: [new winston.transports.File({ filename: "invoices.json" })],
@@ -553,3 +554,31 @@ exports.getPurchasebyVender = async (req,res)=>{
         }
       
 }
+
+exports.totalPurchase = async (req, res) => {
+    try {
+      const data = await PurchesModel.find();
+  
+      if (data.length === 0) {
+        return res.status(404).json({
+          message: "No Data found.",
+          success: true,
+        });
+      }
+  
+      const totalAmount = data.reduce((total, purchase) => {
+        return total + purchase.total;
+      }, 0);
+  
+      console.log("totalamount", totalAmount);
+  
+      return res.status(200).json({
+        totalAmount: totalAmount,
+        message: "List of purchases with total amount.",
+        success: true,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Something Went Wrong" });
+    }
+  };

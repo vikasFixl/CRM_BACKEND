@@ -48,5 +48,6 @@ router.delete("/deletepurchase/:id", invoiceController.deleteInvoice);
 router.get("/count", invoiceController.getTotalCount);
 router.get("/user", invoiceController.getInvoicesByUser);
 router.get("/getPurchasebyVender/:vender_id", invoiceController.getPurchasebyVender);
+router.get("/totalPurchase", invoiceController.totalPurchase);
 
 module.exports = router;
