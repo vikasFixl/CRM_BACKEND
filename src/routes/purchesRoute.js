@@ -40,7 +40,6 @@ router.patch(
   invoiceController.restoreCancelInvoice
 );
 
-/// delete routes
 
 router.delete("/deletepurchase/:id", invoiceController.deleteInvoice);
 
