@@ -24,7 +24,7 @@ const vendorSchema = new mongoose.Schema(
     },
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "vender_id",
+      ref: "vendorId",
       required: false,
     },
     delete: {

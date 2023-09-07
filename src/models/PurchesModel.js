@@ -10,7 +10,7 @@ const PurchesSchema = new mongoose.Schema({
       amount: { type: Number },
       hsn: { type: String },
       sac: { type: String },
-      taxRate:{type: String},
+      taxRate: { type: String },
       desc: { type: String },
       discount: { type: Number },
     },
@@ -18,22 +18,21 @@ const PurchesSchema = new mongoose.Schema({
   gstn: { type: String },
   notes: { type: String },
   remark: { type: String },
-  
-    vender: {
-      name: String,
-      email: String,
-      phone: Number,
-      taxId: String,
-      address: {
-        address1:String,
-        address2: String,
-        city: String,
-        state: String,
-        country: String,
-        pinCode: Number
-      },
-      vender_id: {type: mongoose.Schema.Types.ObjectId, ref: "vender_id" }    },
-  
+  vendor: {
+    name: String,
+    email: String,
+    phone: Number,
+    taxId: String,
+    address: {
+      address1: String,
+      address2: String,
+      city: String,
+      state: String,
+      country: String,
+      pinCode: Number
+    },
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "vendorId" }
+  },
   tax: { type: Array },
   taxAmt: { type: Array },
   subTotal: { type: Number },
