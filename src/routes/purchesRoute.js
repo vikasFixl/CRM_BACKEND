@@ -7,13 +7,13 @@ const invoiceController = require("../controllers/purches");
 router.get("/drafts/:orgId", invoiceController.getDrafts);
 router.get("/cancel/:orgId", invoiceController.getCancel);
 router.get("/all/:orgId", invoiceController.getAllInvoices);
-router.get("/singleInvoice/:orgId/:id", invoiceController.getInvoice);
+router.get("/singlePurchase/:orgId/:id", invoiceController.getInvoice);
 router.get(
-  "/getAllCancelInvoices/:orgId",
+  "/getAllCancelPurchase/:orgId",
   invoiceController.getAllCancelInvoices
 );
 router.get(
-  "/getAllDeletedInvoices/:orgId",
+  "/getAllDeletedPurchase/:orgId",
   invoiceController.getAllDeletedInvoices
 );
 
@@ -42,8 +42,6 @@ router.patch(
 
 
 router.delete("/deletepurchase/:id", invoiceController.deleteInvoice);
-
-/// not in use
 
 router.get("/count", invoiceController.getTotalCount);
 router.get("/user", invoiceController.getInvoicesByUser);
