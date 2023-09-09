@@ -99,6 +99,7 @@ exports.addOrg = async (req, res) => {
     const data = req.body;
     const emailChk = req.body.orgEmail;
     const chkEmail = await Org.findOne({ orgEmail: emailChk });
+    console.log("chkEmail", chkEmail);
     if (!chkEmail) {
       try {
         const org = new Org({
@@ -106,19 +107,28 @@ exports.addOrg = async (req, res) => {
           orgEmail: data.orgEmail,
           orgPhone: data.orgPhone,
         });
-        const salt = await bcrypt.genSalt(10);
-        const password = await bcrypt.hash(data.orgPassword, salt);
-        const user = new User({
-          firstName: data.orgName,
-          email: data.orgEmail,
-          phone: data.orgPhone,
-          role: "Admin",
-          department: "Admin",
-          password: password,
-        });
+        try {
+          const updatedUser = await User.findOneAndUpdate(
+            { email: emailChk },
+            { $set: { orgId: org._id } },
+            { new: true } // This option returns the updated document
+          );
+        
+          if (updatedUser) {
+            console.log("Updated user:", updatedUser);
+            // Handle success here
+          } else {
+            console.log("User not found.");
+            // Handle the case where the user was not found
+          }
+        } catch (error) {
+          console.error("Error updating user:", error);
+        }
+        
         await org.save();
-        await user.save();
+        // await user.save();
         res.json({
+          data: org,
           success: true,
           message: "Org saved successfully",
           status: 201,
@@ -126,7 +136,7 @@ exports.addOrg = async (req, res) => {
       } catch (err) {
         console.log(err);
         res.json({
-          message: "Someting went wrong!",
+          message: "Someting went wrong!!!",
           status: 400,
           success: false,
         });
@@ -186,20 +196,24 @@ exports.signin = async (req, res) => {
   }
 };
 
-exports.logo=async(req,res)=>{
+exports.logo = async (req, res) => {
   try {
-    const url = req.protocol + '://' + req.get('host')
-    const _id=req.params.id;
-    const image=await Org.findByIdAndUpdate(_id,{orgLogo:url + '/public/org/' + req.file.filename},{
-      new:true
-    })
+    const url = req.protocol + "://" + req.get("host");
+    const _id = req.params.id;
+    const image = await Org.findByIdAndUpdate(
+      _id,
+      { orgLogo: url + "/public/org/" + req.file.filename },
+      {
+        new: true,
+      }
+    );
     res.status(201).json({
-      "orgLogo":image.path,
+      orgLogo: image.path,
       code: 201,
       success: true,
       message: "logo Updated successfully!",
-    })
+    });
   } catch (error) {
     res.status(400).json({ message: "Something Went wrong! " });
   }
-}
+};

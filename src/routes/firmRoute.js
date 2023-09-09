@@ -6,6 +6,7 @@ const path=require("path")
 const fs=require("fs")
 const multerS3 = require('multer-s3');
 const AWS = require('aws-sdk');
+const { authorize } = require('../middleweare/middleware');
 
 
 const s3 = new AWS.S3({
@@ -24,7 +25,7 @@ const upload = multer({
     storage:storage
 });
 
-router.post('/create',firmController.createFirm);
+router.post('/create', authorize("Create", "firm", ["Admin", "subAdmin", "Purchase", "Custom"]), firmController.createFirm);
 
 router.delete('/delete/:id', firmController.deleteFirm);
 

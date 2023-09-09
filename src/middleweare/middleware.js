@@ -1,7 +1,5 @@
 const jwtDecode = require("jwt-decode");
 
-
-
 const permited = (data) => {
   return (req, res, next) => {
     const token = req.headers.authorization;
@@ -9,7 +7,7 @@ const permited = (data) => {
       res.status(400).json({ msg: "Token Not Found" });
     }
     const role = jwtDecode(token);
-    const RoleValidater = data.find(item => item === role.role);
+    const RoleValidater = data.find((item) => item === role.role);
     if (RoleValidater) {
       next();
     } else {
@@ -18,27 +16,31 @@ const permited = (data) => {
   };
 };
 
-const authorize=(userPermissions)=> {
+const authorize = (action, module, role) => {
   return (req, res, next) => {
-    const { module, action } = req.params; // Extract the module and action from the request
-
-    // Find the user's permissions for the requested module
-    const user = userPermissions.find((user) => user.userId === req.userId);
-    if (!user) {
-      return res.status(403).json({ message: 'Access forbidden' });
+    try {
+      const token = jwtDecode(req.headers.authorization);
+      const permissions = token.permissions;
+      const matchingRoles = role.filter((element) => token.role.includes(element));
+      if (matchingRoles.length === 0) {
+        return res.status(403).json({ message: "Access forbidden" });
+      }
+      const authorized = permissions.some((data) => {
+        return data.module === module && data.action.includes(action);
+      });
+      if (authorized) {
+        next(); // User is authorized
+      } else {
+        return res.status(403).json({
+          message: `${action} permission not available for ${module}, please contact the admin.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error decoding JWT:", error);
+      return res.status(401).json({ message: "Unauthorized" });
     }
-
-    const modulePermissions = user.modulePermissions.find(
-      (modulePermission) => modulePermission.module === module
-    );
-
-    if (!modulePermissions || !modulePermissions.permissions.includes(action)) {
-      return res.status(403).json({ message: 'Access forbidden' });
-    }
-
-    next(); // User is authorized
   };
-}
+};
 
 module.exports.permited = permited;
 module.exports.authorize = authorize;

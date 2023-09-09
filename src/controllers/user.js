@@ -26,30 +26,62 @@ exports.signin = async (req, res) => {
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: "Invalid password credentials" });
     }
-    const accessToken = jwt.sign({ userId: user._id }, SECRET, {
-      expiresIn: "1d",
-    });
+    const accessToken = jwt.sign(
+      { userId: user._id, role: [user.role], permissions: user.permissions },
+      SECRET,
+      {
+        expiresIn: "1d",
+      }
+    );
     await User.findByIdAndUpdate(user._id, { accessToken });
     if (user.role === "Admin") {
       const orgDetails = await Org.findOne({ orgEmail: email });
-      res.status(200).json({
-        data: {
-          user_id: user._id,
-          orgID: orgDetails._id,
-          orgEmail: orgDetails.orgEmail,
-          orgName: orgDetails.orgName,
-          orgPhone: orgDetails.phone,
-          orgid: orgDetails._id,
-          role: user.role,
-          orgDept: orgDetails.orgDept,
-          orgLeadStatus: orgDetails.orgLeadStatus,
-          orgLeadStages: orgDetails.orgLeadStages,
-        },
-        success: true,
-        code: 200,
-        message: "You have logged in successfully",
-        token: accessToken,
-      });
+      console.log(orgDetails);
+      if (orgDetails) {
+        res.status(200).json({
+          data: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            role: user.role,
+            permissions: user.permissions,
+            department: user.department,
+            // profilePhoto: url + "/public/user/" + req.file.filename,
+            orgID: orgDetails._id,
+            orgEmail: orgDetails.orgEmail,
+            orgName: orgDetails.orgName,
+            orgPhone: orgDetails.phone,
+            orgid: orgDetails._id,
+            orgDept: orgDetails.orgDept,
+            orgLeadStatus: orgDetails.orgLeadStatus,
+            orgLeadStages: orgDetails.orgLeadStages,
+          },
+          success: true,
+          code: 200,
+          message: "You have logged in successfully",
+          token: accessToken,
+        });
+      } else {
+        res.status(200).json({
+          data: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            role: user.role,
+            permissions: user.permissions,
+            department: user.department,
+            // profilePhoto: url + "/public/user/" + req.file.filename,
+          },
+          success: true,
+          code: 200,
+          message: "You have logged in successfully",
+          token: accessToken,
+        });
+      }
     } else {
       res.status(200).json({
         data: {
@@ -59,6 +91,7 @@ exports.signin = async (req, res) => {
           lastName: user.lastName,
           phone: user.phone,
           role: user.role,
+          permissions: user.userPermissions,
           department: user.department,
         },
         success: true,
@@ -74,8 +107,9 @@ exports.signin = async (req, res) => {
 };
 
 exports.signup = async (req, res) => {
-  const form = req.body;
+  const { form } = req.body;
   const { email } = req.body;
+  console.log("body", req.body);
   try {
     const url = req.protocol + "://" + req.get("host");
     const existingUser = await User.findOne({ email });
@@ -84,6 +118,7 @@ exports.signup = async (req, res) => {
     const emp = new Employee({
       eid: "F" + Math.random(),
       //userid:user._id,
+      firstName: req.body.firstName,
       gender: req.body.gender,
       dob: req.body.dob,
       doj: req.body.doj,
@@ -104,7 +139,7 @@ exports.signup = async (req, res) => {
       password: req.body.password,
       orgId: req.body.orgId,
       permissions: req.body.permissions,
-      profilePhoto: url + "/public/user/" + req.file.filename,
+      // profilePhoto: url + "/public/user/" + req.file.filename,
       eid: emp.eid,
     });
     const salt = await bcrypt.genSalt(10);
