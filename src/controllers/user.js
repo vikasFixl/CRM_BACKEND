@@ -114,12 +114,13 @@ exports.signup = async (req, res) => {
   try {
     const url = req.protocol + "://" + req.get("host");
     const existingUser = await User.findOne({ email });
-    if (existingUser)
+    if(req.body.password != req.body.confirmPassword){
+    return res.status(403).json({message: "Password does not match"});
+   }
+   else if (existingUser)
      { return res.status(403).json({ message: "User already exist" });}
-     else if(req.body.password != req.body.confirmPassword){
-      return res.status(404).json("Password does not match");
-     }
-    const emp = new Employee({
+   
+     const emp = new Employee({
       eid: "F" + Math.random(),
       //userid:user._id,
       firstName: req.body.firstName,

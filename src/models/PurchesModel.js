@@ -1,5 +1,5 @@
-const { number, string } = require("joi");
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
+const { logPurchase } = require('../Activitylogger/activitylogger');
 
 const PurchesSchema = new mongoose.Schema({
   items: [
@@ -90,4 +90,18 @@ const PurchesSchema = new mongoose.Schema({
   orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
 });
 
-module.exports = mongoose.model("PurchesModel", PurchesSchema);
+// Hook to log when a new purchase is created
+PurchesSchema.pre('save', function (next) {
+  // Log the purchase creation
+  logPurchase(`New purchase created with purchaseNumber: ${this.purchaseNumber}`);
+  next();
+});
+
+// Hook to log when the status changes
+PurchesSchema.pre('updateOne', function (next) {
+  // Log the status change
+  logPurchase(`Purchase with purchaseNumber: ${this.getQuery().purchaseNumber} status changed to: ${this._update.status}`);
+  next();
+});
+
+module.exports = mongoose.model('PurchesModel', PurchesSchema);
