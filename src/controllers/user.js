@@ -141,7 +141,7 @@ exports.signup = async (req, res) => {
       department: req.body.department,
       phone: req.body.phone,
       password: req.body.password,
-      confirmPassword:req.body.confirmPassword,
+      // confirmPassword:req.body.confirmPassword,
       orgId: req.body.orgId,
       permissions: req.body.permissions,
       eid: emp.eid,
