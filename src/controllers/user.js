@@ -106,6 +106,7 @@ exports.signin = async (req, res) => {
   }
 };
 
+
 exports.signup = async (req, res) => {
   const { form } = req.body;
   const { email } = req.body;
