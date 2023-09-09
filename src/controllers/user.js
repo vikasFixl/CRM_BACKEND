@@ -114,7 +114,10 @@ exports.signup = async (req, res) => {
     const url = req.protocol + "://" + req.get("host");
     const existingUser = await User.findOne({ email });
     if (existingUser)
-      return res.status(403).json({ message: "User already exist" });
+     { return res.status(403).json({ message: "User already exist" });}
+     else if(password != confirmPassword){
+      return res.status(404).json("confirmPassword is incorrect");
+     }
     const emp = new Employee({
       eid: "F" + Math.random(),
       //userid:user._id,
@@ -137,15 +140,19 @@ exports.signup = async (req, res) => {
       department: req.body.department,
       phone: req.body.phone,
       password: req.body.password,
+      confirmPassword:req.body.confirmPassword,
       orgId: req.body.orgId,
       permissions: req.body.permissions,
-      // profilePhoto: url + "/public/user/" + req.file.filename,
       eid: emp.eid,
     });
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(user.password, salt);
     await user.save();
     res.status(201).json({
+      "firstName":firstName,
+      "lastName":lastName,
+      "Email":email,
+      "Role":role,
       success: true,
       code: 201,
       message: "You have signed up successfully",

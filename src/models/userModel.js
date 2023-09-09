@@ -35,6 +35,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    confirmPassword: {
+      type: String,
+      required: true,
+    },
     permissions: {
       type: Array,
       required: false,
