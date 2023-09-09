@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
     },
     department: {
       type: String,
-      required: true,
+      required: false,
     },
     phone: {
       type: Number,
