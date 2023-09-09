@@ -116,8 +116,8 @@ exports.signup = async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser)
      { return res.status(403).json({ message: "User already exist" });}
-     else if(password != confirmPassword){
-      return res.status(404).json("confirmPassword is incorrect");
+     else if(req.body.password != req.body.confirmPassword){
+      return res.status(404).json("Password does not match");
      }
     const emp = new Employee({
       eid: "F" + Math.random(),
@@ -150,10 +150,10 @@ exports.signup = async (req, res) => {
     user.password = await bcrypt.hash(user.password, salt);
     await user.save();
     res.status(201).json({
-      "firstName":firstName,
-      "lastName":lastName,
-      "Email":email,
-      "Role":role,
+      "firstName":user.firstName,
+      "lastName":user.lastName,
+      "email":user.email,
+      "role":user.role,
       success: true,
       code: 201,
       message: "You have signed up successfully",
