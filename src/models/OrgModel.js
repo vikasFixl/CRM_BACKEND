@@ -9,6 +9,9 @@ const OrgSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    plan:{
+      type:String
+     },
     orgEmail: {
       type: String,
       required: true,
