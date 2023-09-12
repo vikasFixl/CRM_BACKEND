@@ -1,6 +1,7 @@
 const Lead = require("../models/leadModel");
 const Client = require("../models/ClientModel");
 const { default: mongoose } = require("mongoose");
+const { nanoid } = require("nanoid");
 
 /* Lead By Org */
 
@@ -149,8 +150,13 @@ exports.leadById = async (req, res) => {
 };
 
 exports.addLead = async (req, res) => {
-  const data = req.body;
-  const lead = new Lead(data);
+  const randomLeadId = nanoid(5);
+  const newLead = new Lead({
+    ...req.body,
+    randomLeadId: randomLeadId,
+  });
+
+  const lead = new Lead(newLead);
   await lead.save();
   res.json({
     success: true,
@@ -243,9 +249,8 @@ exports.leadSearch = async (req, res) => {
 
 exports.bulkDelete = async(req,res)=>{
   try {
-    
     const id = req.body.id;
-    const result = await Lead.deleteMany({ _id: { $in: id } });
+    const result = await Lead.removeAllListeners({ _id: { $in: id } });
 
     res.status(200).json({ message: 'Bulk delete successful', result });
   } catch (error) {
