@@ -43,7 +43,7 @@ const LeadSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    randomLeadId: { type: String },
+    randomLeadId: { type: Number },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
     firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" },
   },
