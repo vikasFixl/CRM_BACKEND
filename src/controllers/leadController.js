@@ -13,7 +13,7 @@ exports.getListByOrg = async (req, res) => {
         message: "Invaild Org Id.",
         success: false,
         status: 400,
-      });
+      }).sort({ createdAt: -1 });
     }
     const lead = await Lead.find({ orgId: orgId, delete: deleted });
     if (!lead) {
@@ -44,7 +44,7 @@ exports.getByStatusByOrg = async (req, res) => {
       message: "Invaild Org Id.",
       success: false,
       status: 400,
-    });
+    }).sort({ createdAt: -1 });
   }
   const lead = await Lead.find({ orgId: orgId, delete: false, status: status });
   if (!lead) {
@@ -72,7 +72,7 @@ exports.getListByFirm = async (req, res) => {
       message: "Invaild firm Id.",
       success: false,
       status: 400,
-    });
+    }).sort({ createdAt: -1 });
   }
   const lead = await Lead.find({ firmId: firmId, delete: deleted });
   if (!lead) {
@@ -98,13 +98,13 @@ exports.getByStatusByFirm = async (req, res) => {
       message: "Invaild firm Id.",
       success: false,
       status: 400,
-    });
+    }).sort({ createdAt: -1 });
   }
   const lead = await Lead.find({
     firmId: firmId,
     delete: false,
     status: status,
-  });
+  }).sort({ createdAt: -1 });
   if (!lead) {
     res.json({
       success: true,
@@ -130,7 +130,7 @@ exports.leadById = async (req, res) => {
       success: false,
       status: 404,
       message: "Invalid id.",
-    });
+    }).sort({ createdAt: -1 });
   }
   const data = await Lead.findById(id);
   if (!data) {
@@ -201,7 +201,7 @@ exports.leadSearch = async (req, res) => {
   try {
     const { search, orgId } = req.body;
     const newData = [];
-    const data = await Lead.find({ orgId: orgId, delete: false });
+    const data = await Lead.find({ orgId: orgId, delete: false }).sort({ createdAt: -1 });
     data.filter((doc) => {
       console.log("doc",doc);
       for (const key in doc.toObject()) {
