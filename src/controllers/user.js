@@ -46,7 +46,7 @@ exports.signin = async (req, res) => {
             lastName: user.lastName,
             phone: user.phone,
             role: user.role,
-            permissions: user.permissions,
+            // permissions: user.permissions,
             department: user.department,
             // profilePhoto: url + "/public/user/" + req.file.filename,
             orgID: orgDetails._id,
