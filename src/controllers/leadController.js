@@ -1,7 +1,7 @@
 const Lead = require("../models/leadModel");
 const Client = require("../models/ClientModel");
 const { default: mongoose } = require("mongoose");
-const { nanoid } = require("nanoid");
+
 
 /* Lead By Org */
 
@@ -150,11 +150,14 @@ exports.leadById = async (req, res) => {
 };
 
 exports.addLead = async (req, res) => {
-  const randomLeadId = nanoid(5);
-  const newLead = new Lead({
-    ...req.body,
-    randomLeadId: randomLeadId,
-  });
+  const { nanoid } = await import('nanoid');
+
+    const randomLeadId = nanoid(5);
+
+    const newLead = new Lead({
+      ...req.body,
+      randomLeadId: randomLeadId,
+    });
 
   const lead = new Lead(newLead);
   await lead.save();
