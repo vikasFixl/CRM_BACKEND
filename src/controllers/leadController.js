@@ -154,12 +154,12 @@ exports.addLead = async (req, res) => {
 
     const randomLeadId = nanoid(5);
 
-    const newLead = new Lead({
+    const newLead = new Lead.sort({ createdDate: -1 })({
       ...req.body,
       randomLeadId: randomLeadId,
     });
 
-  const lead1 =newLead.sort({ createdDate: -1 })
+
 
   await lead1.save();
   res.json({
