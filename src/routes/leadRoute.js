@@ -20,5 +20,6 @@ router.post("/add-lead", leadController.addLead);
 router.post("/leadSearch", leadController.leadSearch);
 
 router.patch("/update-lead/:id", leadController.updateLead);
+router.post("/bulkDelete", leadController.bulkDelete);
 
 module.exports = router

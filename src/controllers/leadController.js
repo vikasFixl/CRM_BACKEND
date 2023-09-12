@@ -193,17 +193,44 @@ exports.leadSearch = async (req, res) => {
     const newData = [];
     const data = await Lead.find({ orgId: orgId, delete: false });
     data.filter((doc) => {
+      console.log("doc",doc);
       for (const key in doc.toObject()) {
-        if (doc[key] === search) {
+        if (doc[key] === search ) {
           newData.push(doc);
         }
       }
+      for (const key in doc.clientAddress.toObject()) {
+        if (doc.clientAddress[key] === search ) {
+          newData.push(doc);
+          
+        }
+      }
+      for (const key in doc.pipeline.toObject()) {
+        if (doc.pipeline[key] === search ) {
+          newData.push(doc);
+          
+        }
+      }
+      for (const key in doc.orgDetails.toObject()) {
+        if (doc.orgDetails[key] === search ) {
+          newData.push(doc);
+          
+        }
+      }
+      for (const key in doc.orgDetails.orgAddress.toObject()) {
+        if (doc.orgDetails.orgAddress[key] === search ) {
+          newData.push(doc);
+          
+        }
+      }
+     
     });
     res.json({
       data: newData,
       message: "Data List",
       success: false,
       status: 200,
+      length: newData.length
     });
   } catch (err) {
     res.json({
@@ -213,3 +240,16 @@ exports.leadSearch = async (req, res) => {
     });
   }
 };
+
+exports.bulkDelete = async(req,res)=>{
+  try {
+    
+    const id = req.body.id;
+    const result = await Lead.deleteMany({ _id: { $in: id } });
+
+    res.status(200).json({ message: 'Bulk delete successful', result });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+}
