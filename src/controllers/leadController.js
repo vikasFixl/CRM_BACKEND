@@ -159,8 +159,9 @@ exports.addLead = async (req, res) => {
       randomLeadId: randomLeadId,
     });
 
-  const lead = new Lead(newLead);
-  await lead.save();
+  const lead1 =newLead.sort({ createdDate: -1 })
+
+  await lead1.save();
   res.json({
     success: true,
     message: "Lead saved successfully",
