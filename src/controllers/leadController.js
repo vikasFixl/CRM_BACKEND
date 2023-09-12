@@ -252,9 +252,8 @@ exports.leadSearch = async (req, res) => {
 
 exports.bulkDelete = async(req,res)=>{
   try {
-    const { leadIds } = req.body; // Assuming you send an array of lead IDs in the request body
-
-    // Use Mongoose's deleteMany method to delete leads by their IDs
+    const { leadIds } = req.body; 
+    console.log(leadIds);
     const result = await Lead.deleteMany({ _id: { $in: leadIds } });
 
     if (result.deletedCount > 0) {
