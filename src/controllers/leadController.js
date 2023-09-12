@@ -161,7 +161,7 @@ exports.addLead = async (req, res) => {
 
 
 
-  await lead1.save();
+  await newLead.save();
   res.json({
     success: true,
     message: "Lead saved successfully",
