@@ -252,12 +252,27 @@ exports.leadSearch = async (req, res) => {
 
 exports.bulkDelete = async(req,res)=>{
   try {
-    const id = req.body.id;
-    const result = await Lead.removeAllListeners({ _id: { $in: id } });
+    const { leadIds } = req.body; // Assuming you send an array of lead IDs in the request body
 
-    res.status(200).json({ message: 'Bulk delete successful', result });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal Server Error' });
+    // Use Mongoose's deleteMany method to delete leads by their IDs
+    const result = await Lead.deleteMany({ _id: { $in: leadIds } });
+
+    if (result.deletedCount > 0) {
+      res.status(200).json({
+        message: `${result.deletedCount} leads deleted successfully`,
+        success: true,
+      });
+    } else {
+      res.status(404).json({
+        message: "No leads found to delete",
+        success: false,
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
   }
 }
