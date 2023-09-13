@@ -181,7 +181,7 @@ exports.addLead = async (req, res) => {
 
   const newLead = new Lead({
     ...req.body,
-    randomLeadId: uniqueRandomNumbers,
+    randomLeadId: uniqueRandomNumbers[0],
   });
 
   const lead1 = new Lead(newLead)
