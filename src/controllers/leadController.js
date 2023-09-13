@@ -13,9 +13,9 @@ exports.getListByOrg = async (req, res) => {
         message: "Invaild Org Id.",
         success: false,
         status: 400,
-      }).sort({ createdDate: -1 });
+      })
     }
-    const lead = await Lead.find({ orgId: orgId, delete: deleted });
+    const lead = await Lead.find({ orgId: orgId, delete: deleted }).sort({ _id: -1 });
     if (!lead) {
       res.json({
         success: true,
@@ -44,9 +44,9 @@ exports.getByStatusByOrg = async (req, res) => {
       message: "Invaild Org Id.",
       success: false,
       status: 400,
-    }).sort({ createdDate: -1 });
+    })
   }
-  const lead = await Lead.find({ orgId: orgId, delete: false, status: status });
+  const lead = await Lead.find({ orgId: orgId, delete: false, status: status }).sort({ _id: -1 });
   if (!lead) {
     res.json({
       success: true,
@@ -72,9 +72,9 @@ exports.getListByFirm = async (req, res) => {
       message: "Invaild firm Id.",
       success: false,
       status: 400,
-    }).sort({ createdDate: -1 });
+    })
   }
-  const lead = await Lead.find({ firmId: firmId, delete: deleted });
+  const lead = await Lead.find({ firmId: firmId, delete: deleted }).sort({ _id: -1 });
   if (!lead) {
     res.json({
       success: true,
@@ -98,13 +98,13 @@ exports.getByStatusByFirm = async (req, res) => {
       message: "Invaild firm Id.",
       success: false,
       status: 400,
-    }).sort({ createdDate: -1 });
+    })
   }
   const lead = await Lead.find({
     firmId: firmId,
     delete: false,
     status: status,
-  }).sort({ createdDate: -1 });
+  }).sort({ _id: -1 });
   if (!lead) {
     res.json({
       success: true,
@@ -130,7 +130,7 @@ exports.leadById = async (req, res) => {
       success: false,
       status: 404,
       message: "Invalid id.",
-    }).sort({ createdDate: -1 });
+    })
   }
   const data = await Lead.findById(id);
   if (!data) {
@@ -152,15 +152,15 @@ exports.leadById = async (req, res) => {
 exports.addLead = async (req, res) => {
   const { nanoid } = await import('nanoid');
 
-    const randomLeadId = nanoid(5);
+  const randomLeadId = nanoid(5);
 
-    const newLead = new Lead({
-      ...req.body,
-      randomLeadId: randomLeadId,
-    });
+  const newLead = new Lead({
+    ...req.body,
+    randomLeadId: randomLeadId,
+  });
+  const lead1 = new Lead(newLead)
 
 
-const lead1 = new Lead(newLead)
   await lead1.save();
   res.json({
     success: true,
@@ -201,39 +201,39 @@ exports.leadSearch = async (req, res) => {
   try {
     const { search, orgId } = req.body;
     const newData = [];
-    const data = await Lead.find({ orgId: orgId, delete: false }).sort({ createdDate: -1 });
+    const data = await Lead.find({ orgId: orgId, delete: false }).sort({ _id: -1 });
     data.filter((doc) => {
-      console.log("doc",doc);
+      console.log("doc", doc);
       for (const key in doc.toObject()) {
-        if (doc[key] === search ) {
+        if (doc[key] === search) {
           newData.push(doc);
         }
       }
       for (const key in doc.clientAddress.toObject()) {
-        if (doc.clientAddress[key] === search ) {
+        if (doc.clientAddress[key] === search) {
           newData.push(doc);
-          
+
         }
       }
       for (const key in doc.pipeline.toObject()) {
-        if (doc.pipeline[key] === search ) {
+        if (doc.pipeline[key] === search) {
           newData.push(doc);
-          
+
         }
       }
       for (const key in doc.orgDetails.toObject()) {
-        if (doc.orgDetails[key] === search ) {
+        if (doc.orgDetails[key] === search) {
           newData.push(doc);
-          
+
         }
       }
       for (const key in doc.orgDetails.orgAddress.toObject()) {
-        if (doc.orgDetails.orgAddress[key] === search ) {
+        if (doc.orgDetails.orgAddress[key] === search) {
           newData.push(doc);
-          
+
         }
       }
-     
+
     });
     res.json({
       data: newData,
@@ -251,9 +251,9 @@ exports.leadSearch = async (req, res) => {
   }
 };
 
-exports.bulkDelete = async(req,res)=>{
+exports.bulkDelete = async (req, res) => {
   try {
-    const { leadIds } = req.body; 
+    const { leadIds } = req.body;
     console.log(leadIds);
     const result = await Lead.deleteMany({ _id: { $in: leadIds } });
 
