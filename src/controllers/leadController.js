@@ -150,22 +150,47 @@ exports.leadById = async (req, res) => {
 };
 
 exports.addLead = async (req, res) => {
-  const { nanoid } = await import('nanoid');
 
-  const randomLeadId = nanoid(5);
+  function generateUniqueRandomNumbers(min, max, count) {
+    if (max - min + 1 < count) {
+      throw new Error("Cannot generate unique random numbers with given constraints.");
+    }
+  
+    const numbers = Array.from({ length: max - min + 1 }, (_, i) => i + min);
+    const uniqueRandomNumbers = [];
+  
+    while (uniqueRandomNumbers.length < count) {
+      const randomIndex = Math.floor(Math.random() * numbers.length);
+      const selectedNumber = numbers[randomIndex];
+  
+      // Remove the selected number from the list
+      numbers.splice(randomIndex, 1);
+  
+      uniqueRandomNumbers.push(selectedNumber);
+    }
+  
+    return uniqueRandomNumbers;
+  }
+  
+  const min = 100;
+  const max = 99999;
+  const count = 1; // Change this to the number of unique random numbers you need
+  
+  const uniqueRandomNumbers = generateUniqueRandomNumbers(min, max, count);
+  console.log(uniqueRandomNumbers);
 
   const newLead = new Lead({
     ...req.body,
-    randomLeadId: randomLeadId,
+    randomLeadId: uniqueRandomNumbers,
   });
+
   const lead1 = new Lead(newLead)
-
-
   await lead1.save();
   res.json({
     success: true,
     message: "Lead saved successfully",
     status: 201,
+    data: lead1
   });
 };
 
