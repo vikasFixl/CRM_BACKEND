@@ -17,7 +17,7 @@ exports.getLeadActivity = async (req, res) => {
     const { leadId } = req.params;
     const data = await LeadActivity.find({ leadId: leadId })
       .populate("comment.userID", "firstName")
-      .sort("-1");
+      .sort({_id: -1});
     res.status(200).json({
       data: data,
       message: "Fetched Successfully.",
