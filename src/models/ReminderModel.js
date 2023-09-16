@@ -1,13 +1,11 @@
 const mongoose = require("mongoose");
-const ReminderSchema = new mongoose.Schema({
-  Reminder: [
-    {
-      key: String,
-      reminder: String,
-    },
-  ],
-},
-{
+const ReminderSchema = new mongoose.Schema(
+  {
+    date: { type: Date },
+    time: { type: String },
+    text: { type: String }
+  },
+  {
     timestamps: true,
   }
 );
