@@ -154,6 +154,8 @@ exports.createLeadActivity = async (req, res) => {
       image: im,
       orgId: req.body.orgId,
       firmId: req.body.firmId,
+      activityDate:req.body.activityDate,
+      activityTime:req.body.activityTime,
     });
     await activity.save();
     res.status(201).json({
