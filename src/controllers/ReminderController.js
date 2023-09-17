@@ -43,7 +43,12 @@ exports.createReminder = async (req, res) => {
 exports.getAllReminders = async (req, res) => {
   try {
     const reminders = await ReminderModel.find();
-    res.status(200).json(reminders);
+    res.status(200).json({
+      success: true,
+      data: reminders,
+      status: 200,
+      message: "All reminders get here"
+    });
   } catch (error) {
     res.status(500).json({ error: "Unable to fetch reminders" });
   }
