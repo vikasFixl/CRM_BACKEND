@@ -11,6 +11,25 @@ const logger = winston.createLogger({
   transports: [new winston.transports.File({ filename: "invoices.json" })],
 });
 
+function generateNewInvoiceNumber() {
+  const now = new Date();
+  const timestamp = now
+    .toISOString()
+    .replace(/\D/g, "")
+    .slice(0, 14);
+
+  // Generate a random component (e.g., a random number or alphanumeric characters)
+  // You can customize the length and characters used for the random component
+  const randomComponent = Math.random()
+    .toString(36)
+    .substring(2, 8); // Generates a random 6-character alphanumeric string
+
+  // Combine the elements to create the unique invoice number
+  const invoiceNumber = `${prefix}${timestamp}${randomComponent}`;
+
+  return invoiceNumber;
+}
+
 exports.getInvoicesByUser = async (req, res) => {
   const { searchQuery } = req.query;
 
@@ -206,6 +225,59 @@ exports.createInvoice = async (req, res) => {
     curConvert,
     incluTax,
   } = req.body;
+
+
+  
+  if (recurringInvoice.isEnabled===true) {
+    // Create a new invoice for recurring invoices and schedule regeneration
+    const newInvoice = new InvoiceModel(req.body);
+    const newData = await newInvoice.save();
+
+    const newRecurr = new RecurringInvoiceModel({
+      details: req.body,
+      amount: total,
+      frequency: recurringInvoice.frequency,
+      start_date: invoiceDate,
+      customer_id: client.client_id,
+      end_date: recurringInvoice.end_date,
+      invoice_id: newInvoice._id, // Save the newly created invoice's ID
+    });
+
+    await newRecurr.save();
+
+    // Schedule a recurring job using node-schedule
+    schedule.scheduleJob(`0 0 */${recurringInvoice.frequency} * * *`, async () => {
+      try {
+        const now = new Date();
+        const invoiceToDuplicate = await InvoiceModel.findById(newInvoice._id);
+
+        // Duplicate the existing invoice to create a new one
+        const duplicatedInvoiceData = { ...invoiceToDuplicate.toObject() };
+        duplicatedInvoiceData.invoiceNumber = generateNewInvoiceNumber(); // Generate a new invoice number
+        duplicatedInvoiceData.invoiceDate = now; // Set the current date as the new invoice date
+
+        // Create and save the new invoice without deleting the old one
+        const newDuplicatedInvoice = new InvoiceModel(duplicatedInvoiceData);
+        await newDuplicatedInvoice.save();
+
+        console.log(`Regenerated invoice: ${newDuplicatedInvoice.invoiceNumber}`);
+      } catch (error) {
+        console.error('Error regenerating invoices:', error);
+      }
+    });
+
+    res.status(201).json({
+      data: newData,
+      success: true,
+      code: 201,
+      message: "Invoice and recurring invoice created successfully!",
+    });
+  } else {
+    // Handle other cases as needed
+    // ...
+  }
+
+
   try {
     if (draft == true) {
       const newInvoice = new InvoiceModel(req.body);

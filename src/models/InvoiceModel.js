@@ -90,6 +90,7 @@ const InvoiceSchema = new mongoose.Schema({
   },
   draft: { type: Boolean },
   orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
+
 });
 
 module.exports = mongoose.model("InvoiceModel", InvoiceSchema);
