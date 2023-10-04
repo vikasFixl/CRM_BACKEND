@@ -15,6 +15,7 @@ const LeadSchema = new mongoose.Schema(
     },
     timezone: { type: String },
     stage: { type: String },
+    currency: { type: String },
     estimatedWorth: { type: String },
     createdDate: { type: String },
     title: { type: String },

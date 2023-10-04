@@ -28,6 +28,7 @@ const employeeRoutes = require("./src/routes/empRoute");
 const vendorRoutes = require("./src/routes/vendorRoutes");
 const purchesRoutes =require("./src/routes/purchesRoute.js")
 const Subscription =require("./src/routes/subscriptionRoute.js")
+const Reminder =require("./src/routes/reminderRoute.js")
 const appRouter = require("./src/routes/HRM/mainRoutes.js");
 
 require("dotenv").config({
@@ -96,6 +97,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/role", roleRoutes);
 app.use("/api/subscription",Subscription)
+app.use("/api/Reminder",Reminder)
 
 
 

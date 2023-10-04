@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
 const subscriptionSchema = new mongoose.Schema({
-  // User associated with the subscription
+
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ORG',
     required: true,
   },
-  // Subscription plan details
+ 
   planName: {
     type: String,
     enum:["Free","Medium","Premium"],

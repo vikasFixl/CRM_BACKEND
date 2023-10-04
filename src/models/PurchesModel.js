@@ -90,9 +90,7 @@ const PurchesSchema = new mongoose.Schema({
   orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
 });
 
-// Hook to log when a new purchase is created
 PurchesSchema.pre('save', function (next) {
-  // Log the purchase creation
   logPurchase(`New purchase created with purchaseNumber: ${this.purchaseNumber}`);
   next();
 });
