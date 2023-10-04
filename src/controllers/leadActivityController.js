@@ -17,7 +17,7 @@ exports.getLeadActivity = async (req, res) => {
     const { leadId } = req.params;
     const data = await LeadActivity.find({ leadId: leadId })
       .populate("comment.userID", "firstName")
-      .sort({_id: -1});
+      .sort({ _id: -1 });
     res.status(200).json({
       data: data,
       message: "Fetched Successfully.",
@@ -150,12 +150,13 @@ exports.createLeadActivity = async (req, res) => {
       leadId: req.body.leadId,
       title: req.body.title,
       desc: req.body.desc,
+      details: req.body.details,
       type: req.body.type,
       image: im,
       orgId: req.body.orgId,
       firmId: req.body.firmId,
-      activityDate:req.body.activityDate,
-      activityTime:req.body.activityTime,
+      activityDate: req.body.activityDate,
+      activityTime: req.body.activityTime,
     });
     await activity.save();
     res.status(201).json({

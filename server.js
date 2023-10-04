@@ -26,9 +26,9 @@ const dedRoutes = require("./src/routes/dedRoute");
 const salRoutes = require("./src/routes/salRoute");
 const employeeRoutes = require("./src/routes/empRoute");
 const vendorRoutes = require("./src/routes/vendorRoutes");
-const purchesRoutes =require("./src/routes/purchesRoute.js")
-const Subscription =require("./src/routes/subscriptionRoute.js")
-const Reminder =require("./src/routes/reminderRoute.js")
+const purchesRoutes = require("./src/routes/purchesRoute.js")
+const Subscription = require("./src/routes/subscriptionRoute.js")
+const Reminder = require("./src/routes/reminderRoute.js")
 const appRouter = require("./src/routes/HRM/mainRoutes.js");
 
 require("dotenv").config({
@@ -78,7 +78,7 @@ app.use(express.json());
 
 app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
-app.use("/api/purchase",purchesRoutes)
+app.use("/api/purchase", purchesRoutes)
 app.use("/api/client", clientRoutes);
 app.use("/api/firm", firmRoutes);
 app.use("/api/org", orgRoutes);
@@ -96,12 +96,10 @@ app.use("/api/employee", employeeRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/role", roleRoutes);
-app.use("/api/subscription",Subscription)
-app.use("/api/Reminder",Reminder)
+app.use("/api/subscription", Subscription)
+app.use("/api/Reminder", Reminder)
 
-
-
-app.use("/api/hrm/", appRouter);
+app.use("/api/hrm", appRouter);
 
 app.use(async (req, res, next) => {
   if (req.headers["x-access-token"]) {

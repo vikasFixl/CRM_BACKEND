@@ -47,6 +47,7 @@ const LeadSchema = new mongoose.Schema(
     randomLeadId: { type: Number },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
     firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" },
+    firmName: { type: String }
   },
   {
     timestamps: true,

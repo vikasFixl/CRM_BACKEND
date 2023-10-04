@@ -14,6 +14,7 @@ const LeadActivitySchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    details: { type: String, require: false },
     type: {
       type: String,
       required: false,
@@ -22,8 +23,8 @@ const LeadActivitySchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    activityDate:Date,
-    activityTime:String,
+    activityDate: Date,
+    activityTime: String,
     comment: [
       {
         comment: { type: String },
