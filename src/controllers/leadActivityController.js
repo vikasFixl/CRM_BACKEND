@@ -43,7 +43,7 @@ exports.getActivityByType = async (req, res) => {
         code: 400,
       });
     }
-    const data = await LeadActivity.find({ leadId: leadId, type: type });
+    const data = await LeadActivity.find({ leadId: leadId, type: type }).sort({ _id: -1 });
     if (!data) {
       return res.status(404).json({
         message: "No data found.",
