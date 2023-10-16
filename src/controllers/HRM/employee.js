@@ -105,7 +105,7 @@ const register = async (req, res) => {
     const leave_date = new Date(req.body.leaveDate);
     console.log("redfdsdf", req.body);
     const hash = await bcrypt.hash(req.body.password, saltRounds);
-    
+
     const createEmployee = new Employee({
       firstName: req.body.firstName,
       lastName: req.body.lastName,
@@ -131,17 +131,17 @@ const register = async (req, res) => {
       weeklyHolidayId: req.body.weeklyHolidayId,
       designationHistory: req.body.designationId
         ? {
-            create: {
-              designationId: req.body.designationId,
-              startDate: req.body.designationStartDate
-                ? new Date(req.body.designationStartDate)
-                : new Date(),
-              endDate: req.body.designationEndDate
-                ? new Date(req.body.designationEndDate)
-                : new Date(),
-              comment: req.body.designationComment || null,
-            },
-          }
+          create: {
+            designationId: req.body.designationId,
+            startDate: req.body.designationStartDate
+              ? new Date(req.body.designationStartDate)
+              : new Date(),
+            endDate: req.body.designationEndDate
+              ? new Date(req.body.designationEndDate)
+              : new Date(),
+            comment: req.body.designationComment || null,
+          },
+        }
         : {},
       // salaryHistory: req.body.salary
       //   ? {
@@ -158,7 +158,7 @@ const register = async (req, res) => {
       //     }
       //   : {},
       designationHistory: req.body.designationHistory
-      ? req.body.designationHistory.map((e) => {
+        ? req.body.designationHistory.map((e) => {
           return {
             designationId: e.designationId,
             startDate: e.designationStartDate
@@ -167,36 +167,37 @@ const register = async (req, res) => {
             endDate: e.designationEndDate
               ? new Date(e.designationEndDate)
               : new Date(),
-            comment: e.designationComment || null,
+            name: e.name || null
+            // comment: e.designationComment || null,
           }
-      })
-      : [],
-        salaryHistory: req.body.salaryHistory
+        })
+        : [],
+      salaryHistory: req.body.salaryHistory
         ? req.body.salaryHistory.map((e) => {
-            return {
-              salary: e.salary,
-              startDate: e.salaryStartDate
-                ? new Date(e.salaryStartDate)
-                : new Date(),
-              endDate: e.salaryEndDate
-                ? new Date(e.salaryEndDate)
-                : new Date(),
-              comment: e.salaryComment || null,
-            }
+          return {
+            salary: e.salary,
+            startDate: e.salaryStartDate
+              ? new Date(e.salaryStartDate)
+              : new Date(),
+            endDate: e.salaryEndDate
+              ? new Date(e.salaryEndDate)
+              : new Date(),
+            comment: e.salaryComment || null,
+          }
         })
         : [],
       educations: req.body.educations
-          ? req.body.educations.map((e) => {
-              return {
-                degree: e.degree,
-                institution: e.institution,
-                fieldOfStudy: e.fieldOfStudy,
-                result: e.result,
-                startDate: new Date(e.studyStartDate),
-                endDate: new Date(e.studyEndDate),
-              };
-            })
-          : [],
+        ? req.body.educations.map((e) => {
+          return {
+            degree: e.degree,
+            institution: e.institution,
+            fieldOfStudy: e.fieldOfStudy,
+            result: e.result,
+            startDate: new Date(e.studyStartDate),
+            endDate: new Date(e.studyEndDate),
+          };
+        })
+        : [],
     });
 
     await createEmployee.save();
