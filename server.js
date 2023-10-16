@@ -99,8 +99,6 @@ app.use("/api/role", roleRoutes);
 app.use("/api/subscription",Subscription)
 app.use("/api/Reminder",Reminder)
 
-
-
 app.use("/api/hrm/", appRouter);
 
 app.use(async (req, res, next) => {

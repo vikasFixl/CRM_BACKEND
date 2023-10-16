@@ -51,6 +51,14 @@ router.post(
   "/addLeadActivityComment",
   LeadActivityController.addLeadActivityComment
 );
+router.patch(
+  "/updateLeadActivityComment",
+  LeadActivityController.updateLeadActivityComment
+);
+router.delete(
+  "/deleteLeadActivityComment/:id",
+  LeadActivityController.deleteLeadActivityComment
+);
 
 router.patch(
   "/updateLeadActivity/:id",

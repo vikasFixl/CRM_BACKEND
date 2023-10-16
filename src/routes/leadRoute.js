@@ -17,6 +17,7 @@ router.post("/getByStatusByFirm", leadController.getByStatusByFirm);
 router.get("/leadById/:id", leadController.leadById);
 
 router.post("/add-lead", leadController.addLead);
+router.post("/add-leadbyExcel", leadController.addLeadByExcel);
 router.post("/leadSearch", leadController.leadSearch);
 
 router.patch("/update-lead/:id", leadController.updateLead);

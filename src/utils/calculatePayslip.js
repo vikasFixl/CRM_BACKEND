@@ -24,7 +24,7 @@ const calculatePayslip = async (salaryMonth, salaryYear) => {
         acceptLeaveTo: {
           $lte: new Date(`${salaryYear}-${parseInt(salaryMonth) + 1}-01`),
         },
-      },
+      }, 
       select: 'leaveType leaveDuration',
     });
 

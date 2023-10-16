@@ -17,7 +17,7 @@ exports.getLeadActivity = async (req, res) => {
     const { leadId } = req.params;
     const data = await LeadActivity.find({ leadId: leadId })
       .populate("comment.userID", "firstName")
-      .sort({_id: -1});
+      .sort({ _id: -1 });
     res.status(200).json({
       data: data,
       message: "Fetched Successfully.",
@@ -154,8 +154,8 @@ exports.createLeadActivity = async (req, res) => {
       image: im,
       orgId: req.body.orgId,
       firmId: req.body.firmId,
-      activityDate:req.body.activityDate,
-      activityTime:req.body.activityTime,
+      activityDate: req.body.activityDate,
+      activityTime: req.body.activityTime,
     });
     await activity.save();
     res.status(201).json({
@@ -264,6 +264,113 @@ exports.addLeadActivityComment = async (req, res) => {
     status: 201,
     message: "Comment added successfully.",
   });
+};
+exports.updateLeadActivityComment = async (req, res) => {
+  const { commentId, updatedComment } = req.body;
+  const { userId } = req.body; // Get user information from the request object
+
+  // Validate commentId
+  if (!mongoose.Types.ObjectId.isValid(commentId)) {
+    return res.status(400).json({
+      message: `Invalid Comment Id`,
+      success: false,
+      status: 400,
+    });
+  }
+
+  try {
+    // const existingComment = await LeadActivity.findOneAndUpdate(
+    //   { 'comment._id': commentId, 'comment.userID': userId }, // Match the commentId and userId
+    //   { $set: { 'comment.$.comment': updatedComment, 'comment.$.date': new Date() } }, // Update the comment and date
+    //   { new: true }
+    // );
+    const existingComment = await LeadActivity.findOneAndUpdate(
+      {
+        comment: {
+          $elemMatch: { _id: commentId, userID: userId }, // Match commentId and userId within the comment array
+        },
+      },
+      {
+        $set: {
+          "comment.$.comment": updatedComment,
+          "comment.$.date": new Date(),
+        }, // Update the comment and date
+      },
+      { new: true }
+    );
+    // Check if the comment with given commentId and userId exists
+    if (!existingComment) {
+      return res.status(404).json({
+        message: `Comment not found or permission denied`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    res.json({
+      success: true,
+      status: 200,
+      message: "Comment updated successfully.",
+      data: existingComment,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: `Internal Server Error`,
+      success: false,
+      status: 500,
+    });
+  }
+};
+exports.deleteLeadActivityComment = async (req, res) => {
+  const { commentId, userId } = req.query; // Assuming commentId is passed as a route parameter
+
+  console.log(" commentId, userId",  commentId, userId);
+  // Validate commentId
+  if (!mongoose.Types.ObjectId.isValid(commentId)) {
+    return res.status(400).json({
+      message: `Invalid Comment Id`,
+      success: false,
+      status: 400,
+    });
+  }
+
+  try {
+    const updatedLeadActivity = await LeadActivity.findOneAndUpdate(
+      {
+        comment: {
+          $elemMatch: { _id: commentId, userID: userId }, // Match commentId and userId within the comment array
+        },
+      },
+      {
+        $pull: { comment: { _id: commentId } }, // Remove the comment from the array
+      },
+      { new: true }
+    );
+
+    // Check if the comment with given commentId and userId exists
+    if (!updatedLeadActivity) {
+      return res.status(404).json({
+        message: `Comment not found or permission denied`,
+        success: false,
+        status: 404,
+      });
+    }
+
+    res.json({
+      success: true,
+      status: 200,
+      message: "Comment deleted successfully.",
+      data: updatedLeadActivity,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: `Internal Server Error`,
+      success: false,
+      status: 500,
+    });
+  }
 };
 
 exports.getLeadActivityComment = async (req, res) => {
