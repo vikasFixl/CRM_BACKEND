@@ -157,7 +157,7 @@ exports.leadById = async (req, res) => {
 };
 
 exports.addLeadByExcel = async (req, res) => {
-  let { leads } = req.body;
+  let leads = req.body;
 
   function generateUniqueRandomNumbers(min, max, count) {
     if (max - min + 1 < count) {
@@ -184,14 +184,13 @@ exports.addLeadByExcel = async (req, res) => {
 
   const min = 100;
   const max = 99999;
-  const count = 1; // Change this to the number of unique random numbers you need
+  const count = leads.length; // Change this to the number of unique random numbers you need
 
   const uniqueRandomNumbers = generateUniqueRandomNumbers(min, max, count);
-  console.log(uniqueRandomNumbers);
   for (let i = 0; i < leads.length; i++) {
     await Lead.create({
       ...leads[i],
-      randomLeadId: uniqueRandomNumbers[0],
+      randomLeadId: uniqueRandomNumbers[i],
     });
   }
   res.json({
@@ -231,7 +230,6 @@ exports.addLead = async (req, res) => {
   const count = 1; // Change this to the number of unique random numbers you need
 
   const uniqueRandomNumbers = generateUniqueRandomNumbers(min, max, count);
-  console.log(uniqueRandomNumbers);
 
   const newLead = new Lead({
     ...req.body,
