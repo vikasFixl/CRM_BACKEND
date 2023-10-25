@@ -106,7 +106,6 @@ exports.signin = async (req, res) => {
   }
 };
 
-
 exports.signup = async (req, res) => {
   const { form } = req.body;
   const { email } = req.body;
@@ -339,5 +338,68 @@ exports.updateProfileimage = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ message: "something went wrong! " });
+  }
+};
+
+
+exports.email = async (req, res) => {
+  const { userName, from, to, link } = req.body;
+  console.log("res", userName);
+  try {
+    // create reusable transporter object using the default SMTP transport
+    let transporter = await nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "msc.manishchoudhary@gmail.com",
+        pass: "zdvgzwmkrxxamwzb",
+      },
+    });
+    // send mai with defined transport object
+    const htmlContent = `
+    <div style="font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px; text-align: center;">
+    <p style="font-size: 32px; color: #333;"> <strong> CRM </strong> </p>
+    <p style="font-size: 16px; color: #333;">
+    @${userName} has invited you to collaborate on the
+    CRM software
+    </p>
+    <a href="${link}" style="
+    display: inline-block;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    background-color: #4183c4;
+    width: auto!important;
+    text-align: center;
+    border-radius: 5px;
+    letter-spacing: normal;
+    font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif;
+    margin: 0 auto;
+    padding: 6px 12px;
+    text-decoration: none; font-size: 16px;">Accept Invitation</a>
+</div>
+`;
+    const mailOption = {
+      from: `${userName} <${from}>`,
+      to: `${to}`,
+      subject: `${userName} Send invitation to join CRM ✔`,
+      text: "Hello to myself!",
+      html: htmlContent,
+      // "<p><b>Hello</b> to myself friendly! <button>invitation Accept </button></p>",
+    };
+    await transporter.sendMail(mailOption, (err, info) => {
+      if (err) {
+        console.log("Error occurred. " + err.message);
+        // return process.exit(1);
+        return res
+          .status(404)
+          .json({ Message: "Error occurred. " + err.message });
+      } else {
+        console.log("Message sent: %s", info);
+        // console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+        return res.status(201).json({ Message: `Invitation sent to: ${to}` });
+      }
+    });
+  } catch (error) {
+    return (message = { error: error.message });
   }
 };

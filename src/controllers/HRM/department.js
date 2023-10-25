@@ -34,7 +34,6 @@ const createSingleDepartment = async (req, res) => {
   }
 };
 
-
 const getAllDepartment = async (req, res) => {
   if (req.query.query === "all") {
     try {
@@ -135,7 +134,6 @@ const getSingleDepartment = async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 };
-
 
 const updateSingleDepartment = async (req, res) => {
   try {

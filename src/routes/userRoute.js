@@ -3,7 +3,7 @@ const router = express.Router();
 const userController = require("../controllers/user.js");
 const multer=require("multer")
 const path=require("path")
-const fs=require("fs")
+const fs=require("fs");
 
 const url = './public/user/'
 const storage = multer.diskStorage({
@@ -25,6 +25,7 @@ const upload = multer({
 router.post("/signin", userController.signin);
 router.post("/signup",upload.single("profilePhoto"),userController.signup);
 router.post("/forgot", userController.forgotPassword);
+router.post("/invitation", userController.email);
 router.post("/reset", userController.resetPassword);
 router.post('/getUsersByDept',userController.getUsersByDept);
 

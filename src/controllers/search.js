@@ -7,7 +7,7 @@ const User = require('../models/userModel');
 
 exports.getResult =  async (req,res) => {
     try{
-    const search = req.body;
+    const search = req.body.mail;
     const obj = Object.keys(search)[0];
     const obj_val = Object.values(search)[0];
     if(obj == "firstName") {

@@ -60,7 +60,6 @@ const getSingleAwardHistory = async (req, res) => {
   }
 };
 
-
 const updateSingleAwardHistory = async (req, res) => {
   try {
     const awardHistoryId = req.params.id;
@@ -86,6 +85,7 @@ const updateSingleAwardHistory = async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 };
+
 const deleteSingleAwardHistory = async (req, res) => {
   try {
     const awardHistoryId = req.params.id;

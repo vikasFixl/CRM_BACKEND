@@ -26,6 +26,7 @@ const createSingleDesignationHistory = async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 };
+
 const getAllDesignationHistory = async (req, res) => {
   try {
     const allDesignationHistory = await DesignationHistory.find().sort({ id: 'asc' });
@@ -50,7 +51,6 @@ const getSingleDesignationHistory = async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 };
-
 
 const updateSingleDesignationHistory = async (req, res) => {
   try {

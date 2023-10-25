@@ -75,8 +75,8 @@ const getAssignedTaskById = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
-//update assignedTask controller
 
+//update assignedTask controller
 const updateAssignedTask = async (req, res) => {
   try {
     const { id } = req.params;
@@ -112,8 +112,8 @@ const updateAssignedTask = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
-//delete assignedTask controller
 
+//delete assignedTask controller
 const deleteAssignedTask = async (req, res) => {
   try {
     const taskId = parseInt(req.params.id);
