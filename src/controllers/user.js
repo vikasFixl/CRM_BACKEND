@@ -113,13 +113,12 @@ exports.signup = async (req, res) => {
   try {
     const url = req.protocol + "://" + req.get("host");
     const existingUser = await User.findOne({ email });
-    if(req.body.password != req.body.confirmPassword){
-    return res.status(403).json({message: "Password does not match"});
-   }
-   else if (existingUser)
-     { return res.status(403).json({ message: "User already exist" });}
-   
-     const emp = new Employee({
+    if (req.body.password != req.body.confirmPassword) {
+      return res.status(403).json({ message: "Password does not match" });
+    }
+    else if (existingUser) { return res.status(403).json({ message: "User already exist" }); }
+
+    const emp = new Employee({
       eid: "F" + Math.random(),
       //userid:user._id,
       firstName: req.body.firstName,
@@ -150,10 +149,10 @@ exports.signup = async (req, res) => {
     user.password = await bcrypt.hash(user.password, salt);
     await user.save();
     res.status(201).json({
-      "firstName":user.firstName,
-      "lastName":user.lastName,
-      "email":user.email,
-      "role":user.role,
+      "firstName": user.firstName,
+      "lastName": user.lastName,
+      "email": user.email,
+      "role": user.role,
       success: true,
       code: 201,
       message: "You have signed up successfully",
@@ -356,32 +355,48 @@ exports.email = async (req, res) => {
     });
     // send mai with defined transport object
     const htmlContent = `
-    <div style="font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px; text-align: center;">
-    <p style="font-size: 32px; color: #333;"> <strong> CRM </strong> </p>
-    <p style="font-size: 16px; color: #333;">
-    @${userName} has invited you to collaborate on the
-    CRM software
-    </p>
-    <a href="${link}" style="
-    display: inline-block;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    background-color: #4183c4;
-    width: auto!important;
-    text-align: center;
-    border-radius: 5px;
-    letter-spacing: normal;
-    font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif;
-    margin: 0 auto;
-    padding: 6px 12px;
-    text-decoration: none; font-size: 16px;">Accept Invitation</a>
-</div>
+    <div style="width: 100%; color: #000; background: #fff; padding: 2rem; margin-top: 0; display: flex; justify-content: center; align-items: center">
+      <div style="width: 40%; margin-left: 25%; border: 1px solid #c8c9ca; padding: 2rem ">
+        <div style="text-align: center">
+          <h1 style="text-align: center; color: #000; font-weight: 900 ">CRM</h1>
+          <p style="font-size: 18px;padding-top: 0; padding: 1rem; border-bottom: 1px solid #c8c9ca">
+            ${userName} has invited you to join <span style="font-size: 20px; margin: 0; padding: 0; font-weight: 600 ">CRM</span>
+          </p>
+          <p style="margin: 1rem auto; margin-top: 1rem; font-size: 13px">
+            We're thrilled to invite you to join our 
+            <span style="margin: 0; padding: 0; color: blue">CRM</span>,
+            designed to supercharge our team collaboration and streamline our workflow.
+          </p>
+          <a href=${link} style="display: inline-block; color: #fff; background:blue; border-radius: 5px; text-decoration: none; font-size: 14px; font-weight: 600; margin: 1rem auto; padding: 6px 12px ">
+            View Invitation
+          </a>
+          <p style="margin: 1rem auto; font-size: 13px; padding-bottom: 2rem; border-bottom: 1px solid #c8c9ca">
+            We believe that by embracing our platform, we can take our
+            collaboration and efficiency to new heights. This is an exciting step forward for our team, and we're
+            eager to have you on board.
+          </p>
+          <div style="font-size: 12px; width: 100%; text-align: left">
+            <span style="margin: 0; padding: 0; color: #000; font-weight: 600">Note: </span>
+            <p style="display: inline "> This invitation was intended for
+              <span style="margin: 0; padding: 0; color: blue"; text-decoration: none; font-weight: 600>${to}</span>.
+              If you were not expecting this invitation, you can ignore this email.
+            </p>
+          </div>
+          <div style="font-size: 12px; width: 100%; text-align: left; margin-top: 1rem">
+            <span style="margin: 0; padding: 0; color: gray; font-weight: 600">Button not working? :</span>
+            <p style="display: inline; color: gray">Copy and paste this link to your browser:</p>
+            <p style="color: blue, margin-top: 0.5rem">
+              <a href=${link} target="_blank">${link}</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
 `;
     const mailOption = {
       from: `${userName} <${from}>`,
       to: `${to}`,
-      subject: `${userName} Send invitation to join CRM ✔`,
+      subject: `${userName} sent invitation to join CRM ✔`,
       text: "Hello to myself!",
       html: htmlContent,
       // "<p><b>Hello</b> to myself friendly! <button>invitation Accept </button></p>",
