@@ -13,16 +13,11 @@ const logger = winston.createLogger({
 
 function generateNewInvoiceNumber() {
   const now = new Date();
-  const timestamp = now
-    .toISOString()
-    .replace(/\D/g, "")
-    .slice(0, 14);
+  const timestamp = now.toISOString().replace(/\D/g, "").slice(0, 14);
 
   // Generate a random component (e.g., a random number or alphanumeric characters)
   // You can customize the length and characters used for the random component
-  const randomComponent = Math.random()
-    .toString(36)
-    .substring(2, 8); // Generates a random 6-character alphanumeric string
+  const randomComponent = Math.random().toString(36).substring(2, 8); // Generates a random 6-character alphanumeric string
 
   // Combine the elements to create the unique invoice number
   const invoiceNumber = `${prefix}${timestamp}${randomComponent}`;
@@ -219,6 +214,7 @@ exports.createInvoice = async (req, res) => {
     draft,
     roundOff,
     recurringInvoice,
+    recurringInvoiceObj,
     tax,
     desc,
     orgId,
@@ -226,109 +222,67 @@ exports.createInvoice = async (req, res) => {
     incluTax,
   } = req.body;
 
-
-  
-  if (recurringInvoice.isEnabled===true) {
+  console.log("test", recurringInvoice);
+  if (recurringInvoice === true) {
     // Create a new invoice for recurring invoices and schedule regeneration
     const newInvoice = new InvoiceModel(req.body);
     const newData = await newInvoice.save();
-
-    const newRecurr = new RecurringInvoiceModel({
-      details: req.body,
-      amount: total,
-      frequency: recurringInvoice.frequency,
-      start_date: invoiceDate,
-      customer_id: client.client_id,
-      end_date: recurringInvoice.end_date,
-      invoice_id: newInvoice._id, // Save the newly created invoice's ID
-    });
-
-    await newRecurr.save();
-
-    // Schedule a recurring job using node-schedule
-    schedule.scheduleJob(`0 0 */${recurringInvoice.frequency} * * *`, async () => {
-      try {
-        const now = new Date();
-        const invoiceToDuplicate = await InvoiceModel.findById(newInvoice._id);
-
-        // Duplicate the existing invoice to create a new one
-        const duplicatedInvoiceData = { ...invoiceToDuplicate.toObject() };
-        duplicatedInvoiceData.invoiceNumber = generateNewInvoiceNumber(); // Generate a new invoice number
-        duplicatedInvoiceData.invoiceDate = now; // Set the current date as the new invoice date
-
-        // Create and save the new invoice without deleting the old one
-        const newDuplicatedInvoice = new InvoiceModel(duplicatedInvoiceData);
-        await newDuplicatedInvoice.save();
-
-        console.log(`Regenerated invoice: ${newDuplicatedInvoice.invoiceNumber}`);
-      } catch (error) {
-        console.error('Error regenerating invoices:', error);
+    console.log("fkfd");
+    try {
+      if (draft == true) {
+        const newInvoice = new InvoiceModel(req.body);
+        const newData = await newInvoice.save();
+        res.status(201).json({
+          data: newData,
+          success: true,
+          code: 201,
+          message: "Invoice created successfully!",
+        });
+      } else {
+        const newInvoice = new InvoiceModel({
+          items: items,
+          subTotal: subTotal,
+          vat: vat,
+          total: total,
+          notes: notes,
+          remark: remark,
+          amount: amount,
+          dueAmount: dueAmount,
+          amountPaid: amountPaid,
+          invoiceNumber: invoiceNumber,
+          dueDate: dueDate,
+          invoiceDate: invoiceDate,
+          client: client,
+          status: status,
+          firm: firm,
+          termsNcondition: termsNcondition,
+          currency: currency,
+          partialPay: partialPay,
+          allowTip: allowTip,
+          incluTax: incluTax,
+          draft: draft,
+          recurringInvoice: recurringInvoice,
+          tax: tax,
+          roundOff: roundOff,
+          desc: desc,
+          recurringInvoiceObj: recurringInvoiceObj,
+          orgId: orgId,
+          curConvert: curConvert,
+        });
+        const bd2 = await newInvoice.save();
+        res.status(201).json({
+          data: bd2,
+          success: true,
+          code: 201,
+          message: "Invoice created successfully!",
+        });
       }
-    });
-
-    res.status(201).json({
-      data: newData,
-      success: true,
-      code: 201,
-      message: "Invoice and recurring invoice created successfully!",
-    });
-  } else {
-    // Handle other cases as needed
-    // ...
-  }
-
-
-  try {
-    if (draft == true) {
-      const newInvoice = new InvoiceModel(req.body);
-      const newData = await newInvoice.save();
-      res.status(201).json({
-        data: newData,
-        success: true,
-        code: 201,
-        message: "Invoice created successfully!",
-      });
-    } else {
-      const newInvoice = new InvoiceModel({
-        items: items,
-        subTotal: subTotal,
-        vat: vat,
-        total: total,
-        notes: notes,
-        remark: remark,
-        amount: amount,
-        dueAmount: dueAmount,
-        amountPaid: amountPaid,
-        invoiceNumber: invoiceNumber,
-        dueDate: dueDate,
-        invoiceDate: invoiceDate,
-        client: client,
-        status: status,
-        firm: firm,
-        termsNcondition: termsNcondition,
-        currency: currency,
-        partialPay: partialPay,
-        allowTip: allowTip,
-        incluTax: incluTax,
-        draft: draft,
-        recurringInvoice: recurringInvoice,
-        tax: tax,
-        roundOff: roundOff,
-        desc: desc,
-        orgId: orgId,
-        curConvert: curConvert,
-      });
-      const bd2 = await newInvoice.save();
-      res.status(201).json({
-        data: bd2,
-        success: true,
-        code: 201,
-        message: "Invoice created successfully!",
-      });
+    } catch (error) {
+      console.log(error);
+      res.status(409).json({ message: "something went wrong." });
     }
-  } catch (error) {
-    console.log(error);
-    res.status(409).json({ message: "something went wrong." });
+  } else {
+    res.status(409).json({ message: "something went wrong..." });
   }
 };
 

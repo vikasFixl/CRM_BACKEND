@@ -15,7 +15,7 @@ const permited = (data) => {
     }
   };
 };
-
+  
 const authorize = (action, module, role) => {
   return (req, res, next) => {
     try {

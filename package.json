@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "aws-sdk": "^2.1338.0",
+    "axios": "^1.6.0",
     "bcrypt": "^5.0.1",
     "corn": "^0.0.1",
     "cors": "^2.8.5",

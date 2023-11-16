@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const paypal = require("paypal-rest-sdk");
 const cors = require("cors");
 const dbConfig = require("./config/db.config.js");
+const schedule = require("node-schedule");
 
 //Routes
 const userRoutes = require("./src/routes/userRoute");
@@ -26,10 +27,13 @@ const dedRoutes = require("./src/routes/dedRoute");
 const salRoutes = require("./src/routes/salRoute");
 const employeeRoutes = require("./src/routes/empRoute");
 const vendorRoutes = require("./src/routes/vendorRoutes");
-const purchesRoutes = require("./src/routes/purchesRoute.js")
-const Subscription = require("./src/routes/subscriptionRoute.js")
-const Reminder = require("./src/routes/reminderRoute.js")
+const purchesRoutes = require("./src/routes/purchesRoute.js");
+const Subscription = require("./src/routes/subscriptionRoute.js");
+const Reminder = require("./src/routes/reminderRoute.js");
 const appRouter = require("./src/routes/HRM/mainRoutes.js");
+const { default: axios } = require("axios");
+const RecurringInvoiceModel = require("./src/models/RecurringInvoiceModel.js");
+const InvoiceModel = require("./src/models/InvoiceModel.js");
 
 require("dotenv").config({
   path: path.join(__dirname, "./.env"),
@@ -78,7 +82,7 @@ app.use(express.json());
 
 app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
-app.use("/api/purchase", purchesRoutes)
+app.use("/api/purchase", purchesRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/firm", firmRoutes);
 app.use("/api/org", orgRoutes);
@@ -96,11 +100,182 @@ app.use("/api/employee", employeeRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/role", roleRoutes);
-app.use("/api/subscription", Subscription)
-app.use("/api/Reminder", Reminder)
+app.use("/api/subscription", Subscription);
+app.use("/api/Reminder", Reminder);
 
 app.use("/api/hrm", appRouter);
 
+
+const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
+  try {
+    const currentDate = new Date();
+
+    // Query the database for recurring invoices that need to be processed
+    // const recurringInvoices = await InvoiceModel.find({});
+    const recurringInvoices = await InvoiceModel.find({
+      "recurringInvoiceObj.start_date": { $exists: true },
+      "recurringInvoiceObj.end_date": { $exists: true },
+    });
+    
+    if (recurringInvoices.length !== 0) {
+      for (const recurringInvoice of recurringInvoices) {
+        // const end = recurringInvoice.recurringInvoiceObj.end_date &&
+        const startDateSplit =
+          recurringInvoice.recurringInvoiceObj.start_date.toISOString();
+        const [startdatePart, starttimePart] = startDateSplit.split("T");
+        const endDateSplit =
+          recurringInvoice.recurringInvoiceObj.end_date.toISOString();
+        const [enddatePart, endtimePart] = endDateSplit.split("T");
+
+        const DueDateSplit =
+        recurringInvoice.dueDate.toISOString();
+      const [duedatePart, duetimePart] = DueDateSplit.split("T");
+
+        if (enddatePart === currentDate.toISOString().split("T")[0]) {
+
+          const InvoiceCount = await axios.post(
+            "http://localhost:5001/api/invoice/listInvoiceNo",
+            {
+              ordId: recurringInvoice.orgId,
+              firmId: recurringInvoice.firm.firmID,
+            }
+          );
+          const firmDetails = await axios.get(
+            `http://localhost:5001/api/firm/getFirm/${recurringInvoice.orgId}/${recurringInvoice.firm.firmID}`
+          );
+          const invoiceNumber =
+            InvoiceCount.data.data[0] &&
+            InvoiceCount.data.data[0].split("-")[1];
+          const UpdatedInvoiceCountDetails = Number(invoiceNumber) + 1;
+
+          const updatedInvoiceObject = recurringInvoice;
+        
+          updatedInvoiceObject.invoiceNumber = `${
+            firmDetails.data && firmDetails.data.data[0].invoicePrefix
+          }-${UpdatedInvoiceCountDetails}`;
+
+       
+        const InvoiceItemArr = updatedInvoiceObject.items ? (updatedInvoiceObject.items.length !== 0 && updatedInvoiceObject.items.map((item, i) => {
+              return { 
+                itemName: item.itemName,
+                  unitPrice: item.unitPrice,
+                  quantity: item.unitPrice,
+                  amount: item.amount,
+                  hsn: item.hsn,
+                  sac: item.sac,
+                  taxRate: item.taxRate,
+                  desc: item.desc,
+                  discount: item.discount
+                }
+            })) : [];
+            
+            function adjustDates(startDate, endDate) {
+              // Convert string dates to Date objects
+              const startDateObj = new Date(startDate);
+              const endDateObj = new Date(endDate);
+            
+              // Find the gap between dates in milliseconds
+              const dateGap = endDateObj - startDateObj;
+            
+              // Increase both dates by the gap
+              const adjustedStartDate = new Date(startDateObj.getTime() + dateGap);
+              const adjustedEndDate = new Date(endDateObj.getTime() + dateGap);
+            
+              // Format the dates
+              const formattedStartDate = adjustedStartDate.toISOString().split('T')[0];
+              const formattedEndDate = adjustedEndDate.toISOString().split('T')[0];
+            
+              return {
+                start_date: formattedStartDate,
+                end_date: formattedEndDate,
+              };
+            }
+            
+          const NewUpdatedArr = {
+              client: updatedInvoiceObject.client,
+              firm: updatedInvoiceObject.firm,
+              recurringInvoiceObj: adjustDates(startdatePart, enddatePart),
+              items: InvoiceItemArr,
+              notes: updatedInvoiceObject.notes,
+              remark: updatedInvoiceObject.remark,
+              tax: updatedInvoiceObject.tax,
+              taxAmt: updatedInvoiceObject.taxAmt,
+              subTotal: updatedInvoiceObject.subTotal,
+              total: updatedInvoiceObject.total,
+              invoiceDate: updatedInvoiceObject.invoiceDate,
+              dueDate: updatedInvoiceObject.dueDate,
+              status: updatedInvoiceObject.status,
+              amountPaid: updatedInvoiceObject.amountPaid,
+              dueAmount: updatedInvoiceObject.dueAmount,
+              delete: updatedInvoiceObject.delete,
+              roundOff: updatedInvoiceObject.roundOff,
+              invoiceNumber: updatedInvoiceObject.invoiceNumber,
+              termsNcondition: updatedInvoiceObject.termsNcondition,
+              currency: updatedInvoiceObject.currency,
+              curConvert: updatedInvoiceObject.curConvert,
+              incluTax: updatedInvoiceObject.incluTax,
+              partialPay: updatedInvoiceObject.partialPay,
+              allowTip: updatedInvoiceObject.allowTip,
+              recurringInvoice: updatedInvoiceObject.recurringInvoice,
+              draft: updatedInvoiceObject.draft,
+              orgId: updatedInvoiceObject.orgId,
+              payment: updatedInvoiceObject.payment
+            
+          }
+
+          const response = await axios.post(
+            "http://localhost:5001/api/invoice/create",
+            NewUpdatedArr
+          );
+
+          console.log(
+            "Invoices generated on the 1st day of the month.",
+            response.data
+          );
+        }
+        if (duedatePart === currentDate.toISOString().split("T")[0]) {
+            function adjustDates(dueDate) {
+              // Convert string dates to Date objects
+              const startDateObj = new Date(dueDate);
+              const currentDate = new Date();
+            
+              // Find the gap between dates in milliseconds
+              const dateGap = currentDate - startDateObj;
+            
+              // Increase both dates by the gap
+              const adjustedStartDate = new Date(startDateObj.getTime() + dateGap);
+            
+              // Format the dates
+              const formattedStartDate = adjustedStartDate.toISOString().split('T')[0];
+            
+              return {
+                dueDate: formattedStartDate,
+              };
+            }
+            
+        //     // Example usage:
+        const due = adjustDates(recurringInvoice.dueDate)
+          const NewUpdatedArr = {
+              dueDate: due.dueDate,
+              status: "Pending",
+          }
+
+          const response = await axios.patch(
+            `http://localhost:5001/api/invoice/updateInvoice/${recurringInvoice._id}`,
+            NewUpdatedArr
+          );
+        } 
+      }
+    } 
+  } catch (error) {
+    console.error("Error generating invoices:", error);
+  }
+});
+
+// Handle errors if the schedule fails
+monthlySchedule.on("error", (error) => {
+  console.error("Schedule error:", error);
+});
 app.use(async (req, res, next) => {
   if (req.headers["x-access-token"]) {
     const accessToken = req.headers["x-access-token"];

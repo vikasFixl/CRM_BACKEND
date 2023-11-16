@@ -77,17 +77,31 @@ const InvoiceSchema = new mongoose.Schema({
       chequeNo: { type: Number },
     },
   ],
+  recurringInvoiceObj:{
+    // frequency: {
+    //   type: String,
+    //   required: true
+    // },
+    // due:{
+    //   type: String,
+    //   required: true
+    // },
+    start_date: {
+      type: Date,
+      // required: true
+    },
+    end_date: {
+      type: Date,
+      // required: true
+    },
+  },
   termsNcondition: [],
   currency: { type: String },
   curConvert: { type: String },
   incluTax: { type: Boolean },
   partialPay: { type: Boolean },
   allowTip: { type: Boolean },
-  recurringInvoice: {
-    isEnabled: { type: Boolean },
-    frequncy: { type: Number },
-    end_date: { type: Date },
-  },
+  recurringInvoice: { type: Boolean },
   draft: { type: Boolean },
   orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
 
