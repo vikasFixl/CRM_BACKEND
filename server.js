@@ -134,14 +134,14 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
         if (enddatePart === currentDate.toISOString().split("T")[0]) {
 
           const InvoiceCount = await axios.post(
-            "http://localhost:5001/api/invoice/listInvoiceNo",
+            "https://crm-backend-xi.vercel.app/api/invoice/listInvoiceNo",
             {
               ordId: recurringInvoice.orgId,
               firmId: recurringInvoice.firm.firmID,
             }
           );
           const firmDetails = await axios.get(
-            `http://localhost:5001/api/firm/getFirm/${recurringInvoice.orgId}/${recurringInvoice.firm.firmID}`
+            `https://crm-backend-xi.vercel.app/api/firm/getFirm/${recurringInvoice.orgId}/${recurringInvoice.firm.firmID}`
           );
           const invoiceNumber =
             InvoiceCount.data.data[0] &&
@@ -224,7 +224,7 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
           }
 
           const response = await axios.post(
-            "http://localhost:5001/api/invoice/create",
+            "https://crm-backend-xi.vercel.app/api/invoice/create",
             NewUpdatedArr
           );
 
@@ -261,7 +261,7 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
           }
 
           const response = await axios.patch(
-            `http://localhost:5001/api/invoice/updateInvoice/${recurringInvoice._id}`,
+            `https://crm-backend-xi.vercel.app/api/invoice/updateInvoice/${recurringInvoice._id}`,
             NewUpdatedArr
           );
         } 
