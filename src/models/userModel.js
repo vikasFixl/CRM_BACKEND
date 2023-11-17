@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    email: { 
+    email: {
       type: String,
       required: true,
       unique: true,
@@ -18,6 +18,10 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       required: true,
+    },
+    subRole: {
+      type: String,
+      required: false,
     },
     designation: {
       type: String,

@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const invoiceController = require("../controllers/invoices");
+const { authorize } = require("../middleweare/middleware");
 
 /// get routes
 
@@ -23,7 +24,7 @@ router.post("/checkout-stripe", invoiceController.paymnetlink1);
 router.post("/create", invoiceController.createInvoice);
 router.post("/getSingleInvoice", invoiceController.getSingleInvoice);
 router.post("/getInvoiceByClient", invoiceController.getInvoiceByClient);
-router.post("/getInvoiceByFirm", invoiceController.getInvoiceByFirm);
+router.post("/getInvoiceByFirm", authorize("Read", "firm", ["Admin", "subAdmin", "Custom"]), invoiceController.getInvoiceByFirm);
 router.post("/listInvoiceNo", invoiceController.listInvoiceNo);
 
 /// patch routes

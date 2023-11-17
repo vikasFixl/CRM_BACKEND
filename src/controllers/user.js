@@ -19,6 +19,7 @@ const Employee = require("../models/employeeModel");
 
 exports.signin = async (req, res) => {
   const { email, password } = req.body;
+  console.log("api hit");
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User doesn't exist" });
@@ -36,7 +37,7 @@ exports.signin = async (req, res) => {
     await User.findByIdAndUpdate(user._id, { accessToken });
     if (user.role === "Admin") {
       const orgDetails = await Org.findOne({ orgEmail: email });
-      console.log(orgDetails);
+      console.log("admin");
       if (orgDetails) {
         res.status(200).json({
           data: {
@@ -64,6 +65,8 @@ exports.signin = async (req, res) => {
           token: accessToken,
         });
       } else {
+        const orgDetails = await Org.findOne({ _id: user.orgId });
+        console.log("org details", orgDetails);
         res.status(200).json({
           data: {
             id: user._id,
@@ -74,6 +77,8 @@ exports.signin = async (req, res) => {
             role: user.role,
             permissions: user.permissions,
             department: user.department,
+            orgID: orgDetails._id,
+            orgName: orgDetails.orgName
             // profilePhoto: url + "/public/user/" + req.file.filename,
           },
           success: true,
@@ -83,6 +88,8 @@ exports.signin = async (req, res) => {
         });
       }
     } else {
+      const orgDetails = await Org.findOne({ _id: user.orgId });
+console.log("org", orgDetails);
       res.status(200).json({
         data: {
           id: user._id,
@@ -91,8 +98,10 @@ exports.signin = async (req, res) => {
           lastName: user.lastName,
           phone: user.phone,
           role: user.role,
-          permissions: user.userPermissions,
+          permissions: user.permissions,
           department: user.department,
+          orgID: orgDetails._id,
+          orgName: orgDetails.orgName
         },
         success: true,
         code: 200,
@@ -251,6 +260,7 @@ exports.getUser = async (req, res) => {
         phone: user.phone,
         permissions: user.permissions,
         password: user.password,
+        profilePhoto: user.profilePhoto,
       },
       success: true,
       code: 200,
