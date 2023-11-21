@@ -15,7 +15,7 @@ const permited = (data) => {
     }
   };
 };
-  
+
 const authorize = (action, module, role) => {
   return (req, res, next) => {
     try {
@@ -28,11 +28,15 @@ const authorize = (action, module, role) => {
       const authorized = permissions.some((data) => {
         return data.module === module && data.action.includes(action);
       });
+
+      console.log("permissions", permissions);
+
       if (authorized) {
         next(); // User is authorized
       } else {
         return res.status(403).json({
-          message: `${action} permission not available for ${module}, please contact the admin.`,
+          message: 'Permission denied, please contact the admin',
+          // message: `${action} permission not available for ${module}, please contact the admin.`,
         });
       }
     } catch (error) {

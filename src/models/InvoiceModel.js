@@ -103,8 +103,7 @@ const InvoiceSchema = new mongoose.Schema({
   allowTip: { type: Boolean },
   recurringInvoice: { type: Boolean },
   draft: { type: Boolean },
-  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
-
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" }
 });
 
 module.exports = mongoose.model("InvoiceModel", InvoiceSchema);
