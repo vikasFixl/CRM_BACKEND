@@ -3,10 +3,10 @@ const router = express.Router();
 const taxController = require("../controllers/taxRates");
 const { authorize } = require("../middleweare/middleware");
 
-router.post("/postGlobalTax", taxController.postGlobalTax);
-router.post("/addTaxInFirm", taxController.addTaxInFirm);
-router.post("/clientByTax", taxController.clientByTax);
-router.post("/invoiceByTax", taxController.invoiceByTax);
+router.post("/postGlobalTax", authorize('Create', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.postGlobalTax);
+router.post("/addTaxInFirm", authorize('Create', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.addTaxInFirm);
+router.post("/clientByTax", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']),  taxController.clientByTax);
+router.post("/invoiceByTax", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.invoiceByTax);
 
 router.get("/gettaxRates/:firmId", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.gettaxrates);
 router.get("/getGlobalTaxs/:orgId", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.getGlobalTaxs);

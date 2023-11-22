@@ -223,11 +223,10 @@ exports.createInvoice = async (req, res) => {
   } = req.body;
 
   console.log("test", recurringInvoice);
-  if (recurringInvoice === true) {
+  // if (recurringInvoice === true) {
     // Create a new invoice for recurring invoices and schedule regeneration
     const newInvoice = new InvoiceModel(req.body);
     const newData = await newInvoice.save();
-    console.log("fkfd");
     try {
       if (draft == true) {
         const newInvoice = new InvoiceModel(req.body);
@@ -281,9 +280,9 @@ exports.createInvoice = async (req, res) => {
       console.log(error);
       res.status(409).json({ message: "something went wrong." });
     }
-  } else {
-    res.status(409).json({ message: "something went wrong..." });
-  }
+  // } else {
+  //   res.status(409).json({ message: "something went wrong..." });
+  // }
 };
 
 exports.getInvoice = async (req, res) => {
