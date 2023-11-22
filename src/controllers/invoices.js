@@ -224,62 +224,63 @@ exports.createInvoice = async (req, res) => {
 
   console.log("test", recurringInvoice);
   // if (recurringInvoice === true) {
-    // Create a new invoice for recurring invoices and schedule regeneration
-    const newInvoice = new InvoiceModel(req.body);
-    const newData = await newInvoice.save();
-    try {
-      if (draft == true) {
-        const newInvoice = new InvoiceModel(req.body);
-        const newData = await newInvoice.save();
-        res.status(201).json({
-          data: newData,
-          success: true,
-          code: 201,
-          message: "Invoice created successfully!",
-        });
-      } else {
-        const newInvoice = new InvoiceModel({
-          items: items,
-          subTotal: subTotal,
-          vat: vat,
-          total: total,
-          notes: notes,
-          remark: remark,
-          amount: amount,
-          dueAmount: dueAmount,
-          amountPaid: amountPaid,
-          invoiceNumber: invoiceNumber,
-          dueDate: dueDate,
-          invoiceDate: invoiceDate,
-          client: client,
-          status: status,
-          firm: firm,
-          termsNcondition: termsNcondition,
-          currency: currency,
-          partialPay: partialPay,
-          allowTip: allowTip,
-          incluTax: incluTax,
-          draft: draft,
-          recurringInvoice: recurringInvoice,
-          tax: tax,
-          roundOff: roundOff,
-          desc: desc,
-          recurringInvoiceObj: recurringInvoiceObj,
-          orgId: orgId,
-          curConvert: curConvert,
-        });
-        const bd2 = await newInvoice.save();
-        res.status(201).json({
-          data: bd2,
-          success: true,
-          code: 201,
-          message: "Invoice created successfully!",
-        });
-      }
-    } catch (error) {
-      console.log(error);
-      res.status(409).json({ message: "something went wrong." });
+  // Create a new invoice for recurring invoices and schedule regeneration
+  // const newInvoice = new InvoiceModel(req.body);
+  // const newData = await newInvoice.save();
+  console.log("fkfd");
+  try {
+    if (draft == true) {
+      const newInvoice = new InvoiceModel(req.body);
+      const newData = await newInvoice.save();
+      res.status(201).json({
+        data: newData,
+        success: true,
+        code: 201,
+        message: "Invoice created successfully!",
+      });
+    } else {
+      const newInvoice = new InvoiceModel({
+        items: items,
+        subTotal: subTotal,
+        vat: vat,
+        total: total,
+        notes: notes,
+        remark: remark,
+        amount: amount,
+        dueAmount: dueAmount,
+        amountPaid: amountPaid,
+        invoiceNumber: invoiceNumber,
+        dueDate: dueDate,
+        invoiceDate: invoiceDate,
+        client: client,
+        status: status,
+        firm: firm,
+        termsNcondition: termsNcondition,
+        currency: currency,
+        partialPay: partialPay,
+        allowTip: allowTip,
+        incluTax: incluTax,
+        draft: draft,
+        recurringInvoice: recurringInvoice,
+        tax: tax,
+        roundOff: roundOff,
+        desc: desc,
+        recurringInvoiceObj: recurringInvoiceObj,
+        orgId: orgId,
+        curConvert: curConvert,
+      });
+      const bd2 = await newInvoice.save();
+      res.status(201).json({
+        data: bd2,
+        success: true,
+        code: 201,
+        message: "Invoice created successfully!",
+      });
     }
+  } catch (error) {
+    console.log(error);
+    res.status(409).json({ message: "something went wrong." });
+  }
   // } else {
   //   res.status(409).json({ message: "something went wrong..." });
   // }
