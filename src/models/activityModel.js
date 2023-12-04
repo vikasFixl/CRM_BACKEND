@@ -1,27 +1,16 @@
 const mongoose = require("mongoose");
 
-const ActivitySchema = new mongoose.Schema({
-  Activity: {
-    Users:[{
-      username:{type:String},
-      purchase:{
-        createpuchasedis:{type:String},
-        deletepurchasedis:{type:String},
-        updatepurchasedis:{type:String},
-      },
-      invoiceDis:{
-        createinvoicedis:{type:String},
-        deleteinvoicedis:{type:String},
-        updateinvoicedis:{type:String},
-      },
-      leadDis:{type:String},
-      firmDis:{type:String},
-      vanderDis:{type:String},
-      Dis:{type:String},
-      salDis:{type:String},
-    }]
-  }
-});
+const ActivitySchema = new mongoose.Schema(
+  {
+    module: { type: [String], require: true },
+    entityId: { type: [String], require: false },
+    activity: { type: String, require: false },
+    activityDesc: { type: String, require: false },
+    createdDate: { type: String, require: true },
+    createdTime: { type: String, require: true },
+    // user: { type: String, require: false }
+  },
+);
 const ActivityModel = mongoose.model("ActivityModel", ActivitySchema);
 
 module.exports = ActivityModel;

@@ -222,12 +222,10 @@ exports.createInvoice = async (req, res) => {
     incluTax,
   } = req.body;
 
-  console.log("test", recurringInvoice);
   // if (recurringInvoice === true) {
   // Create a new invoice for recurring invoices and schedule regeneration
   // const newInvoice = new InvoiceModel(req.body);
   // const newData = await newInvoice.save();
-  console.log("fkfd");
   try {
     if (draft == true) {
       const newInvoice = new InvoiceModel(req.body);
