@@ -19,6 +19,7 @@ const orgRoutes = require("./src/routes/orgRoute");
 const productRoutes = require("./src/routes/productRoutes.js");
 const leadRoutes = require("./src/routes/leadRoute");
 const leadActivityRoutes = require("./src/routes/leadActivityRoute");
+const activitRoutes = require('./src/routes/activityRoute.js');
 
 const searchRoutes = require("./src/routes/searchRoute");
 const roleRoutes = require("./src/routes/roleNpermissionRoute");
@@ -100,6 +101,9 @@ app.use("/api/role", roleRoutes);
 app.use("/api/subscription", Subscription);
 app.use("/api/Reminder", Reminder);
 app.use("/api/hrm", appRouter);
+
+app.use('/api/activities', activitRoutes);
+
 
 const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
   try {

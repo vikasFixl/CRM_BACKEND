@@ -10,7 +10,7 @@ const InvoiceSchema = new mongoose.Schema({
       amount: { type: Number },
       hsn: { type: String },
       sac: { type: String },
-      taxRate:{type: String},
+      taxRate: { type: String },
       desc: { type: String },
       discount: { type: Number },
     },
@@ -77,7 +77,7 @@ const InvoiceSchema = new mongoose.Schema({
       chequeNo: { type: Number },
     },
   ],
-  recurringInvoiceObj:{
+  recurringInvoiceObj: {
     // frequency: {
     //   type: String,
     //   required: true

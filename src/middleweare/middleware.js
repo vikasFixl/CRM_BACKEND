@@ -1,4 +1,5 @@
 const jwtDecode = require("jwt-decode");
+const ActivityModel = require("../models/activityModel");
 
 const permited = (data) => {
   return (req, res, next) => {
@@ -46,5 +47,19 @@ const authorize = (action, module, role) => {
   };
 };
 
+const activityLogger = (moduleName, activity) => {
+  return async (req, res, next) => {
+    try {
+      await ActivityModel.create({ module: moduleName, activity, });
+      next();
+    } catch (error) {
+      console.error(`Error logging activity: ${error}`);
+      next(error);
+    }
+  };
+};
+
+
 module.exports.permited = permited;
 module.exports.authorize = authorize;
+module.exports.activityLogger = activityLogger;
