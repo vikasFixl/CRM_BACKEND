@@ -16,14 +16,17 @@ router.get("/getAllDeletedInvoices/:orgId", authorize('Read', 'invoice', ['Admin
 
 router.post("/checkout-stripe", invoiceController.paymnetlink1);
 router.post("/create", authorize("Create", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.createInvoice);
+router.post("/createrecurringinvoice", invoiceController.createInvoice);
 router.post("/getSingleInvoice", invoiceController.getSingleInvoice);
 router.post("/getInvoiceByClient", authorize("Read", "client", ["Admin", "subAdmin", "Custom"]), invoiceController.getInvoiceByClient);
 router.post("/getInvoiceByFirm", authorize("Read", "firm", ["Admin", "subAdmin", "Custom"]), invoiceController.getInvoiceByFirm);
 router.post("/listInvoiceNo", authorize("Create", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.listInvoiceNo);
+router.post("/listInvoiceNumber",  invoiceController.listInvoiceNo);
 
 /// patch routes
 
 router.patch("/updateInvoice/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.updateInvoice);
+router.patch("/updateInvoiceforrecurringinvoice/:id", invoiceController.updateInvoice);
 router.patch("/drafttoinvoice/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.drafttoinvoice);
 router.patch("/updateDraft/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.updateDraftIn);
 router.patch("/payment/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.payment);

@@ -28,8 +28,8 @@ const upload = multer({
 router.post('/create', authorize("Create", "firm", ["Admin", "subAdmin", "Custom"]), firmController.createFirm);
 
 router.delete('/delete/:id', authorize("Delete", "firm", ["Admin", "Custom"]), firmController.deleteFirm);
-
 router.get('/getFirm/:orgId/:id', authorize("Read", "firm", ["Admin", "subAdmin", "Custom"]), firmController.getFirm);
+router.get('/getFirmforinvoicerecurring/:orgId/:id', firmController.getFirm);
 router.get('/getAllFirm/:orgId', authorize("Read", "firm", ["Admin", "subAdmin", "Custom"]), firmController.getAllFirm);
 router.get('/getFirmList/:orgId', authorize("Read", "firm", ["Admin", "subAdmin", "Custom"]), firmController.getFirmList);
 

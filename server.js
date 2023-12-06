@@ -79,20 +79,17 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(cors());
 app.use(express.json());
-
 app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
 app.use("/api/purchase", purchesRoutes);
 app.use("/api/client", clientRoutes);
-app.use("/api/firm", firmRoutes);
+app.use("/api/firm", firmRoutes); 
 app.use("/api/org", orgRoutes);
 app.use("/api/taxRates", taxRoutes);
 app.use("/api/product", productRoutes);
 app.use("/api/lead", leadRoutes);
 app.use("/api/leadActivity", leadActivityRoutes);
-
 app.use("/api/vendor", vendorRoutes);
-
 app.use("/api/attendence", attendenceRoutes);
 app.use("/api/ded", dedRoutes);
 app.use("/api/sal", salRoutes);
@@ -102,9 +99,7 @@ app.use("/api/search", searchRoutes);
 app.use("/api/role", roleRoutes);
 app.use("/api/subscription", Subscription);
 app.use("/api/Reminder", Reminder);
-
 app.use("/api/hrm", appRouter);
-
 
 const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
   try {
@@ -133,15 +128,18 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
 
         if (enddatePart === currentDate.toISOString().split("T")[0]) {
 
+          // console.log("InvoiceCount", recurringInvoice);
           const InvoiceCount = await axios.post(
-            "https://crm-backend-xi.vercel.app/api/invoice/listInvoiceNo",
+            "https://crm-backend-xi.vercel.app/api/invoice/listInvoiceNumber",
+            // "http://localhost:5001/api/invoice/listInvoiceNumber",
             {
               ordId: recurringInvoice.orgId,
               firmId: recurringInvoice.firm.firmID,
             }
           );
           const firmDetails = await axios.get(
-            `https://crm-backend-xi.vercel.app/api/firm/getFirm/${recurringInvoice.orgId}/${recurringInvoice.firm.firmID}`
+            `https://crm-backend-xi.vercel.app/api/firm/getFirmforinvoicerecurring/${recurringInvoice.orgId}/${recurringInvoice.firm.firmID}`
+            // `http://localhost:5001/api/firm/getFirmforinvoicerecurring/${recurringInvoice.orgId}/${recurringInvoice.firm.firmID}`
           );
           const invoiceNumber =
             InvoiceCount.data.data[0] &&
@@ -224,7 +222,9 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
           }
 
           const response = await axios.post(
-            "https://crm-backend-xi.vercel.app/api/invoice/create",
+            "https://crm-backend-xi.vercel.app/api/invoice/createrecurringinvoice",
+            // "http://localhost:5001/api/invoice/createrecurringinvoice",
+
             NewUpdatedArr
           );
 
@@ -261,9 +261,11 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
           }
 
           const response = await axios.patch(
-            `https://crm-backend-xi.vercel.app/api/invoice/updateInvoice/${recurringInvoice._id}`,
+            `https://crm-backend-xi.vercel.app/api/invoice/updateInvoiceforrecurringinvoice/${recurringInvoice._id}`,
+            // `http://localhost:5001/api/invoice/updateInvoiceforrecurringinvoice/${recurringInvoice._id}`,
             NewUpdatedArr
           );
+          console.log("response", response);
         } 
       }
     } 
@@ -295,9 +297,7 @@ app.use(async (req, res, next) => {
     next();
   }
 });
-
 app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
-
 app.post("/api/pay", (req, res) => {
   const create_payment_json = {
     intent: "sale",
@@ -373,7 +373,5 @@ app.get("/api/success", (req, res) => {
     }
   );
 });
-
 app.get("/api/cancel", (req, res) => res.send("Cancelled"));
-
 app.listen(PORT, () => console.log(`Server Started on ${PORT}`));
