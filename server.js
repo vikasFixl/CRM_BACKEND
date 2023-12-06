@@ -103,7 +103,7 @@ app.use("/api/Reminder", Reminder);
 app.use("/api/hrm", appRouter);
 app.use("/api/activities", activitRoutes);
 
-const monthlySchedule = schedule.scheduleJob("0 16 * * *", async () => {
+const monthlySchedule = schedule.scheduleJob("0 0 * * *", async () => {
   try {
     const currentDate = new Date();
 
