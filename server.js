@@ -19,7 +19,7 @@ const orgRoutes = require("./src/routes/orgRoute");
 const productRoutes = require("./src/routes/productRoutes.js");
 const leadRoutes = require("./src/routes/leadRoute");
 const leadActivityRoutes = require("./src/routes/leadActivityRoute");
-const activitRoutes = require('./src/routes/activityRoute.js');
+const activitRoutes = require("./src/routes/activityRoute.js");
 
 const searchRoutes = require("./src/routes/searchRoute");
 const roleRoutes = require("./src/routes/roleNpermissionRoute");
@@ -84,7 +84,7 @@ app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
 app.use("/api/purchase", purchesRoutes);
 app.use("/api/client", clientRoutes);
-app.use("/api/firm", firmRoutes); 
+app.use("/api/firm", firmRoutes);
 app.use("/api/org", orgRoutes);
 app.use("/api/taxRates", taxRoutes);
 app.use("/api/product", productRoutes);
@@ -101,11 +101,9 @@ app.use("/api/role", roleRoutes);
 app.use("/api/subscription", Subscription);
 app.use("/api/Reminder", Reminder);
 app.use("/api/hrm", appRouter);
+app.use("/api/activities", activitRoutes);
 
-app.use('/api/activities', activitRoutes);
-
-
-const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
+const monthlySchedule = schedule.scheduleJob("0 16 * * *", async () => {
   try {
     const currentDate = new Date();
 
@@ -115,7 +113,7 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
       "recurringInvoiceObj.start_date": { $exists: true },
       "recurringInvoiceObj.end_date": { $exists: true },
     });
-    
+
     if (recurringInvoices.length !== 0) {
       for (const recurringInvoice of recurringInvoices) {
         // const end = recurringInvoice.recurringInvoiceObj.end_date &&
@@ -126,40 +124,45 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
           recurringInvoice.recurringInvoiceObj.end_date.toISOString();
         const [enddatePart, endtimePart] = endDateSplit.split("T");
 
-        const DueDateSplit =
-        recurringInvoice.dueDate.toISOString();
-      const [duedatePart, duetimePart] = DueDateSplit.split("T");
-
+        const DueDateSplit = recurringInvoice.dueDate.toISOString();
+        const [duedatePart, duetimePart] = DueDateSplit.split("T");
         if (enddatePart === currentDate.toISOString().split("T")[0]) {
-
           // console.log("InvoiceCount", recurringInvoice);
+          const org = recurringInvoice.orgId.toString();
+
           const InvoiceCount = await axios.post(
             "https://crm-backend-xi.vercel.app/api/invoice/listInvoiceNumber",
             // "http://localhost:5001/api/invoice/listInvoiceNumber",
             {
-              ordId: recurringInvoice.orgId,
-              firmId: recurringInvoice.firm.firmID,
+              firmId: `${recurringInvoice.firm.firmID}`,
+              orgId: org,
             }
           );
           const firmDetails = await axios.get(
             `https://crm-backend-xi.vercel.app/api/firm/getFirmforinvoicerecurring/${recurringInvoice.orgId}/${recurringInvoice.firm.firmID}`
             // `http://localhost:5001/api/firm/getFirmforinvoicerecurring/${recurringInvoice.orgId}/${recurringInvoice.firm.firmID}`
           );
-          const invoiceNumber =
-            InvoiceCount.data.data[0] &&
-            InvoiceCount.data.data[0].split("-")[1];
+          const invoiceNumber = InvoiceCount.data.data[0]
+            ? InvoiceCount.data.data[0].split("-")[1]
+            : 0;
           const UpdatedInvoiceCountDetails = Number(invoiceNumber) + 1;
-
+          // console.log("invoiceNumber", invoiceNumber, InvoiceCount.data, recurringInvoice.firm.firmID, recurringInvoice.orgId);
           const updatedInvoiceObject = recurringInvoice;
-        
+
           updatedInvoiceObject.invoiceNumber = `${
             firmDetails.data && firmDetails.data.data[0].invoicePrefix
           }-${UpdatedInvoiceCountDetails}`;
+          console.log(
+            InvoiceCount.data,
+            "invoiceNumber",
+            updatedInvoiceObject.invoiceNumber
+          );
 
-       
-        const InvoiceItemArr = updatedInvoiceObject.items ? (updatedInvoiceObject.items.length !== 0 && updatedInvoiceObject.items.map((item, i) => {
-              return { 
-                itemName: item.itemName,
+          const InvoiceItemArr = updatedInvoiceObject.items
+            ? updatedInvoiceObject.items.length !== 0 &&
+              updatedInvoiceObject.items.map((item, i) => {
+                return {
+                  itemName: item.itemName,
                   unitPrice: item.unitPrice,
                   quantity: item.unitPrice,
                   amount: item.amount,
@@ -167,63 +170,69 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
                   sac: item.sac,
                   taxRate: item.taxRate,
                   desc: item.desc,
-                  discount: item.discount
-                }
-            })) : [];
-            
-            function adjustDates(startDate, endDate) {
-              // Convert string dates to Date objects
-              const startDateObj = new Date(startDate);
-              const endDateObj = new Date(endDate);
-            
-              // Find the gap between dates in milliseconds
-              const dateGap = endDateObj - startDateObj;
-            
-              // Increase both dates by the gap
-              const adjustedStartDate = new Date(startDateObj.getTime() + dateGap);
-              const adjustedEndDate = new Date(endDateObj.getTime() + dateGap);
-            
-              // Format the dates
-              const formattedStartDate = adjustedStartDate.toISOString().split('T')[0];
-              const formattedEndDate = adjustedEndDate.toISOString().split('T')[0];
-            
-              return {
-                start_date: formattedStartDate,
-                end_date: formattedEndDate,
-              };
-            }
-            
-          const NewUpdatedArr = {
-              client: updatedInvoiceObject.client,
-              firm: updatedInvoiceObject.firm,
-              recurringInvoiceObj: adjustDates(startdatePart, enddatePart),
-              items: InvoiceItemArr,
-              notes: updatedInvoiceObject.notes,
-              remark: updatedInvoiceObject.remark,
-              tax: updatedInvoiceObject.tax,
-              taxAmt: updatedInvoiceObject.taxAmt,
-              subTotal: updatedInvoiceObject.subTotal,
-              total: updatedInvoiceObject.total,
-              invoiceDate: updatedInvoiceObject.invoiceDate,
-              dueDate: updatedInvoiceObject.dueDate,
-              status: updatedInvoiceObject.status,
-              amountPaid: updatedInvoiceObject.amountPaid,
-              dueAmount: updatedInvoiceObject.dueAmount,
-              delete: updatedInvoiceObject.delete,
-              roundOff: updatedInvoiceObject.roundOff,
-              invoiceNumber: updatedInvoiceObject.invoiceNumber,
-              termsNcondition: updatedInvoiceObject.termsNcondition,
-              currency: updatedInvoiceObject.currency,
-              curConvert: updatedInvoiceObject.curConvert,
-              incluTax: updatedInvoiceObject.incluTax,
-              partialPay: updatedInvoiceObject.partialPay,
-              allowTip: updatedInvoiceObject.allowTip,
-              recurringInvoice: updatedInvoiceObject.recurringInvoice,
-              draft: updatedInvoiceObject.draft,
-              orgId: updatedInvoiceObject.orgId,
-              payment: updatedInvoiceObject.payment
-            
+                  discount: item.discount,
+                };
+              })
+            : [];
+
+          function adjustDates(startDate, endDate) {
+            // Convert string dates to Date objects
+            const startDateObj = new Date(startDate);
+            const endDateObj = new Date(endDate);
+
+            // Find the gap between dates in milliseconds
+            const dateGap = endDateObj - startDateObj;
+
+            // Increase both dates by the gap
+            const adjustedStartDate = new Date(
+              startDateObj.getTime() + dateGap
+            );
+            const adjustedEndDate = new Date(endDateObj.getTime() + dateGap);
+
+            // Format the dates
+            const formattedStartDate = adjustedStartDate
+              .toISOString()
+              .split("T")[0];
+            const formattedEndDate = adjustedEndDate
+              .toISOString()
+              .split("T")[0];
+
+            return {
+              start_date: formattedStartDate,
+              end_date: formattedEndDate,
+            };
           }
+
+          const NewUpdatedArr = {
+            client: updatedInvoiceObject.client,
+            firm: updatedInvoiceObject.firm,
+            recurringInvoiceObj: adjustDates(startdatePart, enddatePart),
+            items: InvoiceItemArr,
+            notes: updatedInvoiceObject.notes,
+            remark: updatedInvoiceObject.remark,
+            tax: updatedInvoiceObject.tax,
+            taxAmt: updatedInvoiceObject.taxAmt,
+            subTotal: updatedInvoiceObject.subTotal,
+            total: updatedInvoiceObject.total,
+            invoiceDate: updatedInvoiceObject.invoiceDate,
+            dueDate: updatedInvoiceObject.dueDate,
+            status: updatedInvoiceObject.status,
+            amountPaid: updatedInvoiceObject.amountPaid,
+            dueAmount: updatedInvoiceObject.dueAmount,
+            delete: updatedInvoiceObject.delete,
+            roundOff: updatedInvoiceObject.roundOff,
+            invoiceNumber: updatedInvoiceObject.invoiceNumber,
+            termsNcondition: updatedInvoiceObject.termsNcondition,
+            currency: updatedInvoiceObject.currency,
+            curConvert: updatedInvoiceObject.curConvert,
+            incluTax: updatedInvoiceObject.incluTax,
+            partialPay: updatedInvoiceObject.partialPay,
+            allowTip: updatedInvoiceObject.allowTip,
+            recurringInvoice: updatedInvoiceObject.recurringInvoice,
+            draft: updatedInvoiceObject.draft,
+            orgId: updatedInvoiceObject.orgId,
+            payment: updatedInvoiceObject.payment,
+          };
 
           const response = await axios.post(
             "https://crm-backend-xi.vercel.app/api/invoice/createrecurringinvoice",
@@ -238,31 +247,35 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
           );
         }
         if (duedatePart === currentDate.toISOString().split("T")[0]) {
-            function adjustDates(dueDate) {
-              // Convert string dates to Date objects
-              const startDateObj = new Date(dueDate);
-              const currentDate = new Date();
-            
-              // Find the gap between dates in milliseconds
-              const dateGap = currentDate - startDateObj;
-            
-              // Increase both dates by the gap
-              const adjustedStartDate = new Date(startDateObj.getTime() + dateGap);
-            
-              // Format the dates
-              const formattedStartDate = adjustedStartDate.toISOString().split('T')[0];
-            
-              return {
-                dueDate: formattedStartDate,
-              };
-            }
-            
-        //     // Example usage:
-        const due = adjustDates(recurringInvoice.dueDate)
-          const NewUpdatedArr = {
-              dueDate: due.dueDate,
-              status: "Pending",
+          function adjustDates(dueDate) {
+            // Convert string dates to Date objects
+            const startDateObj = new Date(dueDate);
+            const currentDate = new Date();
+
+            // Find the gap between dates in milliseconds
+            const dateGap = currentDate - startDateObj;
+
+            // Increase both dates by the gap
+            const adjustedStartDate = new Date(
+              startDateObj.getTime() + dateGap
+            );
+
+            // Format the dates
+            const formattedStartDate = adjustedStartDate
+              .toISOString()
+              .split("T")[0];
+
+            return {
+              dueDate: formattedStartDate,
+            };
           }
+
+          //     // Example usage:
+          const due = adjustDates(recurringInvoice.dueDate);
+          const NewUpdatedArr = {
+            dueDate: due.dueDate,
+            status: "Pending",
+          };
 
           const response = await axios.patch(
             `https://crm-backend-xi.vercel.app/api/invoice/updateInvoiceforrecurringinvoice/${recurringInvoice._id}`,
@@ -270,9 +283,9 @@ const monthlySchedule = schedule.scheduleJob("0 7 * * *", async () => {
             NewUpdatedArr
           );
           console.log("response", response);
-        } 
+        }
       }
-    } 
+    }
   } catch (error) {
     console.error("Error generating invoices:", error);
   }
