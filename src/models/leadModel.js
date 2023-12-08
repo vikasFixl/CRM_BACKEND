@@ -23,7 +23,10 @@ const LeadSchema = new mongoose.Schema(
     pipeline: {
       department: { type: String },
       userType: { type: String },
-      assignTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    },
+    assignedTo: {
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      userName: { type: String }
     },
     status: { type: String },
     orgDetails: {
@@ -46,7 +49,10 @@ const LeadSchema = new mongoose.Schema(
     },
     randomLeadId: { type: Number },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
-    firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" },
+    firm: {
+      firmName: { type: String },
+      firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" }
+    },
     firmName: { type: String }
   },
   {
