@@ -15,6 +15,10 @@ const LeadSchema = new mongoose.Schema(
     },
     timezone: { type: String },
     stage: { type: String },
+    stageHistory: [{
+      stageName: { type: String },
+      days: { type: Number }
+    }],
     currency: { type: String },
     estimatedWorth: { type: String },
     createdDate: { type: String },
@@ -59,4 +63,19 @@ const LeadSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+LeadSchema.pre("save", async function (next) {
+  try {
+    const orgId = this.orgId;
+    const org = await mongoose.model("ORG").findById(orgId);
+    if (org && org.orgLeadStages && org.orgLeadStages.length > 0) {
+      this.stageHistory = org.orgLeadStages;
+    };
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = mongoose.model("LEAD", LeadSchema);
