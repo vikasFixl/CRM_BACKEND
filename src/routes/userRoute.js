@@ -31,6 +31,7 @@ router.post('/getUsersByDept',userController.getUsersByDept);
 
 router.get('/getUser/:id',userController.getUser);
 router.get('/getAllusers/:orgId',userController.getAllusers);
+router.get('/getUserList',userController.getUserList);
 
 router.delete('/delete/:id',userController.delete);
 

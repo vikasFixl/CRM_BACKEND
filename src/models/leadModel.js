@@ -17,7 +17,9 @@ const LeadSchema = new mongoose.Schema(
     stage: { type: String },
     stageHistory: [{
       stageName: { type: String },
-      days: { type: Number }
+      days: { type: Number },
+      startDate: { type: String },
+      endDate: { type: String }
     }],
     currency: { type: String },
     estimatedWorth: { type: String },
@@ -27,6 +29,10 @@ const LeadSchema = new mongoose.Schema(
     pipeline: {
       department: { type: String },
       userType: { type: String },
+    },
+    leadManager: {
+      id: {type: mongoose.Schema.Types.ObjectId, ref: "User"},
+      managerName: {type: String}
     },
     assignedTo: {
       userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -69,8 +75,15 @@ LeadSchema.pre("save", async function (next) {
     const orgId = this.orgId;
     const org = await mongoose.model("ORG").findById(orgId);
     if (org && org.orgLeadStages && org.orgLeadStages.length > 0) {
-      this.stageHistory = org.orgLeadStages;
-    };
+      this.stageHistory = org.orgLeadStages.map((stage, index) => ({
+        stageName: stage?.stageName,
+        days: stage?.days,
+        startDate: index === 0 ? new Date().toISOString() : '',
+        endDate: '',
+      }));
+    } else {
+      this.stageHistory = [];
+    }
 
     next();
   } catch (error) {

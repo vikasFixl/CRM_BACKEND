@@ -30,8 +30,6 @@ const authorize = (action, module, role) => {
         return data.module === module && data.action.includes(action);
       });
 
-      console.log("permissions", permissions);
-
       if (authorized) {
         next(); // User is authorized
       } else {
@@ -41,7 +39,6 @@ const authorize = (action, module, role) => {
         });
       }
     } catch (error) {
-      console.error("Error decoding JWT:", error);
       return res.status(401).json({ message: "Unauthorized" });
     }
   };

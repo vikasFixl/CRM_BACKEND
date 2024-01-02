@@ -19,7 +19,6 @@ const Employee = require("../models/employeeModel");
 
 exports.signin = async (req, res) => {
   const { email, password } = req.body;
-  console.log("api hit");
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User doesn't exist" });
@@ -37,7 +36,6 @@ exports.signin = async (req, res) => {
     await User.findByIdAndUpdate(user._id, { accessToken });
     if (user.role === "Admin") {
       const orgDetails = await Org.findOne({ orgEmail: email });
-      console.log("admin");
       if (orgDetails) {
         res.status(200).json({
           data: {
@@ -66,7 +64,6 @@ exports.signin = async (req, res) => {
         });
       } else {
         const orgDetails = await Org.findOne({ _id: user.orgId });
-        console.log("org details", orgDetails);
         res.status(200).json({
           data: {
             id: user._id,
@@ -88,37 +85,52 @@ exports.signin = async (req, res) => {
         });
       }
     } else {
-      const orgDetails = await Org.findOne({ _id: user.orgId });
-console.log("org", orgDetails);
-      res.status(200).json({
-        data: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phone: user.phone,
-          role: user.role,
-          permissions: user.permissions,
-          department: user.department,
-          orgID: orgDetails._id,
-          orgName: orgDetails.orgName
-        },
-        success: true,
-        code: 200,
-        message: "You have logged in successfully",
-        token: accessToken,
-      });
+      if (user?.orgId) {
+        const orgDetails = await Org.findOne({ _id: user.orgId });
+        res.status(200).json({
+          data: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            role: user.role,
+            permissions: user.permissions,
+            department: user.department,
+            orgID: orgDetails._id,
+            orgName: orgDetails.orgName
+          },
+          success: true,
+          code: 200,
+          message: "You have logged in successfully",
+          token: accessToken,
+        });
+      } else {
+        res.status(200).json({
+          data: {
+            id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            role: user.role,
+            permissions: user.permissions,
+            department: user.department,
+          },
+          success: true,
+          code: 200,
+          message: "You have logged in successfully",
+          token: accessToken,
+        });
+      }
     }
   } catch (error) {
-    console.log(error);
     res.status(404).json({ message: "Something went wrong" });
   }
 };
 
 exports.signup = async (req, res) => {
-  const { form } = req.body;
   const { email } = req.body;
-  console.log("body", req.body);
   try {
     const url = req.protocol + "://" + req.get("host");
     const existingUser = await User.findOne({ email });
@@ -167,7 +179,6 @@ exports.signup = async (req, res) => {
       message: "You have signed up successfully",
     });
   } catch (error) {
-    console.log(error);
     res.status(400).json({ message: "Something went wrong" });
   }
 };
@@ -256,6 +267,7 @@ exports.getUser = async (req, res) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+        subRole: user.subRole,
         department: user.department,
         phone: user.phone,
         permissions: user.permissions,
@@ -270,6 +282,41 @@ exports.getUser = async (req, res) => {
     res.status(409).json({ message: error.message });
   }
 };
+
+exports.getUserList = async (req, res) => {
+  try {
+    // Use find to get all users
+    const users = await User.find();
+
+    if (!users) {
+      return res.status(404).json({
+        success: false,
+        status: 404,
+        message: `No data found`,
+      });
+    }
+
+    res.status(200).json({
+      data: users.map(user => ({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        phone: user.phone,
+        permissions: user.permissions,
+        // Note: Avoid sending sensitive information like passwords in the response
+        profilePhoto: user.profilePhoto,
+      })),
+      success: true,
+      code: 200,
+      message: "All users fetched!",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, code: 500, message: error.message });
+  }
+};
+
 
 exports.getAllusers = async (req, res) => {
   try {
@@ -353,7 +400,6 @@ exports.updateProfileimage = async (req, res) => {
 
 exports.email = async (req, res) => {
   const { userName, from, to, link } = req.body;
-  console.log("res", userName);
   try {
     // create reusable transporter object using the default SMTP transport
     let transporter = await nodemailer.createTransport({
@@ -413,14 +459,11 @@ exports.email = async (req, res) => {
     };
     await transporter.sendMail(mailOption, (err, info) => {
       if (err) {
-        console.log("Error occurred. " + err.message);
         // return process.exit(1);
         return res
           .status(404)
           .json({ Message: "Error occurred. " + err.message });
       } else {
-        console.log("Message sent: %s", info);
-        // console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
         return res.status(201).json({ Message: `Invitation sent to: ${to}` });
       }
     });

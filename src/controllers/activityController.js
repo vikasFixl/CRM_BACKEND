@@ -5,7 +5,7 @@ exports.getRecenteActivities = async (req, res) => {
     try {
         const recentActivities = await ActivityModel.find({ module: { $in: [moduleName] } })
             .sort({ _id: -1 })
-            // .limit(10);
+        // .limit(10);
 
         res.status(200).json({
             data: recentActivities,
@@ -24,7 +24,7 @@ exports.getEntityRecenteActivities = async (req, res) => {
     try {
         const recentActivities = await ActivityModel.find({ module: { $in: [moduleName] }, entityId: { $in: [entityId] } })
             .sort({ _id: -1 })
-            // .limit(10);
+        // .limit(10);
 
         res.status(200).json({
             data: recentActivities,
@@ -35,6 +35,22 @@ exports.getEntityRecenteActivities = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
+exports.getUserActivity = async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+        const recentActivities = await ActivityModel.find({ userId }).sort({ _id: -1 });
+        res.status(200).json({
+            data: recentActivities,
+            status: 200,
+            message: "All"
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
 
 exports.createActivities = async (req, res) => {
     try {

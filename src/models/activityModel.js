@@ -8,7 +8,7 @@ const ActivitySchema = new mongoose.Schema(
     activityDesc: { type: String, require: false },
     createdDate: { type: String, require: true },
     createdTime: { type: String, require: true },
-    // user: { type: String, require: false }
+    userId: { type: String, require: false }
   },
 );
 const ActivityModel = mongoose.model("ActivityModel", ActivitySchema);

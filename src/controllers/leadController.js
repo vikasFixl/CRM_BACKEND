@@ -68,6 +68,66 @@ exports.getByStatusByOrg = async (req, res) => {
   }
 };
 
+exports.getUserLeadsByStatus = async (req, res) => {
+  const { userId, status } = req.body;
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({
+      message: "Invaild User",
+      success: false,
+      status: 400,
+    });
+  }
+  const lead = await Lead.find({
+    "assignedTo.userId": userId,
+    delete: false,
+    status: status,
+  }).sort({ _id: -1 });
+  if (!lead) {
+    res.json({
+      success: true,
+      message: "Leads not found.",
+      status: 200,
+    });
+  } else {
+    res.json({
+      data: lead,
+      success: true,
+      message: "List of all Leads with status " + status,
+      status: 200,
+    });
+  }
+};
+
+exports.getManagerLeadsByStatus = async (req, res) => {
+  const { id, status } = req.body;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invaild User",
+      success: false,
+      status: 400,
+    });
+  }
+  const lead = await Lead.find({
+    "leadManager.id": id,
+    delete: false,
+    status: status,
+  }).sort({ _id: -1 });
+  if (!lead) {
+    res.json({
+      success: true,
+      message: "Leads not found.",
+      status: 200,
+    });
+  } else {
+    res.json({
+      data: lead,
+      success: true,
+      message: "List of all Leads with status " + status,
+      status: 200,
+    });
+  }
+};
+
 /* Lead By Firm */
 
 exports.getListByFirm = async (req, res) => {
@@ -140,6 +200,58 @@ exports.leadById = async (req, res) => {
     });
   }
   const data = await Lead.findById(id);
+  if (!data) {
+    res.json({
+      success: false,
+      status: 404,
+      message: "Lead not found",
+    });
+  } else {
+    res.json({
+      data: data,
+      success: true,
+      status: 200,
+      message: `Lead with ${id}`,
+    });
+  }
+};
+
+exports.leadByUser = async (req, res) => {
+  let id = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({
+      success: false,
+      status: 404,
+      message: "Invalid id.",
+    });
+  }
+  const data = await Lead.find({ "assignedTo.userId": id }).sort({ _id: -1 });
+  if (!data) {
+    res.json({
+      success: false,
+      status: 404,
+      message: "Lead not found",
+    });
+  } else {
+    res.json({
+      data: data,
+      success: true,
+      status: 200,
+      message: `Lead with ${id}`,
+    });
+  }
+};
+
+exports.leadByManager = async (req, res) => {
+  let id = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({
+      success: false,
+      status: 404,
+      message: "Invalid id.",
+    });
+  }
+  const data = await Lead.find({ "leadManager.id": id }).sort({ _id: -1 });
   if (!data) {
     res.json({
       success: false,
@@ -274,6 +386,58 @@ exports.updateLead = async (req, res) => {
   }
 };
 
+exports.updateLeadStage = async (req, res) => {
+
+  const id = req.params.id;
+
+  // if (!mongoose.Types.ObjectId.isValid(id)) {
+  //   return res.json({
+  //     success: true,
+  //     status: 404,
+  //     message: "Invaild id.",
+  //   });
+  // };
+
+  // const data = await Lead.findById(id);
+  // if (!data) {
+  //   res.json({
+  //     success: true,
+  //     status: 404,
+  //     message: "Lead not found!",
+  //   });
+  // } else {
+
+  await Lead.findByIdAndUpdate(id, { stage: req.body.stage, orgId: req.body.orgId });
+
+  const updatedElements = req.body.stageHistory;
+
+  try {
+    const resultPromises = updatedElements.map(async element => {
+      const stageName = element.stageName;
+      const startDate = element.startDate;
+      const endDate = element.endDate;
+
+      const days = Number(element.days);
+
+      const result = await Lead.updateOne(
+        { _id: id, 'stageHistory.stageName': stageName },
+        { $set: { 'stageHistory.$.days': days, 'stageHistory.$.startDate': startDate, 'stageHistory.$.endDate': endDate } },
+      );
+      return result;
+    });
+
+    const results = await Promise.all(resultPromises);
+
+    res.status(200).json({ message: 'All updates completed', results });
+  } catch (err) {
+    console.error('Error updating:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+
+  // }
+
+}
+
 exports.leadSearch = async (req, res) => {
   try {
     const { search, orgId } = req.body;
@@ -282,7 +446,6 @@ exports.leadSearch = async (req, res) => {
       _id: -1,
     });
     data.filter((doc) => {
-      console.log("doc", doc);
       for (const key in doc.toObject()) {
         if (doc[key] === search) {
           newData.push(doc);
@@ -325,10 +488,34 @@ exports.leadSearch = async (req, res) => {
   }
 };
 
+exports.bulkSoftDelete = async (req, res) => {
+  try {
+    const { leadIds } = req.body;
+    const result = await Lead.updateMany({ _id: { $in: leadIds }, delete: true });
+
+    if (result.deletedCount > 0) {
+      res.status(200).json({
+        message: `${result.deletedCount} leads deleted successfully`,
+        success: true,
+      });
+    } else {
+      res.status(404).json({
+        message: "No leads found to delete",
+        success: false,
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
 exports.bulkDelete = async (req, res) => {
   try {
     const { leadIds } = req.body;
-    console.log(leadIds);
     const result = await Lead.deleteMany({ _id: { $in: leadIds } });
 
     if (result.deletedCount > 0) {
