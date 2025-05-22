@@ -2,6 +2,8 @@ const { getPagination } = require("../../utils/query");
 const Role = require("../../models/HRM/role");
 
 const createSingleRole = async (req, res) => {
+
+  // console.log(req.body); not defined 
   try {
     if (req.query.query === "deletemany") {
       const deletedRoles = await Role.deleteMany({

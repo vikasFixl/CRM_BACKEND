@@ -7,6 +7,7 @@ const paypal = require("paypal-rest-sdk");
 const cors = require("cors");
 const dbConfig = require("./config/db.config.js");
 const schedule = require("node-schedule");
+const cookieParser = require("cookie-parser");
 
 //Routes
 const userRoutes = require("./src/routes/userRoute");
@@ -80,6 +81,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
+
 app.use("/api/auth", userRoutes);
 app.use("/api/invoice", invoiceRoutes);
 app.use("/api/purchase", purchesRoutes);
@@ -390,5 +393,15 @@ app.get("/api/success", (req, res) => {
     }
   );
 });
-app.get("/api/cancel", (req, res) => res.send("Cancelled"));
+app.get("/api/cancel", (req, res) => res.send("Cancelled"))
+
+
+process.on("unhandledRejection", (reason, p) => {
+  console.log("Unhandled Rejection at:", p, "reason:", reason);
+  // application specific logging, throwing an error, or other logic here
+})
+process.on("uncaughtException", (err, origin) => {
+  console.log("Uncaught Exception at:", origin, "error:", err);
+  // application specific logging, throwing an error, or other logic here
+})
 app.listen(PORT, () => console.log(`Server Started on ${PORT}`));

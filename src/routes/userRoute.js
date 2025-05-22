@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/user.js");
+
+const {isAuthenticated}=require("../middleweare/middleware.js")
 const multer=require("multer")
 const path=require("path")
 const fs=require("fs");
@@ -29,13 +31,13 @@ router.post("/invitation", userController.email);
 router.post("/reset", userController.resetPassword);
 router.post('/getUsersByDept',userController.getUsersByDept);
 
-router.get('/getUser/:id',userController.getUser);
+router.get('/getUser/:id',isAuthenticated,userController.getUser);
 router.get('/getAllusers/:orgId',userController.getAllusers);
 router.get('/getUserList',userController.getUserList);
 
 router.delete('/delete/:id',userController.delete);
 
-router.patch('/updateUser/:id',userController.updateUser);
+router.patch('/updateUser/:id',isAuthenticated,userController.updateUser);
 router.patch('/updateProfilephoto/:id',upload.single("profilePhoto"),userController.updateProfileimage)
 
 module.exports = router;

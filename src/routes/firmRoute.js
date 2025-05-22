@@ -5,7 +5,7 @@ const multer = require("multer")
 const path = require("path")
 const fs = require("fs")
 const multerS3 = require('multer-s3');
-const AWS = require('aws-sdk');
+const AWS = require("@aws-sdk/client-s3");
 const { authorize } = require('../middleweare/middleware');
 
 

@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       required: true,
+      default: "user",
     },
     subRole: {
       type: String,
@@ -35,14 +36,17 @@ const userSchema = new mongoose.Schema(
       type: Number,
       required: false,
     },
+    status: {
+      type: String,
+      required: false,
+      default: "active",
+    enum: ["active", "inactive", "deleted"]
+    },
     password: {
       type: String,
       required: true,
     },
-    confirmPassword: {
-      type: String,
-      required: false,
-    },
+    
     permissions: {
       type: Array,
       required: false,

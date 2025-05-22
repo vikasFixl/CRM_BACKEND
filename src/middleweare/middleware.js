@@ -1,15 +1,38 @@
 const jwtDecode = require("jwt-decode");
 const ActivityModel = require("../models/activityModel");
 
-const permited = (data) => {
+const isAuthenticated = (req, res, next) => {
+  console.log("req.cookies", req.cookie);
+  const token = req.cookies?.token;
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+  try {
+    const decoded = jwtDecode(token);
+    req.user = decoded; // Attach user info for later
+    next();
+  } catch (err) {
+    return res.status(401).json({ msg: "Invalid token" });
+  }
+};
+
+const permited = (allowedRoles) => {
   return (req, res, next) => {
-    const token = req.headers.authorization;
+    // Read token from cookies
+    const token = req.cookies?.token; // assumes cookie name is "token"
     if (!token) {
-      res.status(400).json({ msg: "Token Not Found" });
+      return res.status(400).json({ msg: "Token Not Found" });
     }
-    const role = jwtDecode(token);
-    const RoleValidater = data.find((item) => item === role.role);
-    if (RoleValidater) {
+
+    let role;
+    try {
+      const decoded = jwtDecode(token);
+      role = decoded.role;
+    } catch (err) {
+      return res.status(401).json({ msg: "Invalid token" });
+    }
+
+    const isRoleValid = allowedRoles.includes(role);
+    if (isRoleValid) {
       next();
     } else {
       res.status(403).json({ msg: "You are not allowed to access!" });
@@ -60,3 +83,4 @@ const activityLogger = (moduleName, activity) => {
 module.exports.permited = permited;
 module.exports.authorize = authorize;
 module.exports.activityLogger = activityLogger;
+module.exports.isAuthenticated = isAuthenticated;

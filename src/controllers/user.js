@@ -1,10 +1,14 @@
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
+
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
-
+const transporter = require("../../config/nodemailer.config.js");
+const {
+  signupSchema,
+  updateUserSchema,
+} = require("../validations/User/UserValidation.js");
 dotenv.config();
 //const SECRET = process.env.JWT_SECRET;
 const SECRET = "123";
@@ -13,30 +17,48 @@ const PORT = process.env.SMTP_PORT;
 const USER = process.env.SMTP_USER;
 const PASS = process.env.SMTP_PASS;
 
+console.log("at server js",HOST, PORT, USER, PASS);
 const User = require("../models/userModel.js");
 const Org = require("../models/OrgModel");
 const Employee = require("../models/employeeModel");
 
+// hanlde user login
 exports.signin = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
+
+  // Check if email and password are provided
+  if (!email || !password)
+    return res.status(400).json({ message: "Please enter email and password" });
+
   try {
+    // Find user by email in the database
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User doesn't exist" });
+
+    // Compare entered password with hashed password stored in DB
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: "Invalid password credentials" });
     }
+
+    // Generate JWT token with userId, role, and permissions, expires in 1 day
     const accessToken = jwt.sign(
       { userId: user._id, role: [user.role], permissions: user.permissions },
       SECRET,
-      {
-        expiresIn: "1d",
-      }
+      { expiresIn: "1d" }
     );
+    res.cookie("token", accessToken, { httpOnly: true });
+
+    // Save generated access token in the user's record
     await User.findByIdAndUpdate(user._id, { accessToken });
+
+    // Handle response differently for Admin users
     if (user.role === "Admin") {
+      // Try finding organization by orgEmail matching user's email
       const orgDetails = await Org.findOne({ orgEmail: email });
+
       if (orgDetails) {
+        // Return user info with detailed org info if orgEmail matched
         res.status(200).json({
           data: {
             id: user._id,
@@ -45,9 +67,7 @@ exports.signin = async (req, res) => {
             lastName: user.lastName,
             phone: user.phone,
             role: user.role,
-            // permissions: user.permissions,
             department: user.department,
-            // profilePhoto: url + "/public/user/" + req.file.filename,
             orgID: orgDetails._id,
             orgEmail: orgDetails.orgEmail,
             orgName: orgDetails.orgName,
@@ -63,6 +83,7 @@ exports.signin = async (req, res) => {
           token: accessToken,
         });
       } else {
+        // If orgEmail not found, find org by user's orgId and respond
         const orgDetails = await Org.findOne({ _id: user.orgId });
         res.status(200).json({
           data: {
@@ -75,8 +96,7 @@ exports.signin = async (req, res) => {
             permissions: user.permissions,
             department: user.department,
             orgID: orgDetails._id,
-            orgName: orgDetails.orgName
-            // profilePhoto: url + "/public/user/" + req.file.filename,
+            orgName: orgDetails.orgName,
           },
           success: true,
           code: 200,
@@ -85,7 +105,10 @@ exports.signin = async (req, res) => {
         });
       }
     } else {
+      // For non-admin users
+
       if (user?.orgId) {
+        // Find org details by orgId and include them in response
         const orgDetails = await Org.findOne({ _id: user.orgId });
         res.status(200).json({
           data: {
@@ -98,7 +121,7 @@ exports.signin = async (req, res) => {
             permissions: user.permissions,
             department: user.department,
             orgID: orgDetails._id,
-            orgName: orgDetails.orgName
+            orgName: orgDetails.orgName,
           },
           success: true,
           code: 200,
@@ -106,6 +129,7 @@ exports.signin = async (req, res) => {
           token: accessToken,
         });
       } else {
+        // If user has no orgId, respond with user info only
         res.status(200).json({
           data: {
             id: user._id,
@@ -125,114 +149,143 @@ exports.signin = async (req, res) => {
       }
     }
   } catch (error) {
+    // Return error if something unexpected happens
     res.status(404).json({ message: "Something went wrong" });
   }
 };
 
+// create new user and new employee record
 exports.signup = async (req, res) => {
-  const { email } = req.body;
   try {
-    const url = req.protocol + "://" + req.get("host");
-    const existingUser = await User.findOne({ email });
-    if (req.body.password != req.body.confirmPassword) {
-      return res.status(403).json({ message: "Password does not match" });
+    console.log(req.body);
+    const result = await signupSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ errors: result.error.errors });
     }
-    else if (existingUser) { return res.status(403).json({ message: "User already exist" }); }
+
+    const data = result.data;
+    console.log(data);
+
+    const existingUser = await User.findOne({ email: data.email });
+
+    if (existingUser) {
+      return res.status(403).json({ message: "User already exist" });
+    }
 
     const emp = new Employee({
       eid: "F" + Math.random(),
       //userid:user._id,
-      firstName: req.body.firstName,
-      gender: req.body.gender,
-      dob: req.body.dob,
-      doj: req.body.doj,
-      orgId: req.body.orgId,
+      firstName: data.firstName,
+      gender: data.gender,
+      dob: data.dob,
+      doj: data.doj,
+      orgId: data.orgId,
       //dol:req.body.dol,
-      designation: req.body.designation,
-      panno: req.body.panno,
-      bankDetails: req.body.bankDetails,
+      designation: data.designation,
+      panno: data.panno,
+      bankDetails: data.bankDetails,
     });
     await emp.save();
     const user = new User({
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      email: req.body.email,
-      role: req.body.role,
-      department: req.body.department,
-      phone: req.body.phone,
-      password: req.body.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      role: data.role,
+      department: data.department,
+      phone: data.phone,
+      password: data.password,
       // confirmPassword:req.body.confirmPassword,
-      orgId: req.body.orgId,
-      permissions: req.body.permissions,
+      orgId: data.orgId,
+      permissions: data.permissions,
       eid: emp.eid,
     });
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(user.password, salt);
     await user.save();
     res.status(201).json({
-      "firstName": user.firstName,
-      "lastName": user.lastName,
-      "email": user.email,
-      "role": user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
       success: true,
       code: 201,
       message: "You have signed up successfully",
+      newUser: user,
     });
   } catch (error) {
-    res.status(400).json({ message: "Something went wrong" });
+    console.error(error); // Always log the full error to your server console
+
+    // Check if error.message exists, else fallback to stringified error or generic message
+    const errorMessage =
+      error?.message || JSON.stringify(error) || "Unknown error";
+
+    res.status(500).json({
+      message: "Something went wrong",
+      error: errorMessage,
+    });
   }
 };
 
-exports.forgotPassword = (req, res) => {
-  const { email } = req.body;
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body || {};
 
-  // NODEMAILER TRANSPORT FOR SENDING POST NOTIFICATION VIA EMAIL
-  const transporter = nodemailer.createTransport({
-    host: HOST,
-    port: PORT,
-    secure: true,
-    auth: {
-      user: USER,
-      pass: PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-  });
+  if (!email) {
+    return res.status(422).json({ error: "Email is required" });
+  }
 
-  crypto.randomBytes(32, (err, buffer) => {
-    if (err) {
-      console.log(err);
+  try {
+    // Verify SMTP connection before sending
+    await transporter.verify();
+
+    // Find user by email
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      return res
+        .status(422)
+        .json({ error: "User does not exist in our database" });
     }
-    const token = buffer.toString("hex");
-    User.findOne({ email: email }).then((user) => {
-      if (!user) {
-        return res
-          .status(422)
-          .json({ error: "User does not exist in our database" });
-      }
-      user.resetToken = token;
-      user.expireToken = Date.now() + 3600000;
-      user
-        .save()
-        .then((result) => {
-          transporter.sendMail({
-            to: user.email,
-            from: process.env.USER,
-            subject: "Password reset request",
-            html: `
-                    <p>You requested for password reset</p>
-                    <h5>Please click this <a href="https://localhost:500/reset/${token}">link</a> to reset your password</h5>
-                    <p>Link not clickable?, copy and paste the following url in your address bar.</p>
-                    <p>https://localhost:5000/reset/${token}</p>
-                    <P>If this was a mistake, just ignore this email and nothing will happen.</P>
-                    `,
-          });
-          res.json({ message: "check your email, sent successfully" });
-        })
-        .catch((err) => console.log(err));
+
+    // Generate reset token
+    const buffer = await new Promise((resolve, reject) => {
+      crypto.randomBytes(32, (err, buf) => {
+        if (err) reject(err);
+        else resolve(buf);
+      });
     });
-  });
+    const token = buffer.toString("hex");
+
+    user.resetToken = token;
+    user.expireToken = Date.now() + 3600000; // 1 hour expiry
+    await user.save();
+
+    // Send reset email
+    const mailOptions = {
+      to: user.email,
+      from: USER,
+      subject: "Password reset request",
+      html: `
+        <p>You requested for password reset</p>
+        <h5>Please click this <a href="https://localhost:5000/reset/${token}">link</a> to reset your password</h5>
+        <p>Link not clickable? Copy and paste this URL into your browser:</p>
+        <p>https://localhost:5000/reset/${token}</p>
+        <p>If this was a mistake, just ignore this email and nothing will happen.</p>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    if (!info.accepted.includes(user.email)) {
+      // Email not accepted by SMTP server
+      return res.status(500).json({ error: "Failed to send email" });
+    }
+
+    res.json({ message: "Check your email, sent successfully" });
+  } catch (error) {
+    console.error("Forgot Password error:", error);
+    res
+      .status(500)
+      .json({ error: "Something went wrong", details: error.message });
+  }
 };
 
 exports.resetPassword = (req, res) => {
@@ -243,8 +296,8 @@ exports.resetPassword = (req, res) => {
       if (!user) {
         return res.status(422).json({ error: "Try again session expired" });
       }
-      bcrypt.hash(newPassword, 12).then(() => {
-        user.password = hashedpassword;
+      bcrypt.hash(newPassword, 12).then((hashedpassword) => {
+        user.password = hashedpassword; // bug
         user.resetToken = undefined;
         user.expireToken = undefined;
         user.save().then((saveduser) => {
@@ -257,6 +310,7 @@ exports.resetPassword = (req, res) => {
     });
 };
 
+//  get specific user by id
 exports.getUser = async (req, res) => {
   try {
     const _id = req.params.id;
@@ -283,6 +337,7 @@ exports.getUser = async (req, res) => {
   }
 };
 
+// get all users
 exports.getUserList = async (req, res) => {
   try {
     // Use find to get all users
@@ -297,7 +352,7 @@ exports.getUserList = async (req, res) => {
     }
 
     res.status(200).json({
-      data: users.map(user => ({
+      data: users.map((user) => ({
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
@@ -317,24 +372,46 @@ exports.getUserList = async (req, res) => {
   }
 };
 
-
+// get organization users
 exports.getAllusers = async (req, res) => {
   try {
     const { orgId } = req.params;
+    const { email } = req.body; // Get email from request body
+
+    // Fetch the organization using orgId
+    const org = await Org.findById(orgId);
+    if (!org) {
+      return res
+        .status(404)
+        .json({ message: "Organization not found", data: [] });
+    }
+
+    // Check if the requesting email matches the org's admin email
+    if (org.orgEmail !== email) {
+      return res.status(403).json({
+        message: "Not authorized: Only the org owner can access this data",
+        data: [],
+      });
+    }
+
+    // Fetch all users in the org, exclude passwords
     const data = await User.find({ orgId: orgId })
       .select("-password")
       .sort({ _id: -1 });
+
     res.status(200).json({
-      data: data,
+      data,
       success: true,
       code: 200,
-      message: "all users get here!!",
+      message: "All users fetched successfully",
     });
   } catch (error) {
-    res.status(409).json(error.message);
+    res.status(409).json({ message: error.message });
   }
 };
 
+// This function retrieves a list of users from a specific department within a given organization.
+// It returns only the users' first names, sorted by most recently created, based on orgId and department provided in the request body.
 exports.getUsersByDept = async (req, res) => {
   try {
     const { orgId, department } = req.body;
@@ -352,6 +429,7 @@ exports.getUsersByDept = async (req, res) => {
   }
 };
 
+// delete user by id
 exports.delete = async (req, res) => {
   const _id = req.params.id;
   if (!mongoose.Types.ObjectId.isValid(_id))
@@ -360,19 +438,44 @@ exports.delete = async (req, res) => {
 
   res.json({ message: "User deleted successfully!" });
 };
-
+//update user
 exports.updateUser = async (req, res) => {
   const { id: _id } = req.params;
-  const user = req.body;
+  console.log(req.user);
+  if (req.user.userId != _id)
+    return res.status(401).json({ message: "Unauthorized" });
 
-  if (!mongoose.Types.ObjectId.isValid(_id))
-    return res.status(404).send("No User with that id. ");
-  const updatedUser = await User.findByIdAndUpdate(
-    _id,
-    { ...user, _id },
-    { new: true }
-  );
-  res.json(updatedUser);
+  // Check for valid MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(_id)) {
+    return res.status(404).send("No User with that id.");
+  }
+
+  // Validate the update payload using Zod
+  const parseResult = updateUserSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({
+      message: "Invalid input",
+      errors: parseResult.error.errors,
+    });
+  }
+
+  try {
+    // Only update allowed fields
+    const updatedUser = await User.findByIdAndUpdate(
+      _id,
+      { ...parseResult.data },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      code: 200,
+      message: "User updated successfully",
+      data: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
 
 exports.updateProfileimage = async (req, res) => {
@@ -397,18 +500,13 @@ exports.updateProfileimage = async (req, res) => {
   }
 };
 
-
 exports.email = async (req, res) => {
   const { userName, from, to, link } = req.body;
+  if (!userName || !from || !to || !link)
+    return res.status(400).json({ message: "All fields are required" });
   try {
     // create reusable transporter object using the default SMTP transport
-    let transporter = await nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "msc.manishchoudhary@gmail.com",
-        pass: "zdvgzwmkrxxamwzb",
-      },
-    });
+
     // send mai with defined transport object
     const htmlContent = `
     <div style="width: 100%; color: #000; background: #fff; padding: 2rem; margin-top: 0; display: flex; justify-content: center; align-items: center">
