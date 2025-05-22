@@ -22,6 +22,7 @@ const LeadSchema = new mongoose.Schema(
       endDate: { type: String }
     }],
     currency: { type: String },
+   
     estimatedWorth: { type: String },
     createdDate: { type: String },
     title: { type: String },
