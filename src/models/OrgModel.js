@@ -4,9 +4,9 @@ const OrgSchema = new mongoose.Schema(
     orgName: {
       type: String,
       required: true,
-    },
+    }, 
     orgLogo: {
-      type: String,
+     type: String,
       required: false,
     },
     plan:{
@@ -24,6 +24,7 @@ const OrgSchema = new mongoose.Schema(
     password: {
       type: String,
       required: false,
+      minLength: 6,
     },
     orgDept: {
       type: Array,
