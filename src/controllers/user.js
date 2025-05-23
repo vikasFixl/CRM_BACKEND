@@ -28,7 +28,7 @@ export const login = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email }).lean();
+    const user = await User.findOne({ email })
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
     }
@@ -37,29 +37,41 @@ export const login = async (req, res) => {
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
+const org = await Org.findOne({ createdBy: user._id }).select("name contactEmail _id").lean();
+console.log("org", org);
+
+const responseData = {
+  id: user._id,
+  eid: user.eid,
+  email: user.email,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  phone: user.phone,
+
+  orgName: org?.name || null,
+  orgEmail: org?.contactEmail || null,
+  orgId: org?._id || null
+};
+
 
     const accessToken = jwt.sign(
       {
         userId: user._id,
         email: user.email,
-        organizations: user.organizations,
+        eid: user.eid,
       },
       SECRET,
       { expiresIn: "1d" }
-    );
+    );  
 
-    res.cookie("token", accessToken, { httpOnly: true });
+    res.cookie("token", accessToken, {
+      httpOnly: false, // Helps prevent XSS (client-side JS can't access the cookie)
+      secure: false, // Ensures the cookie is only sent over HTTPS
+      sameSite: "None", // Needed for cross-site cookie sharing (e.g., frontend and backend on different domains)
+      maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds
+    });
 
-    const responseData = {
-      id: user._id,
-      eid:user.eid,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      organizations: user.organizations,
-    };
-
+   
     res.status(200).json({
       message: "You have logged in successfully",
       success: true,
@@ -93,8 +105,6 @@ export const signup = async (req, res) => {
 
     // Generate unique Employee ID (eid)
 
-  
-    
     const user = new User({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -119,7 +129,7 @@ export const signup = async (req, res) => {
       email: data.email,
       userId: user._id,
     });
-    
+
     await emp.save();
     console.log(emp, "employee");
     console.log(user, "user");
@@ -203,7 +213,7 @@ export const resetPassword = async (req, res) => {
 
 export const getUser = async (req, res) => {
   try {
-    const userId=req.user.userId
+    const userId = req.user.userId;
     const user = await User.findById(userId).select("-password");
     res.status(200).json({
       user,
