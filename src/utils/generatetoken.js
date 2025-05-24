@@ -1,6 +1,8 @@
+import e from "express";
 import jwt from "jsonwebtoken";
 
 const SECRET = process.env.JWT_SECRET || "your-secret-key";
+const ORGSECRET = process.env.JWT_SECRET || "your-org-secret-key";
 
 // Default JWT options for all tokens
 const jwtOptions = {
@@ -26,7 +28,7 @@ export const generateGlobalToken = (user, options = {}) => {
 // 2. Org-scoped token — used for org-specific access
 export const generateOrgToken = (
   { userId, orgId, employeeId, role, permissions },
-  options = {}
+  options = {expiresIn: "1d"}
 ) => {
   return jwt.sign(
     {
@@ -36,7 +38,7 @@ export const generateOrgToken = (
       role,
       permissions,
     },
-    SECRET,
+    ORGSECRET,
     { ...jwtOptions, ...options }
   );
 };

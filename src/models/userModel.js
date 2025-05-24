@@ -16,31 +16,33 @@ const UserSchema = new Schema(
     },
 
     organizations: [
-  {
-    org: {
-      type: Schema.Types.ObjectId,
-      ref: "Organization",
-      index: true,
-    },
-    role: {
-      type: String,
-      enum: ["OrgAdmin", "Manager", "SupportAgent", "User", "Custom"],
-      default: "User",
-    },
-    employeeId: {
-      type: String, // Or Number
-      required: true,
-    },
-    permissions: [
       {
-        name: { type: String, required: true },
-        value: { type: Boolean, required: true },
-      }
+        org: {
+          type: Schema.Types.ObjectId,
+          ref: "Organization",
+          index: true,
+        },
+        role: {
+          type: String,
+          enum: ["OrgAdmin", "Manager", "SupportAgent", "User", "Custom"],
+          default: "User",
+        },
+        employeeId: {
+          type: String, // Or Number
+          required: true,
+        },
+        token: {
+          type: String,
+          required: true,
+        },
+        permissions:{
+          type:[Object],
+          
+          // default: [],
+        }
+      },
     ],
-  }
-]
-,
-    uuid: { type: String, required: true, unique: true, trim: true },
+    uuid: { type: String, required: true, unique: true, trim: true, immutable: true  },
 
     jobTitle: { type: String, trim: true },
     role: {
@@ -72,7 +74,7 @@ const UserSchema = new Schema(
     },
     isActive: { type: Boolean, default: true, index: true },
     lastLogin: { type: Date },
-    loginAttempts: { type: Number, default: 0 ,maxLength: 5},
+    loginAttempts: { type: Number, default: 0, maxLength: 5 },
     lockUntil: { type: Date },
   },
 
