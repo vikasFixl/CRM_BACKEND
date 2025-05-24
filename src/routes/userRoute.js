@@ -1,43 +1,64 @@
-const express = require("express");
+// userRoute.js
+
+import express from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import {
+  login,
+  signup,
+  forgotPassword,
+  resetPassword,
+  email,
+  getUsersByDept,
+  updateProfileimage,
+  getUserList,
+  getUser,
+  getAllusers,
+  deleteUser,
+  updateUser,
+} from "../controllers/user.js";
+
+import { isAuthenticated } from "../middleweare/middleware.js";
+
+// Directory setup for ES module (__dirname alternative)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const router = express.Router();
-const userController = require("../controllers/user.js");
 
-const {isAuthenticated}=require("../middleweare/middleware.js")
-const multer=require("multer")
-const path=require("path")
-const fs=require("fs");
+const uploadDir = path.join(__dirname, "../../public/user/");
 
-const url = './public/user/'
 const storage = multer.diskStorage({
-    destination:function (req, file, callback) {
-        if (!fs.existsSync(url)) {
-          fs.mkdirSync(url);
-        }
-        callback(null, url);
-      },
-    filename: (req, file, cb) => {
-        cb(null,file.fieldname+'-'+Math.random()+Date.now()+path.extname(file.originalname))
+  destination: function (req, file, callback) {
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
+    callback(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.fieldname + "-" + Math.random() + Date.now() + path.extname(file.originalname));
+  }
 });
 
-const upload = multer({
-    storage:storage
-});
+const upload = multer({ storage: storage });
 
-router.post("/signin", userController.signin);
-router.post("/signup",upload.single("profilePhoto"),userController.signup);
-router.post("/forgot", userController.forgotPassword);
-router.post("/invitation", userController.email);
-router.post("/reset", userController.resetPassword);
-router.post('/getUsersByDept',userController.getUsersByDept);
+// User Routes (only active module)
+router.post("/signin", login);
+router.post("/signup", upload.single("profilePhoto"), signup);
+router.post("/forgot",forgotPassword);
+router.post("/invitation", email);
+router.post("/reset", resetPassword);
+router.post("/getUsersByDept", getUsersByDept);
 
-router.get('/getUser/:id',isAuthenticated,userController.getUser);
-router.get('/getAllusers/:orgId',userController.getAllusers);
-router.get('/getUserList',userController.getUserList);
+router.get("/getUser/:id", isAuthenticated,getUser);
+router.get("/getAllusers/:orgId", getAllusers);
+router.get("/getUserList", getUserList);
 
-router.delete('/delete/:id',userController.delete);
+router.delete("/delete/:id", deleteUser);
 
-router.patch('/updateUser/:id',isAuthenticated,userController.updateUser);
-router.patch('/updateProfilephoto/:id',upload.single("profilePhoto"),userController.updateProfileimage)
+router.patch("/updateUser/:id", isAuthenticated, updateUser);
+router.patch("/updateProfilephoto/:id", upload.single("profilePhoto"),updateProfileimage);
 
-module.exports = router;
+export default router;

@@ -1,368 +1,261 @@
-const jwt = require("jsonwebtoken");
-
-const crypto = require("crypto");
-const bcrypt = require("bcrypt");
-const dotenv = require("dotenv");
-const mongoose = require("mongoose");
-const transporter = require("../../config/nodemailer.config.js");
-const {
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import bcrypt from "bcrypt";
+import { v4 as uuidv4 } from "uuid";
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+import transporter from "../../config/nodemailer.config.js";
+import { generateGlobalToken, generateOrgToken } from "../utils/generatetoken.js";
+import {
   signupSchema,
   updateUserSchema,
-} = require("../validations/User/UserValidation.js");
+} from "../validations/User/UserValidation.js";
+
+import User from "../models/userModel.js";
+import Org from "../models/OrgModel.js";
+import Employee from "../models/employeeModel.js";
+
 dotenv.config();
-//const SECRET = process.env.JWT_SECRET;
-const SECRET = "123";
+
+
 const HOST = process.env.SMTP_HOST;
 const PORT = process.env.SMTP_PORT;
 const USER = process.env.SMTP_USER;
 const PASS = process.env.SMTP_PASS;
 
-console.log("at server js",HOST, PORT, USER, PASS);
-const User = require("../models/userModel.js");
-const Org = require("../models/OrgModel");
-const Employee = require("../models/employeeModel");
 
-// hanlde user login
-exports.signin = async (req, res) => {
+
+export const login = async (req, res) => {
   const { email, password } = req.body || {};
 
-  // Check if email and password are provided
-  if (!email || !password)
+  if (!email?.trim() || !password) {
     return res.status(400).json({ message: "Please enter email and password" });
+  }
 
   try {
-    // Find user by email in the database
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User doesn't exist" });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ message: "User doesn't exist" });
+    }
 
-    // Compare entered password with hashed password stored in DB
+    // Check login attempts
+    if (user.loginAttempts >= 5) {
+      return res.status(400).json({
+        message:
+          "You have exceeded the maximum number of login attempts. Please reset your password.",
+      });
+    }
+
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
-      return res.status(400).json({ message: "Invalid password credentials" });
+      user.loginAttempts += 1;
+      await user.save();
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Generate JWT token with userId, role, and permissions, expires in 1 day
-    const accessToken = jwt.sign(
-      { userId: user._id, role: [user.role], permissions: user.permissions },
-      SECRET,
-      { expiresIn: "1d" }
-    );
-    res.cookie("token", accessToken, { httpOnly: true });
+    // Reset login attempts on successful login
+    user.loginAttempts = 0;
+    await user.save();
 
-    // Save generated access token in the user's record
-    await User.findByIdAndUpdate(user._id, { accessToken });
+    // Find an organization created by the user (if any)
+    const org = await Org.findOne({ createdBy: user._id })
+      .select("name contactEmail _id")
+      .lean();
 
-    // Handle response differently for Admin users
-    if (user.role === "Admin") {
-      // Try finding organization by orgEmail matching user's email
-      const orgDetails = await Org.findOne({ orgEmail: email });
+    const responseData = {
+      id: user._id,
+      uuid: user.uuid,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      orgName: org?.name || null,
+      orgEmail: org?.contactEmail || null,
+      orgId: org?._id || null,
+    };
 
-      if (orgDetails) {
-        // Return user info with detailed org info if orgEmail matched
-        res.status(200).json({
-          data: {
-            id: user._id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phone: user.phone,
-            role: user.role,
-            department: user.department,
-            orgID: orgDetails._id,
-            orgEmail: orgDetails.orgEmail,
-            orgName: orgDetails.orgName,
-            orgPhone: orgDetails.phone,
-            orgid: orgDetails._id,
-            orgDept: orgDetails.orgDept,
-            orgLeadStatus: orgDetails.orgLeadStatus,
-            orgLeadStages: orgDetails.orgLeadStages,
-          },
-          success: true,
-          code: 200,
-          message: "You have logged in successfully",
-          token: accessToken,
-        });
-      } else {
-        // If orgEmail not found, find org by user's orgId and respond
-        const orgDetails = await Org.findOne({ _id: user.orgId });
-        res.status(200).json({
-          data: {
-            id: user._id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phone: user.phone,
-            role: user.role,
-            permissions: user.permissions,
-            department: user.department,
-            orgID: orgDetails._id,
-            orgName: orgDetails.orgName,
-          },
-          success: true,
-          code: 200,
-          message: "You have logged in successfully",
-          token: accessToken,
-        });
-      }
-    } else {
-      // For non-admin users
+    const accessToken = generateGlobalToken(user);
 
-      if (user?.orgId) {
-        // Find org details by orgId and include them in response
-        const orgDetails = await Org.findOne({ _id: user.orgId });
-        res.status(200).json({
-          data: {
-            id: user._id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phone: user.phone,
-            role: user.role,
-            permissions: user.permissions,
-            department: user.department,
-            orgID: orgDetails._id,
-            orgName: orgDetails.orgName,
-          },
-          success: true,
-          code: 200,
-          message: "You have logged in successfully",
-          token: accessToken,
-        });
-      } else {
-        // If user has no orgId, respond with user info only
-        res.status(200).json({
-          data: {
-            id: user._id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phone: user.phone,
-            role: user.role,
-            permissions: user.permissions,
-            department: user.department,
-          },
-          success: true,
-          code: 200,
-          message: "You have logged in successfully",
-          token: accessToken,
-        });
-      }
-    }
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({
+      message: "You have logged in successfully",
+      success: true,
+      code: 200,
+      data: responseData,
+      token: accessToken,
+    });
   } catch (error) {
-    // Return error if something unexpected happens
-    res.status(404).json({ message: "Something went wrong" });
+    console.error("Login error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
-// create new user and new employee record
-exports.signup = async (req, res) => {
+
+export const signup = async (req, res) => {
   try {
-    console.log(req.body);
-    const result = await signupSchema.safeParse(req.body);
+   
+    const result = signupSchema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({ errors: result.error.errors });
     }
 
     const data = result.data;
-    console.log(data);
 
+    // Check for existing user
     const existingUser = await User.findOne({ email: data.email });
-
     if (existingUser) {
-      return res.status(403).json({ message: "User already exist" });
+      return res.status(403).json({ message: "User already exists" });
     }
 
-    const emp = new Employee({
-      eid: "F" + Math.random(),
-      //userid:user._id,
-      firstName: data.firstName,
-      gender: data.gender,
-      dob: data.dob,
-      doj: data.doj,
-      orgId: data.orgId,
-      //dol:req.body.dol,
-      designation: data.designation,
-      panno: data.panno,
-      bankDetails: data.bankDetails,
-    });
-    await emp.save();
+    // Generate unique Employee ID (eid)
+
     const user = new User({
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
-      role: data.role,
-      department: data.department,
-      phone: data.phone,
       password: data.password,
-      // confirmPassword:req.body.confirmPassword,
-      orgId: data.orgId,
-      permissions: data.permissions,
-      eid: emp.eid,
+      phone: data.phone,
+      uuid: uuidv4(),
     });
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(user.password, salt);
     await user.save();
+    
+     const accessToken = generateGlobalToken(user);
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
     res.status(201).json({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      role: user.role,
+      message: "You have signed up successfully",
       success: true,
       code: 201,
-      message: "You have signed up successfully",
-      newUser: user,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: `${user.firstName} ${user.lastName}`,
+        uuid: user.eid,
+        token: accessToken,
+      },
     });
   } catch (error) {
-    console.error(error); // Always log the full error to your server console
-
-    // Check if error.message exists, else fallback to stringified error or generic message
-    const errorMessage =
-      error?.message || JSON.stringify(error) || "Unknown error";
-
     res.status(500).json({
       message: "Something went wrong",
-      error: errorMessage,
+      error: error?.message || JSON.stringify(error),
     });
   }
 };
 
-exports.forgotPassword = async (req, res) => {
+export const forgotPassword = async (req, res) => {
   const { email } = req.body || {};
-
   if (!email) {
     return res.status(422).json({ error: "Email is required" });
   }
 
   try {
-    // Verify SMTP connection before sending
-    await transporter.verify();
-
-    // Find user by email
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne({ email });
     if (!user) {
-      return res
-        .status(422)
-        .json({ error: "User does not exist in our database" });
+      return res.status(422).json({ error: "User does not exist" });
     }
 
-    // Generate reset token
-    const buffer = await new Promise((resolve, reject) => {
-      crypto.randomBytes(32, (err, buf) => {
-        if (err) reject(err);
-        else resolve(buf);
-      });
-    });
+    const buffer = crypto.randomBytes(32);
     const token = buffer.toString("hex");
 
-    user.resetToken = token;
-    user.expireToken = Date.now() + 3600000; // 1 hour expiry
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+
     await user.save();
 
-    // Send reset email
-    const mailOptions = {
+    // Send reset email (mocked)
+    await transporter.sendMail({
       to: user.email,
       from: USER,
-      subject: "Password reset request",
-      html: `
-        <p>You requested for password reset</p>
-        <h5>Please click this <a href="https://localhost:5000/reset/${token}">link</a> to reset your password</h5>
-        <p>Link not clickable? Copy and paste this URL into your browser:</p>
-        <p>https://localhost:5000/reset/${token}</p>
-        <p>If this was a mistake, just ignore this email and nothing will happen.</p>
-      `,
-    };
+      subject: "Password Reset",
+      html: `<p>You requested for password reset</p><p>Click this <a href="${"http://localhost:3000"}/reset-password/${token}">link</a> to reset password</p>`,
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-
-    if (!info.accepted.includes(user.email)) {
-      // Email not accepted by SMTP server
-      return res.status(500).json({ error: "Failed to send email" });
-    }
-
-    res.json({ message: "Check your email, sent successfully" });
+    res.status(200).json({
+      message: "Reset link sent to your email",
+      success: true,
+    });
   } catch (error) {
-    console.error("Forgot Password error:", error);
     res
       .status(500)
-      .json({ error: "Something went wrong", details: error.message });
+      .json({ message: "Something went wrong", error: error.message });
   }
 };
 
-exports.resetPassword = (req, res) => {
-  const newPassword = req.body.password;
-  const sentToken = req.body.token;
-  User.findOne({ resetToken: sentToken, expireToken: { $gt: Date.now() } })
-    .then((user) => {
-      if (!user) {
-        return res.status(422).json({ error: "Try again session expired" });
-      }
-      bcrypt.hash(newPassword, 12).then((hashedpassword) => {
-        user.password = hashedpassword; // bug
-        user.resetToken = undefined;
-        user.expireToken = undefined;
-        user.save().then((saveduser) => {
-          res.json({ message: "password updated success" });
-        });
-      });
-    })
-    .catch((err) => {
-      console.log(err);
+export const resetPassword = async (req, res) => {
+  const { password, token } = req.body;
+  try {
+    const user = await User.findOne({
+      resetToken: token,
+      expireToken: { $gt: Date.now() },
     });
+    if (!user)
+      return res.status(422).json({ error: "Session expired. Try again." });
+
+    user.password = await bcrypt.hash(password, 12);
+    user.resetToken = undefined;
+    user.expireToken = undefined;
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Server error", details: err.message });
+  }
 };
 
-//  get specific user by id
-exports.getUser = async (req, res) => {
+export const getUser = async (req, res) => {
   try {
-    const _id = req.params.id;
-    const user = await User.findById(_id);
+    const userId = req.user.userId;
+    const user = await User.findById(userId).select("-password");
     res.status(200).json({
-      data: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        subRole: user.subRole,
-        department: user.department,
-        phone: user.phone,
-        permissions: user.permissions,
-        password: user.password,
-        profilePhoto: user.profilePhoto,
-      },
+      user,
       success: true,
       code: 200,
-      message: "single user fetch!!",
+      message: "User fetched successfully",
     });
   } catch (error) {
     res.status(409).json({ message: error.message });
   }
 };
 
-// get all users
-exports.getUserList = async (req, res) => {
+export const getUserList = async (req, res) => {
   try {
-    // Use find to get all users
     const users = await User.find();
-
-    if (!users) {
-      return res.status(404).json({
-        success: false,
-        status: 404,
-        message: `No data found`,
-      });
-    }
-
     res.status(200).json({
-      data: users.map((user) => ({
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        department: user.department,
-        phone: user.phone,
-        permissions: user.permissions,
-        // Note: Avoid sending sensitive information like passwords in the response
-        profilePhoto: user.profilePhoto,
-      })),
+      data: users.map(
+        ({
+          firstName,
+          lastName,
+          email,
+          role,
+          department,
+          phone,
+          permissions,
+          profilePhoto,
+        }) => ({
+          firstName,
+          lastName,
+          email,
+          role,
+          department,
+          phone,
+          permissions,
+          profilePhoto,
+        })
+      ),
       success: true,
       code: 200,
       message: "All users fetched!",
@@ -372,30 +265,22 @@ exports.getUserList = async (req, res) => {
   }
 };
 
-// get organization users
-exports.getAllusers = async (req, res) => {
+export const getAllusers = async (req, res) => {
   try {
     const { orgId } = req.params;
-    const { email } = req.body; // Get email from request body
+    const { email } = req.body;
 
-    // Fetch the organization using orgId
     const org = await Org.findById(orgId);
-    if (!org) {
+    if (!org)
       return res
         .status(404)
         .json({ message: "Organization not found", data: [] });
-    }
 
-    // Check if the requesting email matches the org's admin email
     if (org.orgEmail !== email) {
-      return res.status(403).json({
-        message: "Not authorized: Only the org owner can access this data",
-        data: [],
-      });
+      return res.status(403).json({ message: "Unauthorized", data: [] });
     }
 
-    // Fetch all users in the org, exclude passwords
-    const data = await User.find({ orgId: orgId })
+    const data = await User.find({ orgId })
       .select("-password")
       .sort({ _id: -1 });
 
@@ -410,63 +295,55 @@ exports.getAllusers = async (req, res) => {
   }
 };
 
-// This function retrieves a list of users from a specific department within a given organization.
-// It returns only the users' first names, sorted by most recently created, based on orgId and department provided in the request body.
-exports.getUsersByDept = async (req, res) => {
+export const getUsersByDept = async (req, res) => {
   try {
     const { orgId, department } = req.body;
-    const data = await User.find({ orgId: orgId, department: department })
+    const data = await User.find({ orgId, department })
       .select("firstName")
       .sort({ _id: -1 });
+
     res.status(200).json({
-      data: data,
+      data,
       success: true,
       code: 200,
-      message: "all users get here!!",
+      message: "Department users fetched",
     });
   } catch (error) {
-    res.status(409).json(error.message);
+    res.status(409).json({ message: error.message });
   }
 };
 
-// delete user by id
-exports.delete = async (req, res) => {
+export const deleteUser = async (req, res) => {
   const _id = req.params.id;
   if (!mongoose.Types.ObjectId.isValid(_id))
-    return res.status(404).send("   No user with that id. ");
-  await User.findByIdAndRemove(_id);
+    return res.status(404).send("No user with that ID.");
 
+  await User.findByIdAndRemove(_id);
   res.json({ message: "User deleted successfully!" });
 };
-//update user
-exports.updateUser = async (req, res) => {
+
+export const updateUser = async (req, res) => {
   const { id: _id } = req.params;
-  console.log(req.user);
   if (req.user.userId != _id)
     return res.status(401).json({ message: "Unauthorized" });
 
-  // Check for valid MongoDB ObjectId
   if (!mongoose.Types.ObjectId.isValid(_id)) {
-    return res.status(404).send("No User with that id.");
+    return res.status(404).send("No User with that ID.");
   }
 
-  // Validate the update payload using Zod
   const parseResult = updateUserSchema.safeParse(req.body);
   if (!parseResult.success) {
-    return res.status(400).json({
-      message: "Invalid input",
-      errors: parseResult.error.errors,
-    });
+    return res
+      .status(400)
+      .json({ message: "Invalid input", errors: parseResult.error.errors });
   }
 
   try {
-    // Only update allowed fields
     const updatedUser = await User.findByIdAndUpdate(
       _id,
       { ...parseResult.data },
       { new: true }
     );
-
     res.status(200).json({
       success: true,
       code: 200,
@@ -478,94 +355,88 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-exports.updateProfileimage = async (req, res) => {
+export const updateProfileimage = async (req, res) => {
   try {
-    const url = req.protocol + "://" + req.get("host");
+    const url = `${req.protocol}://${req.get("host")}`;
     const _id = req.params.id;
     const image = await User.findByIdAndUpdate(
       _id,
-      { profilePhoto: url + "/public/user/" + req.file.filename },
-      {
-        new: true,
-      }
+      { profilePhoto: `${url}/public/user/${req.file.filename}` },
+      { new: true }
     );
     res.status(201).json({
-      profilePhoto: image.path,
+      profilePhoto: image.profilePhoto,
       code: 201,
       success: true,
       message: "Profile Photo Updated successfully!",
     });
   } catch (error) {
-    res.status(400).json({ message: "something went wrong! " });
+    res.status(400).json({ message: "Something went wrong!" });
   }
 };
-
-exports.email = async (req, res) => {
+export const email = async (req, res) => {
   const { userName, from, to, link } = req.body;
-  if (!userName || !from || !to || !link)
+  if (!userName || !from || !to || !link) {
     return res.status(400).json({ message: "All fields are required" });
-  try {
-    // create reusable transporter object using the default SMTP transport
+  }
 
-    // send mai with defined transport object
+  try {
     const htmlContent = `
-    <div style="width: 100%; color: #000; background: #fff; padding: 2rem; margin-top: 0; display: flex; justify-content: center; align-items: center">
-      <div style="width: 40%; margin-left: 25%; border: 1px solid #c8c9ca; padding: 2rem ">
-        <div style="text-align: center">
-          <h1 style="text-align: center; color: #000; font-weight: 900 ">CRM</h1>
-          <p style="font-size: 18px;padding-top: 0; padding: 1rem; border-bottom: 1px solid #c8c9ca">
-            ${userName} has invited you to join <span style="font-size: 20px; margin: 0; padding: 0; font-weight: 600 ">CRM</span>
-          </p>
-          <p style="margin: 1rem auto; margin-top: 1rem; font-size: 13px">
-            We're thrilled to invite you to join our 
-            <span style="margin: 0; padding: 0; color: blue">CRM</span>,
-            designed to supercharge our team collaboration and streamline our workflow.
-          </p>
-          <a href=${link} style="display: inline-block; color: #fff; background:blue; border-radius: 5px; text-decoration: none; font-size: 14px; font-weight: 600; margin: 1rem auto; padding: 6px 12px ">
-            View Invitation
-          </a>
-          <p style="margin: 1rem auto; font-size: 13px; padding-bottom: 2rem; border-bottom: 1px solid #c8c9ca">
-            We believe that by embracing our platform, we can take our
-            collaboration and efficiency to new heights. This is an exciting step forward for our team, and we're
-            eager to have you on board.
-          </p>
-          <div style="font-size: 12px; width: 100%; text-align: left">
-            <span style="margin: 0; padding: 0; color: #000; font-weight: 600">Note: </span>
-            <p style="display: inline "> This invitation was intended for
-              <span style="margin: 0; padding: 0; color: blue"; text-decoration: none; font-weight: 600>${to}</span>.
-              If you were not expecting this invitation, you can ignore this email.
+      <div style="width: 100%; color: #000; background: #fff; padding: 2rem; margin-top: 0; display: flex; justify-content: center; align-items: center">
+        <div style="width: 40%; margin-left: 25%; border: 1px solid #c8c9ca; padding: 2rem">
+          <div style="text-align: center">
+            <h1 style="text-align: center; color: #000; font-weight: 900">CRM</h1>
+            <p style="font-size: 18px; padding: 1rem; border-bottom: 1px solid #c8c9ca">
+              ${userName} has invited you to join <span style="font-size: 20px; font-weight: 600">CRM</span>
             </p>
-          </div>
-          <div style="font-size: 12px; width: 100%; text-align: left; margin-top: 1rem">
-            <span style="margin: 0; padding: 0; color: gray; font-weight: 600">Button not working? :</span>
-            <p style="display: inline; color: gray">Copy and paste this link to your browser:</p>
-            <p style="color: blue, margin-top: 0.5rem">
-              <a href=${link} target="_blank">${link}</a>
+            <p style="margin: 1rem auto; font-size: 13px">
+              We're thrilled to invite you to join our 
+              <span style="color: blue">CRM</span>,
+              designed to supercharge our team collaboration and streamline our workflow.
             </p>
+            <a href="${link}" style="display: inline-block; color: #fff; background: blue; border-radius: 5px; text-decoration: none; font-size: 14px; font-weight: 600; margin: 1rem auto; padding: 6px 12px">
+              View Invitation
+            </a>
+            <p style="margin: 1rem auto; font-size: 13px; padding-bottom: 2rem; border-bottom: 1px solid #c8c9ca">
+              We believe that by embracing our platform, we can take our
+              collaboration and efficiency to new heights. This is an exciting step forward for our team, and we're
+              eager to have you on board.
+            </p>
+            <div style="font-size: 12px; text-align: left">
+              <strong>Note:</strong>
+              <span>This invitation was intended for 
+                <span style="color: blue; font-weight: 600">${to}</span>.
+                If you were not expecting this invitation, you can ignore this email.
+              </span>
+            </div>
+            <div style="font-size: 12px; text-align: left; margin-top: 1rem">
+              <strong style="color: gray">Button not working? :</strong>
+              <span style="color: gray">Copy and paste this link to your browser:</span>
+              <p><a href="${link}" target="_blank" style="color: blue">${link}</a></p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-`;
-    const mailOption = {
+    `;
+
+    const mailOptions = {
       from: `${userName} <${from}>`,
-      to: `${to}`,
-      subject: `${userName} sent invitation to join CRM ✔`,
-      text: "Hello to myself!",
+      to: to,
+      subject: `${userName} sent an invitation to join CRM ✔`,
+      text: "You have been invited to join CRM.",
       html: htmlContent,
-      // "<p><b>Hello</b> to myself friendly! <button>invitation Accept </button></p>",
     };
-    await transporter.sendMail(mailOption, (err, info) => {
+
+    transporter.sendMail(mailOptions, (err, info) => {
       if (err) {
-        // return process.exit(1);
         return res
-          .status(404)
-          .json({ Message: "Error occurred. " + err.message });
+          .status(500)
+          .json({ message: "Error occurred. " + err.message });
       } else {
-        return res.status(201).json({ Message: `Invitation sent to: ${to}` });
+        return res.status(201).json({ message: `Invitation sent to: ${to}` });
       }
     });
   } catch (error) {
-    return (message = { error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };

@@ -1,42 +1,56 @@
-const express = require("express");
-const router = express.Router();
-const orgController = require("../controllers/orgController");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-const { authorize } = require("../middleweare/middleware");
+import express from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+// import { authorize } from "../middleweare/middleware.js";
+import { AddUserToOrganization,createOrganization,  getAllOrganizations} from "../controllers/orgController.js";
+import { isAuthenticated } from "../middleweare/middleware.js";
+const Router = express.Router();
 
 const url = "./public/org/";
+
 const storage = multer.diskStorage({
-  destination: function (req, file, callback) {
+  destination(req, file, cb) {
     if (!fs.existsSync(url)) {
-      fs.mkdirSync(url);
+      fs.mkdirSync(url, { recursive: true });
     }
-    callback(null, url);
+    cb(null, url);
   },
-  filename: (req, file, cb) => {
+  filename(req, file, cb) {
     cb(
       null,
-      file.fieldname +
-      "-" +
-      Math.random() +
-      Date.now() +
-      path.extname(file.originalname)
+      `${file.fieldname}-${Math.random()}${Date.now()}${path.extname(
+        file.originalname
+      )}`
     );
   },
 });
 
-const upload = multer({
-  storage: storage,
-});
+const upload = multer({ storage });
 
-router.get("/getData/:id", orgController.getOrgData);
-router.get("/getOrgDeprt/:id", authorize("Read", "organization", ["Admin", "subAdmin", "Custom"]), orgController.getOrgDeprt);
+// Define routes using Router.route().method chaining
 
-router.patch("/update/:id", authorize("Update", "organization", ["Admin", "Custom"]), orgController.updateOrgData);
-router.patch("/logo/:id", authorize("Update", "organization", ["Admin", "Custom"]), upload.single("orgLogo"), orgController.logo);
+// Router.route("/getData/:id").get(getOrgData);
 
-router.post("/addOrg", upload.single("orgLogo"), orgController.addOrg);
-router.post("/signin", orgController.signin);
+// Router.route("/getOrgDeprt/:id").get(
+//   // authorize("Read", "organization", ["Admin", "subAdmin", "Custom"]),
+//   getOrgDeprt
+// );
 
-module.exports = router;
+// Router.route("/update/:id").patch(
+//   // authorize("Update", "organization", ["Admin", "Custom"]),
+//   updateOrgData
+// );
+
+// Router.route("/logo/:id").patch(
+//   // authorize("Update", "organization", ["Admin", "Custom"]),
+//   // upload.single("orgLogo"),
+//   Logo
+// );
+Router.route("/allOrg").get(isAuthenticated,getAllOrganizations);
+Router.route("/addOrg").post(isAuthenticated,createOrganization);
+Router.route("/adduser").post(isAuthenticated,AddUserToOrganization);
+
+// Router.route("/signin").post(signin);
+
+export default Router;
