@@ -5,7 +5,10 @@ import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import transporter from "../../config/nodemailer.config.js";
-import { generateGlobalToken, generateOrgToken } from "../utils/generatetoken.js";
+import {
+  generateGlobalToken,
+  generateOrgToken,
+} from "../utils/generatetoken.js";
 import {
   signupSchema,
   updateUserSchema,
@@ -17,13 +20,10 @@ import Employee from "../models/employeeModel.js";
 
 dotenv.config();
 
-
 const HOST = process.env.SMTP_HOST;
 const PORT = process.env.SMTP_PORT;
 const USER = process.env.SMTP_USER;
 const PASS = process.env.SMTP_PASS;
-
-
 
 export const login = async (req, res) => {
   const { email, password } = req.body || {};
@@ -76,7 +76,7 @@ export const login = async (req, res) => {
 
     const accessToken = generateGlobalToken(user);
 
-    res.cookie("accessToken", accessToken, {
+    res.cookie("token", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
@@ -99,10 +99,8 @@ export const login = async (req, res) => {
   }
 };
 
-
 export const signup = async (req, res) => {
   try {
-   
     const result = signupSchema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({ errors: result.error.errors });
@@ -127,10 +125,10 @@ export const signup = async (req, res) => {
       uuid: uuidv4(),
     });
     await user.save();
-    
-     const accessToken = generateGlobalToken(user);
 
-    res.cookie("accessToken", accessToken, {
+    const accessToken = generateGlobalToken(user);
+
+    res.cookie("token", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
@@ -153,6 +151,63 @@ export const signup = async (req, res) => {
       message: "Something went wrong",
       error: error?.message || JSON.stringify(error),
     });
+  }
+};
+
+export const logout = async (req, res) => {
+  try {
+    // 🔍 Check the current token before clearing
+    console.log("Token before clearing:", req.cookies.Token);
+    console.log("AccessToken before clearing:", req.cookies.accessToken);
+
+    // 🧹 Optionally: Explicitly overwrite the cookie with empty string
+    res.cookie("token", "", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 0,
+    });
+    res.cookie("orgtoken", "", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 0,
+    });
+
+    res.cookie("Token", "", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 0,
+    });
+
+    // ✅ Clear cookies as well
+    res.clearCookie("Token", "", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    });
+    res.clearCookie("orgToken", "", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    });
+    res.clearCookie("token", "", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+    });
+
+    // ⚠️ req.cookies still shows the old token, it won’t change until the next request
+    console.log(
+      "Token after clearing (still in req.cookies):",
+      req.cookies.Token
+    );
+    console.log(req.cookies.token)
+
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 

@@ -3,8 +3,9 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 // import { authorize } from "../middleweare/middleware.js";
-import { AddUserToOrganization,createOrganization,  getAllOrganizations} from "../controllers/orgController.js";
+import { AddUserToOrganization,createOrganization,  getAllOrganizations, getUserOrganizations, switchOrg} from "../controllers/orgController.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
+import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
 const Router = express.Router();
 
 const url = "./public/org/";
@@ -48,8 +49,11 @@ const upload = multer({ storage });
 //   Logo
 // );
 Router.route("/allOrg").get(isAuthenticated,getAllOrganizations);
+Router.route("/userOrg/:orgId").get(isAuthenticated,getUserOrganizations);
 Router.route("/addOrg").post(isAuthenticated,createOrganization);
-Router.route("/adduser").post(isAuthenticated,AddUserToOrganization);
+Router.route("/adduser").post(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),AddUserToOrganization);
+Router.route("/switch").post(isAuthenticated,switchOrg);
+
 
 // Router.route("/signin").post(signin);
 

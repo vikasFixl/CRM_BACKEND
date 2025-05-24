@@ -30,8 +30,9 @@ const OrganizationSchema = new Schema({
       {
         userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
         role: { type: String, required: true }, // e.g., 'Admin', 'Manager', 'SupportAgent', etc.
-        eid: { type: String},
+        employeeId: { type: String},
         joinedAt: { type: Date, default: Date.now },
+        
       },
     ],
   modules: { type: [String], default: [] },

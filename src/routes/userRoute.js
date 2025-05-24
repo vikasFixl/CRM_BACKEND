@@ -18,6 +18,7 @@ import {
   getAllusers,
   deleteUser,
   updateUser,
+  logout,
 } from "../controllers/user.js";
 
 import { isAuthenticated } from "../middleweare/middleware.js";
@@ -51,6 +52,7 @@ router.post("/forgot",forgotPassword);
 router.post("/invitation", email);
 router.post("/reset", resetPassword);
 router.post("/getUsersByDept", getUsersByDept);
+router.post("/logout",logout);
 
 router.get("/getUser/:id", isAuthenticated,getUser);
 router.get("/getAllusers/:orgId", getAllusers);

@@ -43,16 +43,10 @@ const VALID_ACTIONS = {
 };
 
 const RolePermissionSchema = new Schema({
-  orgId: {
-    type: Schema.Types.ObjectId,
-    ref: "Organization",
-    required: true,
-    index: true,
-  },
   role: {
     type: String,
     required: true,
-    enum: Object.values(ROLES),
+    enum: Object.values(ROLES), // Dynamic enum from ROLES object
   },
   permissions: [
     {
@@ -65,14 +59,12 @@ const RolePermissionSchema = new Schema({
         {
           type: String,
           enum: Object.values(VALID_ACTIONS),
+          default: [],
         },
       ],
     },
   ],
-}, { timestamps: true });
-
-RolePermissionSchema.index({ orgId: 1, role: 1 }, { unique: true });
-
+});
 
 export const RolePermission = model("RolePermission", RolePermissionSchema);
 
