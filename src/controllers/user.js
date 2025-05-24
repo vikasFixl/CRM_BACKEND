@@ -1,9 +1,11 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import transporter from "../../config/nodemailer.config.js";
+import { generateGlobalToken, generateOrgToken } from "../utils/generatetoken.js";
 import {
   signupSchema,
   updateUserSchema,
@@ -15,63 +17,72 @@ import Employee from "../models/employeeModel.js";
 
 dotenv.config();
 
-const SECRET = "123"; // Replace with process.env.JWT_SECRET in production
+
 const HOST = process.env.SMTP_HOST;
 const PORT = process.env.SMTP_PORT;
 const USER = process.env.SMTP_USER;
 const PASS = process.env.SMTP_PASS;
 
+
+
 export const login = async (req, res) => {
   const { email, password } = req.body || {};
-  if (!email || !password) {
+
+  if (!email?.trim() || !password) {
     return res.status(400).json({ message: "Please enter email and password" });
   }
 
   try {
-    const user = await User.findOne({ email })
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
     }
 
+    // Check login attempts
+    if (user.loginAttempts >= 5) {
+      return res.status(400).json({
+        message:
+          "You have exceeded the maximum number of login attempts. Please reset your password.",
+      });
+    }
+
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
+      user.loginAttempts += 1;
+      await user.save();
       return res.status(400).json({ message: "Invalid credentials" });
     }
-const org = await Org.findOne({ createdBy: user._id }).select("name contactEmail _id").lean();
-console.log("org", org);
 
-const responseData = {
-  id: user._id,
-  eid: user.eid,
-  email: user.email,
-  firstName: user.firstName,
-  lastName: user.lastName,
-  phone: user.phone,
+    // Reset login attempts on successful login
+    user.loginAttempts = 0;
+    await user.save();
 
-  orgName: org?.name || null,
-  orgEmail: org?.contactEmail || null,
-  orgId: org?._id || null
-};
+    // Find an organization created by the user (if any)
+    const org = await Org.findOne({ createdBy: user._id })
+      .select("name contactEmail _id")
+      .lean();
 
+    const responseData = {
+      id: user._id,
+      uuid: user.uuid,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      orgName: org?.name || null,
+      orgEmail: org?.contactEmail || null,
+      orgId: org?._id || null,
+    };
 
-    const accessToken = jwt.sign(
-      {
-        userId: user._id,
-        email: user.email,
-        eid: user.eid,
-      },
-      SECRET,
-      { expiresIn: "1d" }
-    );  
+    const accessToken = generateGlobalToken(user);
 
-    res.cookie("token", accessToken, {
-      httpOnly: false, // Helps prevent XSS (client-side JS can't access the cookie)
-      secure: false, // Ensures the cookie is only sent over HTTPS
-      sameSite: "None", // Needed for cross-site cookie sharing (e.g., frontend and backend on different domains)
-      maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
-   
     res.status(200).json({
       message: "You have logged in successfully",
       success: true,
@@ -80,21 +91,23 @@ const responseData = {
       token: accessToken,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Something went wrong", error: error.message });
+    console.error("Login error:", error);
+    res.status(500).json({
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
 
+
 export const signup = async (req, res) => {
   try {
-    console.log(req.body);
+   
     const result = signupSchema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({ errors: result.error.errors });
     }
-    console.log("run");
-    const eid = `F${Date.now().toString().slice(-6)}`;
+
     const data = result.data;
 
     // Check for existing user
@@ -111,28 +124,18 @@ export const signup = async (req, res) => {
       email: data.email,
       password: data.password,
       phone: data.phone,
-      eid: eid,
+      uuid: uuidv4(),
     });
     await user.save();
-    const emp = new Employee({
-      eid,
-      eidPrefix: "F",
-      firstName: data.firstName,
-      lastName: data.lastName,
-      gender: data.gender,
-      dob: data.dob,
-      doj: data.doj,
-      orgId: data.orgId,
-      designation: data.jobTitle,
-      panNo: data.panNo,
-      bankDetails: data.bankDetails,
-      email: data.email,
-      userId: user._id,
-    });
+    
+     const accessToken = generateGlobalToken(user);
 
-    await emp.save();
-    console.log(emp, "employee");
-    console.log(user, "user");
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
     res.status(201).json({
       message: "You have signed up successfully",
       success: true,
@@ -141,6 +144,8 @@ export const signup = async (req, res) => {
         id: user._id,
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
+        uuid: user.eid,
+        token: accessToken,
       },
     });
   } catch (error) {

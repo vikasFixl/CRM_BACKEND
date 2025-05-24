@@ -14,6 +14,7 @@
     "@aws-sdk/client-s3": "^3.815.0",
     "axios": "^1.6.0",
     "bcrypt": "^5.0.1",
+    "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "corn": "^0.0.1",
     "cors": "^2.8.5",
@@ -41,6 +42,7 @@
     "paypal-rest-sdk": "^1.8.1",
     "razorpay": "^2.8.6",
     "stripe": "^11.14.0",
+    "uuid": "^11.1.0",
     "winston": "^3.8.2",
     "zod": "^3.25.20"
   }
