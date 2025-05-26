@@ -6,7 +6,7 @@ const ROLES = {
   MANAGER: "Manager",
   SUPPORT_AGENT: "SupportAgent",
   USER: "User",
-  CUSTOM: "Custom",
+  CUSTOM: " ",
 };
 
 const MODULES = {
@@ -40,6 +40,13 @@ const VALID_ACTIONS = {
   UPGRADE_PLAN: "upgrade-plan",
   MANAGE_PAYMENT: "manage-payment",
   VIEW_INVOICES: "view-invoices",
+   ARCHIVE: "archive",                  // For archiving records (jobs, users, etc.)
+  RESTORE: "restore",                  // Restore from archive
+  VIEW_AUDIT_LOG: "view-audit-log",    // Super admin
+  MANAGE_ORG_SETTINGS: "manage-org-settings", // Super admin
+  VIEW_USERS_ALL_ORGS: "view-users-all-orgs", // Super admin
+  MANAGE_ROLES: "manage-roles",        // Manage all roles & permissions
+  ACCESS_DEV_TOOLS: "access-dev-tools" // Feature flag access, system-wide tools
 };
 
 const RolePermissionSchema = new Schema({

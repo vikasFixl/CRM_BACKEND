@@ -3,7 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 // import { authorize } from "../middleweare/middleware.js";
-import { AddUserToOrganization,createOrganization,  getAllOrganizations, getUserOrganizations, switchOrg} from "../controllers/orgController.js";
+import { AddUserToOrganization,createOrganization,  DeleteOrganizationUser,  getAllOrganizations, getOrganizationBYId, getUserOrganizations, switchOrg, UpdateOrganizationUser} from "../controllers/orgController.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
 const Router = express.Router();
@@ -29,32 +29,38 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Define routes using Router.route().method chaining
 
-// Router.route("/getData/:id").get(getOrgData);
 
 // Router.route("/getOrgDeprt/:id").get(
 //   // authorize("Read", "organization", ["Admin", "subAdmin", "Custom"]),
 //   getOrgDeprt
 // );
 
-// Router.route("/update/:id").patch(
-//   // authorize("Update", "organization", ["Admin", "Custom"]),
-//   updateOrgData
-// );
+
 
 // Router.route("/logo/:id").patch(
 //   // authorize("Update", "organization", ["Admin", "Custom"]),
 //   // upload.single("orgLogo"),
 //   Logo
 // );
+
+
+// get all org of user 
 Router.route("/allOrg").get(isAuthenticated,getAllOrganizations);
+// org by id 
+Router.route("/getOrg/:orgId").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),getOrganizationBYId);
+// get user org
 Router.route("/userOrg/:orgId").get(isAuthenticated,getUserOrganizations);
+// create new org
 Router.route("/addOrg").post(isAuthenticated,createOrganization);
+// help to add userw
 Router.route("/adduser").post(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),AddUserToOrganization);
+// provides access token based on org
 Router.route("/switch").post(isAuthenticated,switchOrg);
+Router.route("/updateuser/:id").put(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),UpdateOrganizationUser);
+Router.route("/deleteuser/:id").delete(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),DeleteOrganizationUser);
 
 
-// Router.route("/signin").post(signin);
+
 
 export default Router;

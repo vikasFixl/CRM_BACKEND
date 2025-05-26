@@ -35,19 +35,25 @@ const UserSchema = new Schema(
           type: String,
           required: true,
         },
+        status: {
+          type: String,
+          enum: ["active", "inactive"],
+          default: "active",
+        },
         permissions:{
           type:[Object],
           
           // default: [],
-        }
+        },
+        jobTitle: { type: String, trim: true }
       },
     ],
     uuid: { type: String, required: true, unique: true, trim: true, immutable: true  },
 
-    jobTitle: { type: String, trim: true },
+ 
     role: {
       type: String,
-      enum: ["Admin", "User"],
+      enum: ["SuperAdmin", "User"],
       required: false,
       default: "User",
     },
@@ -67,6 +73,7 @@ const UserSchema = new Schema(
       type: Date,
       default: null,
       select: false,
+      
     },
     hasReceivedWelcomeEmail: {
       type: Boolean,
@@ -76,6 +83,9 @@ const UserSchema = new Schema(
     lastLogin: { type: Date },
     loginAttempts: { type: Number, default: 0, maxLength: 5 },
     lockUntil: { type: Date },
+    Archive: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
+
   },
 
   { timestamps: true }
