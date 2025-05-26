@@ -7,8 +7,9 @@ import { OrganizationBilling } from "../models/OranizationBillingPlanModel.js";
 import { RolePermission } from "../models/RolePermission.js";
 import { v4 as uuidv4 } from "uuid";
 import { generateOrgToken } from "../utils/generatetoken.js";
+import { OrganizationInvite } from "../models/OrganisationInviteModel.js";
 
-// import { OrganizationInvite } from "../../models/organisationmodel/OragnizationInviteModel.js";
+
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
 // import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
 // Assuming the 'User' model exists and the user is related to the org
@@ -490,6 +491,8 @@ export const getAllOrganizations = async (req, res) => {
   }
 };
 
+
+// todo inivte schema
 export const CreateInvite = async (req, res) => {
   try {
     const { email, role } = req.body || {};
