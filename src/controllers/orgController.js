@@ -191,7 +191,7 @@ export const switchOrg = async (req, res) => {
 
 export const AddUserToOrganization = async (req, res) => {
   try {
-    const { userId, role } = req.body;
+    const { userId, role, jobTitle } = req.body;
     const organizationId = req.orgUser.orgId;
     const loggedinuser = req.user.userId;
     // ✅ Validate ObjectIds
@@ -262,6 +262,7 @@ export const AddUserToOrganization = async (req, res) => {
         role,
         permissions,
       }),
+      jobTitle: jobTitle,
 
       permissions: permissions,
     };
@@ -287,8 +288,8 @@ export const AddUserToOrganization = async (req, res) => {
 export const getUserOrganizations = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const orgid=req.params.orgId
-    if(!orgid){
+    const orgid = req.params.orgId;
+    if (!orgid) {
       return res.status(400).json({ message: "no orgId provided" });
     }
     // console.log("userId", userId);
@@ -296,14 +297,16 @@ export const getUserOrganizations = async (req, res) => {
 
     const organization = await Org.findOne({
       createdBy: userId,
-      _id:orgid
+      _id: orgid,
     }).populate({
       path: "users.userId",
       select: "firstName lastName email phone  jobTitle", // optional fields
     });
 
     if (!organization) {
-      return res.status(404).json({ message: "Organization not found || you are not the owner" });
+      return res
+        .status(404)
+        .json({ message: "Organization not found || you are not the owner" });
     }
 
     res.status(200).json({
@@ -316,13 +319,143 @@ export const getUserOrganizations = async (req, res) => {
   }
 };
 
+export const getOrganizationBYId = async (req, res) => {
+  try {
+    const organizationId = req.params.orgId;
+    const organization = await Org.findById(organizationId);
+    if (!organization) {
+      return res.status(404).json({ message: "Organization not found" });
+    }
+    res.status(200).json({ message: "Organization fetched successfully", organization });
+  } catch (error) {
+    console.error("Error in getOrganizationBYId:", error);
+    res.status(500).json({ error: "Failed to get organization" });
+  }
+}
+
 export const UpdateOrganizationUser = async (req, res) => {
   try {
+    const { id } = req.params;
+    const orgId = req.orgUser.orgId; // From auth middleware
+
+    if (!id) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    const { role, status, permissions } = req.body;
+
+    // Check if there's anything to update
+    if (!role && !status) {
+      return res.status(400).json({
+        error: "At least one of 'role' or 'status' must be provided",
+      });
+    }
+
+    // Fetch the user
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if user belongs to this org
+    const orgEntry = user.organizations.find(
+      (orgObj) => orgObj.org.toString() === orgId.toString()
+    );
+
+    if (!orgEntry) {
+      return res.status(403).json({
+        error: "User does not belong to this organization",
+      });
+    }
+
+    // Handle role update logic
+    if (role) {
+      orgEntry.role = role;
+
+      if (role === "Custom") {
+        if (!Array.isArray(permissions) || permissions.length === 0) {
+          return res.status(400).json({
+            error: "Permissions are required when role is 'Custom'",
+          });
+        }
+
+        orgEntry.permissions = permissions;
+      } else {
+        const rolePermissions = await RolePermission.findOne({ role });
+        if (!rolePermissions) {
+          return res.status(404).json({ error: "Role not found" });
+        }
+
+        orgEntry.permissions = rolePermissions.permissions || [];
+      }
+    }
+
+    // Update other fields
+    if (status) orgEntry.status = status;
+    // if (jobTitle) orgEntry.jobTitle = jobTitle;
+    // if (contactInfo) orgEntry.contactInfo = contactInfo;
+
+    await user.save();
+
     return res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ error: "Failed to update organization user" });
+    console.error("Update user error:", error);
+    return res.status(500).json({
+      error: "Failed to update organization user",
+    });
+  }
+};
+
+// Delete a user from an organization
+
+export const DeleteOrganizationUser = async (req, res) => {
+  try {
+    const { id } = req.params; // User ID to be removed
+    const orgId = req.orgUser.orgId; // From authenticated org user
+
+    if (!id) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    // Fetch the user
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if user belongs to this organization
+    const orgEntry = user.organizations.find(
+      (orgObj) => orgObj.org.toString() === orgId.toString()
+    );
+
+    if (!orgEntry) {
+      return res.status(403).json({
+        error: "User does not belong to this organization",
+      });
+    }
+
+    // Remove org entry from user's organizations array
+    await User.findByIdAndUpdate(id, {
+      $pull: { organizations: { org: orgId } },
+    });
+
+    // Remove user from organization.users array
+    const updatedOrg = await Org.findByIdAndUpdate(
+      orgId,
+      {
+        $pull: { users: { userId: id } },
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      message: "User removed from organization successfully",
+    });
+  } catch (error) {
+    console.error("Error removing user from organization:", error);
+    return res.status(500).json({
+      error: "Internal server error while removing user from organization",
+    });
   }
 };
 

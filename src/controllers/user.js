@@ -288,7 +288,7 @@ export const getUser = async (req, res) => {
 
 export const getUserList = async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find().select("-password");
     res.status(200).json({
       data: users.map(
         ({
@@ -299,7 +299,8 @@ export const getUserList = async (req, res) => {
           department,
           phone,
           permissions,
-          profilePhoto,
+            avatar,
+            _id
         }) => ({
           firstName,
           lastName,
@@ -308,7 +309,8 @@ export const getUserList = async (req, res) => {
           department,
           phone,
           permissions,
-          profilePhoto,
+          avatar,
+          _id
         })
       ),
       success: true,
