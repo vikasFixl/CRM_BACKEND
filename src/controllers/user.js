@@ -68,6 +68,7 @@ export const login = async (req, res) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      role: user.role,
       phone: user.phone,
       orgName: org?.name || null,
       orgEmail: org?.contactEmail || null,
@@ -77,7 +78,7 @@ export const login = async (req, res) => {
     const accessToken = generateGlobalToken(user);
 
     res.cookie("token", accessToken, {
-      httpOnly: true,
+      httpOnly: process.env.NODE_ENV === "production",
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
       maxAge: 24 * 60 * 60 * 1000,
@@ -129,7 +130,7 @@ export const signup = async (req, res) => {
     const accessToken = generateGlobalToken(user);
 
     res.cookie("token", accessToken, {
-      httpOnly: true,
+      httpOnly: process.env.NODE_ENV === "production",
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
       maxAge: 24 * 60 * 60 * 1000,
