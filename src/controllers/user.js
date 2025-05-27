@@ -68,8 +68,9 @@ export const login = async (req, res) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      role: user.role,
       phone: user.phone,
-      orgName: org?.name || null,
+      orgName: org?.name || null, 
       orgEmail: org?.contactEmail || null,
       orgId: org?._id || null,
     };
@@ -77,10 +78,10 @@ export const login = async (req, res) => {
     const accessToken = generateGlobalToken(user);
 
     res.cookie("token", accessToken, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
 
     res.status(200).json({
@@ -111,7 +112,7 @@ export const signup = async (req, res) => {
     // Check for existing user
     const existingUser = await User.findOne({ email: data.email });
     if (existingUser) {
-      return res.status(403).json({ message: "User already exists" });
+      return res.status(403).json({ message: "User already exists" ,success:false});
     }
 
     // Generate unique Employee ID (eid)
@@ -129,10 +130,10 @@ export const signup = async (req, res) => {
     const accessToken = generateGlobalToken(user);
 
     res.cookie("token", accessToken, {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
     res.status(201).json({
       message: "You have signed up successfully",
@@ -142,7 +143,7 @@ export const signup = async (req, res) => {
         id: user._id,
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
-        uuid: user.eid,
+        uuid: user.uuid,
         token: accessToken,
       },
     });

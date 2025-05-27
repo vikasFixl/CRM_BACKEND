@@ -12,7 +12,7 @@ const jwtOptions = {
 };
 
 // 1. Global token — used after login
-export const generateGlobalToken = (user, options = {}) => {
+export const generateGlobalToken = (user, options = {expiresIn: "7d"}) => {
   return jwt.sign(
     {
       userId: user._id,
