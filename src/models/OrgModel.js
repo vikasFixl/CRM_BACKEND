@@ -6,7 +6,7 @@ const OrganizationSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, unique: true },
 
-    logo: {
+    OrgLogo: {
       url: { type: String, trim: true },
       public_id: { type: String, trim: true },
     },
@@ -19,14 +19,16 @@ const OrganizationSchema = new Schema(
       lowercase: true,
     },
     contactPhone: { type: String, trim: true },
+    contactEmail: { type: String, trim: true },
+    contactName: { type: String, trim: true },
 
     // Optional password for org (usually better to keep in User model)
     password: { type: String, trim: true, minlength: 6 },
 
     address: { type: String, trim: true },
-    city: { type: String, trim: true },
-    state: { type: String, trim: true },
-    country: { type: String, trim: true },
+    orgCity: { type: String, trim: true },
+    orgState: { type: String, trim: true },
+    orgCountry: { type: String, trim: true },
 
     timezone: { type: String, default: "UTC" },
     fiscalYearStart: { type: Date },
@@ -48,6 +50,11 @@ const OrganizationSchema = new Schema(
 
     isActive: { type: Boolean, default: true, index: true },
     Archive: { type: Boolean, default: false },
+
+
+
+
+    
     isdeleted: { type: Boolean, default: false },
 
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },

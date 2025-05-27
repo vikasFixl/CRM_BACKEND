@@ -8,6 +8,7 @@ import { RolePermission } from "../models/RolePermission.js";
 import { v4 as uuidv4 } from "uuid";
 import { generateOrgToken } from "../utils/generatetoken.js";
 
+
 // import { OrganizationInvite } from "../../models/organisationmodel/OragnizationInviteModel.js";
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
 // import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
@@ -21,7 +22,7 @@ const generateEmployeeId = () => {
 export const createOrganization = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { name, contactEmail, contactPhone, address, city, state, country } =
+    const { name, contactEmail, contactPhone, address, orgState,contactName , orgCity,orgCountry} =
       req.body;
 
     // ✅ Validate required fields
@@ -29,13 +30,18 @@ export const createOrganization = async (req, res) => {
       !name ||
       !contactEmail ||
       !contactPhone ||
+      !contactName ||
+      !orgCountry ||
       !address ||
-      !city ||
-      !state ||
-      !country
+      !orgCity ||
+      !orgState 
+
+    
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
+
+
 
     // ✅ Check for duplicate organization
     const existingOrg = await Org.findOne({ name });
@@ -58,10 +64,12 @@ export const createOrganization = async (req, res) => {
       modules: billingPlan.features,
       contactEmail,
       contactPhone,
+      contactName,
       address,
-      city,
-      state,
-      country,
+     orgCity,
+      orgState,
+      orgCountry,
+     
       createdBy: userId,
       updatedBy: userId,
       isActive: true,
