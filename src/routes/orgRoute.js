@@ -3,7 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 // import { authorize } from "../middleweare/middleware.js";
-import { AddUserToOrganization,createOrganization,  DeleteOrganizationUser,  getAllOrganizations, getOrganizationBYId, getUserOrganizations, switchOrg, UpdateOrganizationUser} from "../controllers/orgController.js";
+import { acceptInvite, AddUserToOrganization,CreateInvite,createOrganization,  declineInvite,  DeleteOrganizationUser,  getAllOrganizations, getOrganizationBYId, getOrganizationInvite, getUserOrganizations, switchOrg, UpdateOrganizationUser} from "../controllers/orgController.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
 const Router = express.Router();
@@ -59,6 +59,11 @@ Router.route("/adduser").post(isAuthenticated,authenticateOrgToken(["OrgAdmin"])
 Router.route("/switch").post(isAuthenticated,switchOrg);
 Router.route("/updateuser/:id").put(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),UpdateOrganizationUser);
 Router.route("/deleteuser/:id").delete(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),DeleteOrganizationUser);
+Router.route("/createInvite").post(isAuthenticated,authenticateOrgToken(["OrgAdmin","Manager"]),CreateInvite);
+Router.route("/acceptInvite/:token").post(acceptInvite);
+Router.route("/declineInvite/:token").post(declineInvite);
+Router.route("/declineInvite/:token").post(declineInvite);
+Router.route("/orgInvite").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),getOrganizationInvite);
 
 
 

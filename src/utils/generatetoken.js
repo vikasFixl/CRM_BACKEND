@@ -19,6 +19,8 @@ export const generateGlobalToken = (user, options = {expiresIn: "7d"}) => {
       uuid: user.uuid,
       globalRole: user.role,
       email: user.email,
+      firstName: user.firstName,
+      
     },
     SECRET,
     { ...jwtOptions, ...options } // merge custom overrides

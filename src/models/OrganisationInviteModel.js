@@ -7,11 +7,12 @@ const OrganizationInviteSchema = new Schema({
   email: { type: String, required: true,required: true },
   role: { type: String, default: "User" },
   token: { type: String, required: true },
-  status: { type: String, enum: ["pending", "accepted", "expired"], default: "pending" },
+  status: { type: String, enum: ["pending", "accepted", "expired", "rejected"], default: "pending" },
   invitedBy: { type: Schema.Types.ObjectId, ref: "User" },
   expiresAt: {
   type: Date,
- default: () => new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+ default: () => new Date(Date.now() + 60 * 60 * 1000),
+ // 1 hour
 
 },
 }, { timestamps: true });
