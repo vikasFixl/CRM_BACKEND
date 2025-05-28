@@ -23,7 +23,7 @@ const generateEmployeeId = () => {
 export const createOrganization = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { name, contactEmail, contactPhone, address, orgState,contactName , orgCity,orgCountry} =
+    const { name, contactEmail, contactPhone, contactName,address, orgCity, orgState, orgCountry } =
       req.body;
 
     // ✅ Validate required fields
@@ -35,9 +35,10 @@ export const createOrganization = async (req, res) => {
       !orgCountry ||
       !address ||
       !orgCity ||
-      !orgState 
-
-    
+      !orgState ||
+      !orgCountry||
+      !contactName
+      
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -67,10 +68,9 @@ export const createOrganization = async (req, res) => {
       contactPhone,
       contactName,
       address,
-     orgCity,
+      orgCity,
       orgState,
       orgCountry,
-     
       createdBy: userId,
       updatedBy: userId,
       isActive: true,
@@ -118,6 +118,7 @@ export const createOrganization = async (req, res) => {
           role,
           employeeId,
           joinedAt: new Date(),
+          
         },
       },
     });
@@ -137,13 +138,22 @@ export const createOrganization = async (req, res) => {
 
     // console.log("orgtoken", orgtoken);
     // console.log("employeeId", employeeId);
+const isProd = process.env.NODE_ENV === "production";
 
-    return res.status(201).json({
-      message: "Organization and Billing created successfully",
-      orgId: savedOrg._id,
-      employeeId,
-      token: orgtoken,
-    });
+res.cookie("orgtoken", orgtoken, {
+  httpOnly: isProd,
+  secure: isProd,
+  sameSite: "None",
+  maxAge: 1000 * 60 * 60 * 24, // 1 day
+});
+
+return res.status(201).json({
+  message: "Organization and Billing created successfully",
+  orgId: savedOrg._id,
+  employeeId,
+  token: orgtoken,
+});
+
   } catch (error) {
     console.error("Org creation failed:", error);
     return res.status(500).json({
@@ -165,7 +175,7 @@ export const switchOrg = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    console.log("USER", user);
+   
     const orgRecord = user.organizations.find(
       (o) => o.org.toString() === orgId
     );
@@ -185,8 +195,10 @@ export const switchOrg = async (req, res) => {
     });
 
     const token = orgtoken;
+     const isProd = process.env.NODE_ENV === "production";
     res.cookie("orgtoken", token, {
-      secure: process.env.NODE_ENV === "production",
+      secure: isProd,
+      httpOnly: isProd,
       sameSite: "None",
       maxAge: 24 * 60 * 60 * 1000,
     });
