@@ -1,4 +1,3 @@
-
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
@@ -70,18 +69,19 @@ export const login = async (req, res) => {
       lastName: user.lastName,
       role: user.role,
       phone: user.phone,
-      orgName: org?.name || null, 
+      orgName: org?.name || null,
       orgEmail: org?.contactEmail || null,
       orgId: org?._id || null,
     };
 
     const accessToken = generateGlobalToken(user);
+    const isProd = process.env.NODE_ENV === "production";
 
     res.cookie("token", accessToken, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
+      httpOnly: isProd, // true in production for security
+      secure: isProd, // ensures cookie is only sent over HTTPS
       sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.status(200).json({
@@ -112,7 +112,9 @@ export const signup = async (req, res) => {
     // Check for existing user
     const existingUser = await User.findOne({ email: data.email });
     if (existingUser) {
-      return res.status(403).json({ message: "User already exists" ,success:false});
+      return res
+        .status(403)
+        .json({ message: "User already exists", success: false });
     }
 
     // Generate unique Employee ID (eid)
@@ -204,7 +206,7 @@ export const logout = async (req, res) => {
       "Token after clearing (still in req.cookies):",
       req.cookies.Token
     );
-    console.log(req.cookies.token)
+    console.log(req.cookies.token);
 
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
@@ -300,8 +302,8 @@ export const getUserList = async (req, res) => {
           department,
           phone,
           permissions,
-            avatar,
-            _id
+          avatar,
+          _id,
         }) => ({
           firstName,
           lastName,
@@ -311,7 +313,7 @@ export const getUserList = async (req, res) => {
           phone,
           permissions,
           avatar,
-          _id
+          _id,
         })
       ),
       success: true,
