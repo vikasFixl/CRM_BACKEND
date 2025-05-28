@@ -70,11 +70,16 @@ app.use(
   })
 );
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE',"PATCH"]
+}));
 app.use(express.json());
 app.use(cookieParser());
 
 // ✅ Active route
+app.get("/", (req, res) => res.send("Hello from server"));
 app.use("/api/auth", userRoutes);
 app.use("/api/org", orgRoutes);
 app.use("/api/billingplan", BillingRoutes);
