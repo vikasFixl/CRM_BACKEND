@@ -7,9 +7,10 @@ import { OrganizationBilling } from "../models/OranizationBillingPlanModel.js";
 import { RolePermission } from "../models/RolePermission.js";
 import { v4 as uuidv4 } from "uuid";
 import { generateOrgToken } from "../utils/generatetoken.js";
+import { OrganizationInvite } from "../models/OrganisationInviteModel.js";
+import transporter from "../../config/nodemailer.config.js";
 
 
-// import { OrganizationInvite } from "../../models/organisationmodel/OragnizationInviteModel.js";
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
 // import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
 // Assuming the 'User' model exists and the user is related to the org
@@ -498,12 +499,16 @@ export const getAllOrganizations = async (req, res) => {
   }
 };
 
+
+// todo inivte schema
 export const CreateInvite = async (req, res) => {
   try {
     const { email, role } = req.body || {};
-    const orgId = req.params.orgId;
-    const invitedBy = req.user._id;
+    const orgId = req.orgUser.orgId;
+    const {invitedBy, firstName,email:invitedByEmail,userId } = req.user;
 
+
+    
     // Validate org
 
     if (req.body == "" || req.body == undefined) {
@@ -511,7 +516,7 @@ export const CreateInvite = async (req, res) => {
     }
     const organization = await Org.findOne({
       _id: orgId,
-      createdBy: req.user.id, // ensures only the creator can access/modify
+     // ensures only the creator can access/modify
     });
 
     if (!organization) {
@@ -542,8 +547,8 @@ export const CreateInvite = async (req, res) => {
     // Check for existing pending invite
     const existingInvite = await OrganizationInvite.findOne({
       email,
-      orgId,
-      status: "pending",
+    orgId,
+      expiresAt: { $gt: new Date() },
     });
 
     if (existingInvite) {
@@ -562,37 +567,93 @@ export const CreateInvite = async (req, res) => {
       role,
       orgId,
       token,
-      invitedBy,
+      invitedBy:userId,
       status: "pending",
     });
 
     await invite.save();
     // Construct join link
-    const INVITE_LINK = `https://localhost:5000/accept-invite?token=${token}`;
+    const INVITE_LINK = `https://localhost:5173/accept-invite?token=${token}`;
 
-    // create template
-    const html = await InviteEmailTemplate(
-      organization.name,
-      role,
-      email,
-      INVITE_LINK
-    ); // Don't pass values yet
+   
+    
+   
+const htmlcontent=`
+  <html>
+    <body style="font-family: Arial, sans-serif; background-color: #f7f7f7; margin:0; padding:0;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f7f7; padding: 40px 0;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 20px;">
+              <tr>
+                <td style="color:#333333; font-size: 24px; font-weight: bold; padding-bottom: 20px;">
+                  You're Invited to Join ${organization.name}!
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#555555; font-size: 16px; line-height: 1.5; padding-bottom: 10px;">
+                  Hello <strong>${email}</strong>,
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#555555; font-size: 16px; line-height: 1.5; padding-bottom: 10px;">
+                  You have been invited to join the organization <strong>${organization.name}</strong> as a <strong>${role}</strong>.
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#555555; font-size: 16px; line-height: 1.5; padding-bottom: 20px;">
+                  To accept the invitation and get started, please click the link below:
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding-bottom: 20px;">
+                  <a href="${INVITE_LINK}" target="_blank" style="background-color:#007bff; color:#ffffff; padding: 12px 20px; text-decoration:none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                    Accept Invitation
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#555555; font-size: 14px; line-height: 1.5; padding-bottom: 10px;">
+                  If you did not expect this invitation, you can safely ignore this email.
+                </td>
+              </tr>
+              <tr>
+                <td style="color:#999999; font-size: 12px; text-align: center; padding-top: 30px;">
+                  &copy; ${new Date().getFullYear()} ${organization.name}. All rights reserved.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>`
 
-    // send invite
 
+const mailOptions = {
+      from: `${firstName} <${`${invitedByEmail}`}>`,
+      to: email,
+      subject: `${firstName} sent an invitation to join CRM ✔`,
+      text: "You have been invited to join CRM.",
+      html: htmlcontent,
+    };
+
+
+   
     // await sendEmail(email, "You're invited!", `Click here to join: ${inviteLink}`);
-    try {
-      await sendEmail(email, "You're invited!", html);
-    } catch (error) {
-      return res.status(500).json({ message: "Failed to send invite." });
-    }
+  await   transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        res.status(500).json({ error: error.message,message: "Failed to send email." });
+        console.error("Error sending email:", error);
+      } else {
+        console.log("Email sent:", info.response);
+        res.status(200).json({ message: "Invite sent successfully.",token });
+      }
+    })
 
     console.log("Invite link:", INVITE_LINK); // for testing/dev
 
-    return res.status(200).json({
-      message: "Invite created successfully.",
-      INVITE_LINK, // Return for dev; remove in prod
-    });
+   
   } catch (error) {
     console.error("Error creating invite:", error);
     return res
@@ -603,70 +664,122 @@ export const CreateInvite = async (req, res) => {
 
 export const acceptInvite = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token } = req.params;
     console.log("token", token);
-    const invite = await Org.findOne({
+
+    // 1. Find invite by token & check it's still valid (not expired & pending)
+    const invite = await OrganizationInvite.findOne({
       token,
-      expiresAt: { $gt: new Date() }, // only accept if not expired
-      status: "pending", // ensure invite hasn't already been accepted
+      expiresAt: { $gt: new Date() },
+      status: "pending",
     });
 
-    const existingUser = await User.findOne({ email: invite.email });
-
-    if (!existingUser) {
-      return res
-        .status(404)
-        .json({ message: "User does not exist on the platform." });
+    if (!invite) {
+      return res.status(404).json({ message: "Invalid or expired invite token." });
     }
-    console.log("invite", invite);
+
+    // 2. Find the user by email from the invite
+    const existingUser = await User.findOne({ email: invite.email });
+    if (!existingUser) {
+      return res.status(404).json({ message: "User does not exist on the platform." });
+    }
+
+    // 3. Find the organization by orgId in the invite
+    const organization = await Org.findById(invite.orgId);
+    if (!organization) {
+      return res.status(404).json({ message: "Organization not found." });
+    }
+
+    // 4. Check if user already in org.users to avoid duplicates
+    const alreadyMember = organization.users.some(
+      (userEntry) => userEntry.userId.toString() === existingUser._id.toString()
+    );
+    if (alreadyMember) {
+      return res.status(400).json({ message: "User is already a member of this organization." });
+    }
+
+    // 5. Find role permissions
     const rolePermissions = await RolePermission.findOne({ role: invite.role });
-    console.log("rolePermissions", rolePermissions);
-    const org = await Organization.findByIdAndUpdate(invite.orgId, {
-      $push: {
-        users: {
-          userId: existingUser._id,
-          role: invite.role,
-          joinedAt: new Date(),
-        },
-      },
+     const permissions = rolePermissions ? rolePermissions.permissions : [];
+ const employeeId = generateEmployeeId(organization._id);
+    // 6. Add user to organization users array
+    organization.users.push({
+      userId: existingUser._id,
+      role: invite.role,
+      employeeId: employeeId,
+      joinedAt: new Date(),
     });
-    console.log("org", org);
+    await organization.save();
 
-    const user = await User.findByIdAndUpdate(existingUser._id, {
-      $push: {
-        organizations: {
-          org: invite.orgId,
-          role: invite.role,
-          permissions: rolePermissions?.permissions || [],
-        },
-      },
-    });
+    // 7. Add organization info to user's organizations array
+    const organizationObject={
+       org: organization._id,
+      role: invite.role,
+      employeeId,
+      token: generateOrgToken({
+        userId: existingUser._id,
+        orgId: organization._id,
+        employeeId,
+        role:invite.role,
+        permissions,
+      }),
+      
 
-    console.log("user", user);
-    // Set token to null (or delete the document entirely)
-    console.log("runnninf");
+      permissions: permissions,
+      jobTitle:invite.role
+    }
+    existingUser.organizations.push(organizationObject);
+    await existingUser.save();
+
+    // 8. Mark invite as accepted
     invite.status = "accepted";
-    await invite.save(); // or await OrganizationInvite.deleteOne({ _id: invite._id });
+    invite.expiresAt = null;
+    await invite.save();
 
-    console.log("almost done");
+    console.log("User successfully added to organization and invite accepted.");
 
-    res.status(200).json({ message: "Successfully joined the organization." });
+    return res.status(200).json({ message: "Successfully joined the organization." });
   } catch (error) {
-    console.error("Error in acceptInvite:", error); // Add this
-    res.status(500).json({
+    console.error("Error in acceptInvite:", error);
+    return res.status(500).json({
       message: "Internal server error in acceptInvite",
       error: error.message,
     });
   }
 };
 
+export const declineInvite = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const invite = await OrganizationInvite.findOne({ token });
+
+    if (!invite) {
+      return res.status(404).json({ message: "Invite not found or already invalidated." });
+    }
+
+    // Invalidate the invite by clearing token and expiration
+    invite.token = null;
+    invite.expiresAt = null;
+    invite.status = "rejected"; // Optionally mark status as expired
+
+    await invite.save();
+
+    return res.status(200).json({ message: "Invite declined and invalidated successfully." });
+  } catch (error) {
+    console.error("Error in declineInvite:", error);
+    return res.status(500).json({ message: "Internal server error in declineInvite", error: error.message });
+  }
+};
+
+
 export const getOrganizationInvite = async (req, res) => {
   try {
     const { id } = req.body;
-    const invite = await Org.find({ orgId: id });
+    const invite = await OrganizationInvite.find({ orgId: id });
 
     if (!invite) {
-      return res.status(404).json({ message: "Invite not found" });
+      return res.status(404).json({ message: "no inivitation found" });
     }
     res.status(200).json({ message: "Invite fetched successfully.", invite });
   } catch (error) {

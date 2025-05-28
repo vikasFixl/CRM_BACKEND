@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
@@ -69,8 +69,9 @@ export const login = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      role: user.role,
       phone: user.phone,
-      orgName: org?.name || null,
+      orgName: org?.name || null, 
       orgEmail: org?.contactEmail || null,
       orgId: org?._id || null,
     };
@@ -81,7 +82,7 @@ export const login = async (req, res) => {
       httpOnly: process.env.NODE_ENV === "production",
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
 
     res.status(200).json({
@@ -112,7 +113,7 @@ export const signup = async (req, res) => {
     // Check for existing user
     const existingUser = await User.findOne({ email: data.email });
     if (existingUser) {
-      return res.status(403).json({ message: "User already exists" });
+      return res.status(403).json({ message: "User already exists" ,success:false});
     }
 
     // Generate unique Employee ID (eid)
@@ -133,7 +134,7 @@ export const signup = async (req, res) => {
       httpOnly: process.env.NODE_ENV === "production",
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
     res.status(201).json({
       message: "You have signed up successfully",
@@ -143,7 +144,7 @@ export const signup = async (req, res) => {
         id: user._id,
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
-        uuid: user.eid,
+        uuid: user.uuid,
         token: accessToken,
       },
     });
