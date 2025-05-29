@@ -18,6 +18,7 @@ const generateEmployeeId = () => {
   const short = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6-char hex
   return `EMP_${short}`; // like EMP_1F2A9C
 };
+const isProd = process.env.NODE_ENV === "production";
 
 export const createOrganization = async (req, res) => {
   try {
@@ -143,7 +144,6 @@ export const createOrganization = async (req, res) => {
 
     // console.log("orgtoken", orgtoken);
     // console.log("employeeId", employeeId);
-    const isProd = process.env.NODE_ENV === "production";
 
     res.cookie("orgtoken", orgtoken, {
       httpOnly: isProd,
@@ -199,7 +199,7 @@ export const switchOrg = async (req, res) => {
     });
 
     const token = orgtoken;
-    const isProd = process.env.NODE_ENV === "production";
+   
     res.cookie("orgtoken", token, {
       secure: isProd,
       httpOnly: isProd,

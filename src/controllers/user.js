@@ -92,7 +92,7 @@ if (!emailRegex.test(email)) {
       orgId: org?._id || null,
     };
 
-    const accessToken = generateGlobalToken(user,req,res);
+    const accessToken = generateGlobalToken(user, { expiresIn: "7d" });
 
     res.cookie("token", accessToken, {
       httpOnly: isProd, // true in production for security isprod defined at top
@@ -146,7 +146,7 @@ export const signup = async (req, res) => {
     });
     await user.save();
 
-    const accessToken = generateGlobalToken(user);
+    const accessToken = generateGlobalToken(user, { expiresIn: "7d" });
 
     res.cookie("token", accessToken, {
       httpOnly: isProd,
