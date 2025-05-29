@@ -92,16 +92,13 @@ if (!emailRegex.test(email)) {
       orgId: org?._id || null,
     };
 
-    const accessToken = generateGlobalToken(user);
+    const accessToken = generateGlobalToken(user,req,res);
 
     res.cookie("token", accessToken, {
       httpOnly: isProd, // true in production for security isprod defined at top
       secure: isProd, // ensures cookie is only sent over HTTPS
-    SameSite:'None'
-
-,
-
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    SameSite:'None',
+ maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.status(200).json({

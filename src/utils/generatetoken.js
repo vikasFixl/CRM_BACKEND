@@ -12,7 +12,7 @@ const jwtOptions = {
 };
 
 // 1. Global token — used after login
-export const generateGlobalToken = (user, options = {expiresIn: "7d"}) => {
+export const generateGlobalToken = (user, options = {expiresIn: "7d"},req,res) => {
   return jwt.sign(
     {
       userId: user._id,
@@ -25,6 +25,8 @@ export const generateGlobalToken = (user, options = {expiresIn: "7d"}) => {
     SECRET,
     { ...jwtOptions, ...options } // merge custom overrides
   );
+
+  
 };
 
 // 2. Org-scoped token — used for org-specific access
