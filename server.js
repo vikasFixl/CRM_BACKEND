@@ -13,7 +13,7 @@ import { dirname } from "path";
 
 import fileUpload from "express-fileupload";
 import { connectDB } from "./config/db.config.js";
-import{startUserCleanupCron} from "./src/automation/UserDeleteAutomation.js"
+import{startUserCleanupCron} from  "./src/automation/UserDeleteAutomation.js"
 
 // const invoiceRoutes = require("./src/routes/invoiceRoute");
 // const clientRoutes = require("./src/routes/clientRoute");
@@ -71,36 +71,18 @@ app.use(
   })
 );
 app.use(bodyParser.urlencoded({ extended: true }));
-const allowedOrigins = [
-  'http://localhost:5173',
-  "http://localhost:3000",
-  "http://localhost:3001",
-]
-const corsOptions = {
-  origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true); // Origin allowed
-    } else {
-      callback(new Error('Not allowed by CORS')); // Origin not allowed
-    }
-  },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],  // Allowed HTTP methods
-  credentials: true,  // to allow cookies/auth headers
-};
-
-app.use(cors(corsOptions));
-
+app.use(cors(
+  {
+    origin:  "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  }
+));
 app.use(express.json());
 app.use(cookieParser());
-// autmation funtion s
-
-startUserCleanupCron()
 
 // ✅ Active route
-app.get("/", (req, res) => res.send("Hello from server"));
 app.use("/api/auth", userRoutes);
 app.use("/api/organization", orgRoutes);
 app.use("/api/billingplan", BillingRoutes);
@@ -156,6 +138,7 @@ async function startServer() {
 }
 
 startServer();
+startUserCleanupCron();
 app.get("/", (req, res) => {
   res.send("server running");
 })
