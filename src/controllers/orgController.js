@@ -148,7 +148,8 @@ export const createOrganization = async (req, res) => {
     res.cookie("orgtoken", orgtoken, {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "None",
+      sameSite: "Lax",
+
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
@@ -202,7 +203,8 @@ export const switchOrg = async (req, res) => {
     res.cookie("orgtoken", token, {
       secure: isProd,
       httpOnly: isProd,
-      sameSite: "None",
+      sameSite: "Lax",
+
       maxAge: 24 * 60 * 60 * 1000,
     });
 
