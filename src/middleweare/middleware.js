@@ -17,6 +17,20 @@ export const isAuthenticated = (req, res, next) => {
   }
 };
 
+export const isAdminOrSelf = (req, res, next) => {
+ 
+  const userId = req.user.userId;           // from decoded token
+  const paramId = req.params.id;        // from route like /delete/:id
+  const role = req.user.role;           // assuming role is 'admin' or 'user'
+
+  console.log(userId, paramId, role);
+  if (role === "admin" || userId === paramId) {
+    return next();
+  }
+
+  return res.status(403).json({ message: "Access denied" });
+};
+
 // export const permited = (allowedRoles) => {
 //   return (req, res, next) => {
 //     const token = req.cookies?.token;

@@ -13,6 +13,7 @@ import { dirname } from "path";
 
 import fileUpload from "express-fileupload";
 import { connectDB } from "./config/db.config.js";
+import{startUserCleanupCron} from "./src/automation/UserDeleteAutomation.js"
 
 // const invoiceRoutes = require("./src/routes/invoiceRoute");
 // const clientRoutes = require("./src/routes/clientRoute");
@@ -77,11 +78,14 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+// autmation funtion s
+
+startUserCleanupCron()
 
 // ✅ Active route
 app.get("/", (req, res) => res.send("Hello from server"));
 app.use("/api/auth", userRoutes);
-app.use("/api/org", orgRoutes);
+app.use("/api/organization", orgRoutes);
 app.use("/api/billingplan", BillingRoutes);
 app.use("/api/role", RoleRoutes);
 /**
@@ -135,6 +139,9 @@ async function startServer() {
 }
 
 startServer();
+app.get("/", (req, res) => {
+  res.send("server running");
+})
 
 // Global error handlers
 process.on("unhandledRejection", (reason, p) => {

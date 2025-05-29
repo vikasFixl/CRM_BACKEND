@@ -3,7 +3,20 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 // import { authorize } from "../middleweare/middleware.js";
-import { acceptInvite, AddUserToOrganization,CreateInvite,createOrganization,  declineInvite,  DeleteOrganizationUser,  getAllOrganizations, getOrganizationBYId, getOrganizationInvite, getUserOrganizations, switchOrg, UpdateOrganizationUser} from "../controllers/orgController.js";
+import {
+  acceptInvite,
+  // AddUserToOrganization,
+  CreateInvite,
+  createOrganization,
+  declineInvite,
+  DeleteOrganizationUser,
+  // getAllOrganizations,
+  getOrganizationBYId,
+  getOrganizationInvite,
+  getUserOrganizations,
+  switchOrg,
+  UpdateOrganizationUser,
+} from "../controllers/orgController.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
 const Router = express.Router();
@@ -29,14 +42,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-
-
 // Router.route("/getOrgDeprt/:id").get(
 //   // authorize("Read", "organization", ["Admin", "subAdmin", "Custom"]),
 //   getOrgDeprt
 // );
-
-
 
 // Router.route("/logo/:id").patch(
 //   // authorize("Update", "organization", ["Admin", "Custom"]),
@@ -44,28 +53,50 @@ const upload = multer({ storage });
 //   Logo
 // );
 
+// creates a new organisation
+Router.route("/").post(isAuthenticated, createOrganization);
+// gets user organisation (admin organization)
 
-// get all org of user 
-Router.route("/allOrg").get(isAuthenticated,getAllOrganizations);
-// org by id 
-Router.route("/getOrg/:orgId").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),getOrganizationBYId);
-// get user org
-Router.route("/userOrg/:orgId").get(isAuthenticated,getUserOrganizations);
-// create new org
-Router.route("/addOrg").post(isAuthenticated,createOrganization);
-// help to add userw
-Router.route("/adduser").post(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),AddUserToOrganization);
+// Router.route("/").get(isAuthenticated,getAllOrganizations);
+// Add a new user to organization
+// Router.route("/adduser").post(
+//   isAuthenticated,
+//   authenticateOrgToken(["OrgAdmin"]),
+//   AddUserToOrganization
+// );
+// get Oraganisation by id
+Router.route("/:id").get(
+  isAuthenticated,
+  authenticateOrgToken(["OrgAdmin"]),
+  getOrganizationBYId
+);
+// get user org where user is in
+Router.route("/user/all").get(isAuthenticated, getUserOrganizations);
+
 // provides access token based on org
-Router.route("/switch").post(isAuthenticated,switchOrg);
-Router.route("/updateuser/:id").put(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),UpdateOrganizationUser);
-Router.route("/deleteuser/:id").delete(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),DeleteOrganizationUser);
-Router.route("/createInvite").post(isAuthenticated,authenticateOrgToken(["OrgAdmin","Manager"]),CreateInvite);
+Router.route("/switch").post(isAuthenticated, switchOrg);
+Router.route("/updateuser/:id").put(
+  isAuthenticated,
+  authenticateOrgToken(["OrgAdmin"]),
+  UpdateOrganizationUser
+);
+Router.route("/deleteuser/:id").delete(
+  isAuthenticated,
+  authenticateOrgToken(["OrgAdmin"]),
+  DeleteOrganizationUser
+);
+Router.route("/createInvite").post(
+  isAuthenticated,
+  authenticateOrgToken(["OrgAdmin", "Manager"]),
+  CreateInvite
+);
 Router.route("/acceptInvite/:token").post(acceptInvite);
 Router.route("/declineInvite/:token").post(declineInvite);
-Router.route("/declineInvite/:token").post(declineInvite);
-Router.route("/orgInvite").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),getOrganizationInvite);
-
-
-
+// Router.route("/declineInvite/:token").post(declineInvite);
+Router.route("/all/Invite").get(
+  isAuthenticated,
+  authenticateOrgToken(["OrgAdmin"]),
+  getOrganizationInvite
+);
 
 export default Router;

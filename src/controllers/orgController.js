@@ -10,7 +10,6 @@ import { generateOrgToken } from "../utils/generatetoken.js";
 import { OrganizationInvite } from "../models/OrganisationInviteModel.js";
 import transporter from "../../config/nodemailer.config.js";
 
-
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
 // import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
 // Assuming the 'User' model exists and the user is related to the org
@@ -23,8 +22,16 @@ const generateEmployeeId = () => {
 export const createOrganization = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { name, contactEmail, contactPhone, contactName,address, orgCity, orgState, orgCountry } =
-      req.body;
+    const {
+      name,
+      contactEmail,
+      contactPhone,
+      contactName,
+      address,
+      orgCity,
+      orgState,
+      orgCountry,
+    } = req.body;
 
     // ✅ Validate required fields
     if (
@@ -36,9 +43,8 @@ export const createOrganization = async (req, res) => {
       !address ||
       !orgCity ||
       !orgState ||
-      !orgCountry||
+      !orgCountry ||
       !contactName
-      
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -118,7 +124,6 @@ export const createOrganization = async (req, res) => {
           role,
           employeeId,
           joinedAt: new Date(),
-          
         },
       },
     });
@@ -138,22 +143,21 @@ export const createOrganization = async (req, res) => {
 
     // console.log("orgtoken", orgtoken);
     // console.log("employeeId", employeeId);
-const isProd = process.env.NODE_ENV === "production";
+    const isProd = process.env.NODE_ENV === "production";
 
-res.cookie("orgtoken", orgtoken, {
-  httpOnly: isProd,
-  secure: isProd,
-  sameSite: "None",
-  maxAge: 1000 * 60 * 60 * 24, // 1 day
-});
+    res.cookie("orgtoken", orgtoken, {
+      httpOnly: isProd,
+      secure: isProd,
+      sameSite: "None",
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
+    });
 
-return res.status(201).json({
-  message: "Organization and Billing created successfully",
-  orgId: savedOrg._id,
-  employeeId,
-  token: orgtoken,
-});
-
+    return res.status(201).json({
+      message: "Organization and Billing created successfully",
+      orgId: savedOrg._id,
+      employeeId,
+      token: orgtoken,
+    });
   } catch (error) {
     console.error("Org creation failed:", error);
     return res.status(500).json({
@@ -175,7 +179,6 @@ export const switchOrg = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-   
     const orgRecord = user.organizations.find(
       (o) => o.org.toString() === orgId
     );
@@ -195,7 +198,7 @@ export const switchOrg = async (req, res) => {
     });
 
     const token = orgtoken;
-     const isProd = process.env.NODE_ENV === "production";
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("orgtoken", token, {
       secure: isProd,
       httpOnly: isProd,
@@ -210,149 +213,162 @@ export const switchOrg = async (req, res) => {
   }
 };
 
-export const AddUserToOrganization = async (req, res) => {
-  try {
-    const { userId, role, jobTitle } = req.body;
-    const organizationId = req.orgUser.orgId;
-    const loggedinuser = req.user.userId;
-    // ✅ Validate ObjectIds
-    if (!mongoose.isValidObjectId(organizationId)) {
-      return res.status(400).json({ message: "Invalid organizationId" });
-    }
-    if (!mongoose.isValidObjectId(userId)) {
-      return res.status(400).json({ message: "Invalid userId" });
-    }
+// export const AddUserToOrganization = async (req, res) => {
+//   try {
+//     const { userId, role, jobTitle } = req.body;
+//     const organizationId = req.orgUser.orgId;
+//     const loggedinuser = req.user.userId;
+//     // ✅ Validate ObjectIds
+//     if (!mongoose.isValidObjectId(organizationId)) {
+//       return res.status(400).json({ message: "Invalid organizationId" });
+//     }
+//     if (!mongoose.isValidObjectId(userId)) {
+//       return res.status(400).json({ message: "Invalid userId" });
+//     }
 
-    // ✅ No object needed in findById
-    const organization = await Org.findOne({
-      _id: organizationId,
-      createdBy: loggedinuser, // ensures only the creator can access/modify
-    });
-    if (!organization) {
-      return res
-        .status(404)
-        .json({ message: "Organization not found || you are not the creator" });
-    }
+//     // ✅ No object needed in findById
+//     const organization = await Org.findOne({
+//       _id: organizationId,
+//       createdBy: loggedinuser, // ensures only the creator can access/modify
+//     });
+//     if (!organization) {
+//       return res
+//         .status(404)
+//         .json({ message: "Organization not found || you are not the creator" });
+//     }
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+//     const user = await User.findById(userId).select("-password");
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
 
-    if (user.role === "SuperAdmin") {
-      return res.status(400).json({ message: "You can't add SuperAdmin" });
-    }
-    const employeeId = generateEmployeeId(organizationId);
-    // add that user to organization users array
-    organization.users.push({
-      userId: userId,
-      employeeId,
-      role: role,
-      joinedAt: new Date(),
-    });
+//     if (user.role === "SuperAdmin") {
+//       return res.status(400).json({ message: "You can't add SuperAdmin" });
+//     }
+//     const employeeId = generateEmployeeId(organizationId);
+//     // add that user to organization users array
+//     organization.users.push({
+//       userId: userId,
+//       employeeId,
+//       role: role,
+//       joinedAt: new Date(),
+//     });
 
-    await organization.save();
+//     await organization.save();
 
-    // ✅ Check if user is already in the organization
-    const alreadyExists = user.organizations.some(
-      (org) => org.org.toString() === organizationId
-    );
-    if (alreadyExists) {
-      return res
-        .status(400)
-        .json({ message: "User already belongs to this organization" });
-    }
+//     // ✅ Check if user is already in the organization
+//     const alreadyExists = user.organizations.some(
+//       (org) => org.org.toString() === organizationId
+//     );
+//     if (alreadyExists) {
+//       return res
+//         .status(400)
+//         .json({ message: "User already belongs to this organization" });
+//     }
 
-    const rolePermissions = await RolePermission.findOne({ role });
-    if (!rolePermissions) {
-      return res.status(404).json({ message: "Role not found" });
-    }
+//     const rolePermissions = await RolePermission.findOne({ role });
+//     if (!rolePermissions) {
+//       return res.status(404).json({ message: "Role not found" });
+//     }
 
-    const permissions = rolePermissions ? rolePermissions.permissions : [];
-    console.log("permissions", permissions);
+//     const permissions = rolePermissions ? rolePermissions.permissions : [];
+//     console.log("permissions", permissions);
 
-    // ✅ Add organization entry to user
-    const organizationObject = {
-      org: organization._id,
-      role: role,
-      employeeId,
-      token: generateOrgToken({
-        userId,
-        orgId: organization._id,
-        employeeId,
-        role,
-        permissions,
-      }),
-      jobTitle: jobTitle,
+//     // ✅ Add organization entry to user
+//     const organizationObject = {
+//       org: organization._id,
+//       role: role,
+//       employeeId,
+//       token: generateOrgToken({
+//         userId,
+//         orgId: organization._id,
+//         employeeId,
+//         role,
+//         permissions,
+//       }),
+//       jobTitle: jobTitle,
 
-      permissions: permissions,
-    };
+//       permissions: permissions,
+//     };
 
-    console.log("organizationObject", organizationObject);
-    user.organizations.push(organizationObject);
-    await user.save();
+  
+//     user.organizations.push(organizationObject);
+//     await user.save();
 
-    return res.status(200).json({
-      message: "User added to organization successfully",
-      user,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      message: "Error adding user to organization",
-      error: error.message,
-    });
-  }
-};
+//     return res.status(200).json({
+//       message: "User added to organization successfully",
+//       user,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({
+//       message: "Error adding user to organization",
+//       error: error.message,
+//     });
+//   }
+// };
 
-// gets organization user details (specifix organization)
+// get user organizations all (whether he is admin or not)
 export const getUserOrganizations = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const orgid = req.params.orgId;
-    if (!orgid) {
-      return res.status(400).json({ message: "no orgId provided" });
-    }
-    // console.log("userId", userId);
-    // console.log("Fetching users for organization created by:", userId);
+    console.log("userId", userId);
 
-    const organization = await Org.findOne({
-      createdBy: userId,
-      _id: orgid,
+    // Find orgs where user is either in users array or is the creator
+    const organizations = await Org.find({
+      $or: [
+        { "users.userId": userId },
+        { createdBy: userId },
+      ],
     }).populate({
       path: "users.userId",
-      select: "firstName lastName email phone  jobTitle", // optional fields
+      select: "firstName lastName email phone jobTitle",
     });
 
-    if (!organization) {
-      return res
-        .status(404)
-        .json({ message: "Organization not found || you are not the owner" });
+    if (!organizations.length) {
+      return res.status(404).json({ message: "No organizations found for this user." });
     }
 
     res.status(200).json({
-      message: "Organization users fetched successfully",
-      users: organization.users,
+      message: "Organizations fetched successfully",
+      organizations,
     });
   } catch (error) {
-    console.error("Error in getAllOrganizationsUsers:", error);
-    res.status(500).json({ error: "Failed to get organization users" });
+    console.error("Error fetching organizations:", error);
+    res.status(500).json({ error: "Failed to get organizations" });
   }
 };
 
+
 export const getOrganizationBYId = async (req, res) => {
   try {
-    const organizationId = req.params.orgId;
-    const organization = await Org.findById(organizationId);
+    const organizationId = req.params.id;
+    // this is form middlwware
+    const owner = req.orgUser.userId;
+
+    if (!organizationId) {
+      return res.status(400).json({ message: "Organization ID is required" });
+    }
+
+    const organization = await Org.findOne({
+      _id: organizationId,
+      createdBy: owner,
+    }).populate({
+      path: "users.userId",
+      select: "firstName lastName email phone jobTitle employeeId",
+    });
+
     if (!organization) {
       return res.status(404).json({ message: "Organization not found" });
     }
-    res.status(200).json({ message: "Organization fetched successfully", organization });
+    res
+      .status(200)
+      .json({ message: "Organization fetched successfully", organization });
   } catch (error) {
     console.error("Error in getOrganizationBYId:", error);
     res.status(500).json({ error: "Failed to get organization" });
   }
-}
+};
 
 export const UpdateOrganizationUser = async (req, res) => {
   try {
@@ -480,57 +496,57 @@ export const DeleteOrganizationUser = async (req, res) => {
   }
 };
 
-export const getAllOrganizations = async (req, res) => {
-  try {
-    const userId = req.user.userId;
+// export const getAllOrganizations = async (req, res) => {
+//   try {
+//     const userId = req.user.userId;
 
-    // Find all organizations where the user is in the `users` array
-    const organizations = await Org.find({
-      createdBy: userId,
-    })
-      .select("-password")
-      .populate("billingPlan")
-      .populate(
-        "users.userId",
-        "firstName lastName email phone role jobTitle,eid"
-      ); // Populate the nested userId inside users array
+//     // Find all organizations where the user is in the `users` array
+//     const organizations = await Org.find({
+//       createdBy: userId,
+//     })
+//       .select("-password")
+//       .populate("billingPlan");
 
-    if (!organizations || organizations.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No organizations found for this user." });
-    }
+//     if (!organizations || organizations.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: "No organizations found for this user." });
+//     }
 
-    res.status(200).json({
-      message: "Organizations fetched successfully.",
-      organizations,
-    });
-  } catch (error) {
-    console.error("Error fetching user organizations:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-
+//     res.status(200).json({
+//       message: "Organizations fetched successfully.",
+//       organizations,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching user organizations:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// };
 
 // todo inivte schema
 export const CreateInvite = async (req, res) => {
   try {
     const { email, role } = req.body || {};
     const orgId = req.orgUser.orgId;
-    const {invitedBy, firstName,email:invitedByEmail,userId } = req.user;
+    const { invitedBy, firstName, email: invitedByEmail, userId } = req.user;
+    console.log("orgId", orgId);
 
-
-    
     // Validate org
 
     if (req.body == "" || req.body == undefined) {
       return res.status(400).json({ message: "All fields are required" });
     }
+    const useronplatform = await User.findOne({email});
+    if(!useronplatform){
+      return res.status(400).json({ message: "User does not exists on the platform" });
+    }
+
     const organization = await Org.findOne({
       _id: orgId,
-     // ensures only the creator can access/modify
+      // ensures only the creator can access/modify
     });
 
+    console.log("organization", organization);
     if (!organization) {
       return res
         .status(404)
@@ -557,17 +573,18 @@ export const CreateInvite = async (req, res) => {
     }
 
     // Check for existing pending invite
-    const existingInvite = await OrganizationInvite.findOne({
-      email,
-    orgId,
-      expiresAt: { $gt: new Date() },
-    });
 
-    if (existingInvite) {
-      return res
-        .status(400)
-        .json({ message: "An invite for this user already exists." });
-    }
+    // const existingInvite = await OrganizationInvite.findOne({
+    //   email,
+    // orgId,
+    //   expiresAt: { $gt: new Date() },
+    // });
+
+    // if (existingInvite) {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "An invite for this user already exists." });
+    // }
 
     // Generate a secure token
     const token = crypto.randomBytes(64).toString("hex");
@@ -577,20 +594,18 @@ export const CreateInvite = async (req, res) => {
     const invite = await OrganizationInvite.create({
       email,
       role,
-      orgId,
+      orgId: organization._id,
       token,
-      invitedBy:userId,
+      invitedBy: userId,
       status: "pending",
     });
 
     await invite.save();
+    console.log("invite", invite);
     // Construct join link
-    const INVITE_LINK = `https://localhost:5173/accept-invite?token=${token}`;
+    const INVITE_LINK = `http://localhost:5173/accept-invite?token=${token}`;
 
-   
-    
-   
-const htmlcontent=`
+    const htmlcontent = `
   <html>
     <body style="font-family: Arial, sans-serif; background-color: #f7f7f7; margin:0; padding:0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f7f7; padding: 40px 0;">
@@ -609,7 +624,9 @@ const htmlcontent=`
               </tr>
               <tr>
                 <td style="color:#555555; font-size: 16px; line-height: 1.5; padding-bottom: 10px;">
-                  You have been invited to join the organization <strong>${organization.name}</strong> as a <strong>${role}</strong>.
+                  You have been invited to join the organization <strong>${
+                    organization.name
+                  }</strong> as a <strong>${role}</strong>.
                 </td>
               </tr>
               <tr>
@@ -631,7 +648,9 @@ const htmlcontent=`
               </tr>
               <tr>
                 <td style="color:#999999; font-size: 12px; text-align: center; padding-top: 30px;">
-                  &copy; ${new Date().getFullYear()} ${organization.name}. All rights reserved.
+                  &copy; ${new Date().getFullYear()} ${
+      organization.name
+    }. All rights reserved.
                 </td>
               </tr>
             </table>
@@ -639,10 +658,9 @@ const htmlcontent=`
         </tr>
       </table>
     </body>
-    </html>`
+    </html>`;
 
-
-const mailOptions = {
+    const mailOptions = {
       from: `${firstName} <${`${invitedByEmail}`}>`,
       to: email,
       subject: `${firstName} sent an invitation to join CRM ✔`,
@@ -650,22 +668,20 @@ const mailOptions = {
       html: htmlcontent,
     };
 
-
-   
     // await sendEmail(email, "You're invited!", `Click here to join: ${inviteLink}`);
-  await   transporter.sendMail(mailOptions, (error, info) => {
+    transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
-        res.status(500).json({ error: error.message,message: "Failed to send email." });
+        res
+          .status(500)
+          .json({ error: error.message, message: "Failed to send email." });
         console.error("Error sending email:", error);
       } else {
         console.log("Email sent:", info.response);
-        res.status(200).json({ message: "Invite sent successfully.",token });
+        res.status(200).json({ message: "Invite sent successfully.", token });
       }
-    })
+    });
 
     console.log("Invite link:", INVITE_LINK); // for testing/dev
-
-   
   } catch (error) {
     console.error("Error creating invite:", error);
     return res
@@ -687,13 +703,17 @@ export const acceptInvite = async (req, res) => {
     });
 
     if (!invite) {
-      return res.status(404).json({ message: "Invalid or expired invite token." });
+      return res
+        .status(404)
+        .json({ message: "Invalid or expired invite token." });
     }
 
     // 2. Find the user by email from the invite
     const existingUser = await User.findOne({ email: invite.email });
     if (!existingUser) {
-      return res.status(404).json({ message: "User does not exist on the platform." });
+      return res
+        .status(404)
+        .json({ message: "User does not exist on the platform." });
     }
 
     // 3. Find the organization by orgId in the invite
@@ -707,13 +727,15 @@ export const acceptInvite = async (req, res) => {
       (userEntry) => userEntry.userId.toString() === existingUser._id.toString()
     );
     if (alreadyMember) {
-      return res.status(400).json({ message: "User is already a member of this organization." });
+      return res
+        .status(400)
+        .json({ message: "User is already a member of this organization." });
     }
 
     // 5. Find role permissions
     const rolePermissions = await RolePermission.findOne({ role: invite.role });
-     const permissions = rolePermissions ? rolePermissions.permissions : [];
- const employeeId = generateEmployeeId(organization._id);
+    const permissions = rolePermissions ? rolePermissions.permissions : [];
+    const employeeId = generateEmployeeId(organization._id);
     // 6. Add user to organization users array
     organization.users.push({
       userId: existingUser._id,
@@ -724,22 +746,21 @@ export const acceptInvite = async (req, res) => {
     await organization.save();
 
     // 7. Add organization info to user's organizations array
-    const organizationObject={
-       org: organization._id,
+    const organizationObject = {
+      org: organization._id,
       role: invite.role,
       employeeId,
       token: generateOrgToken({
         userId: existingUser._id,
         orgId: organization._id,
         employeeId,
-        role:invite.role,
+        role: invite.role,
         permissions,
       }),
-      
 
       permissions: permissions,
-      jobTitle:invite.role
-    }
+      jobTitle: invite.role,
+    };
     existingUser.organizations.push(organizationObject);
     await existingUser.save();
 
@@ -750,7 +771,9 @@ export const acceptInvite = async (req, res) => {
 
     console.log("User successfully added to organization and invite accepted.");
 
-    return res.status(200).json({ message: "Successfully joined the organization." });
+    return res
+      .status(200)
+      .json({ message: "Successfully joined the organization." });
   } catch (error) {
     console.error("Error in acceptInvite:", error);
     return res.status(500).json({
@@ -767,7 +790,9 @@ export const declineInvite = async (req, res) => {
     const invite = await OrganizationInvite.findOne({ token });
 
     if (!invite) {
-      return res.status(404).json({ message: "Invite not found or already invalidated." });
+      return res
+        .status(404)
+        .json({ message: "Invite not found or already invalidated." });
     }
 
     // Invalidate the invite by clearing token and expiration
@@ -777,23 +802,33 @@ export const declineInvite = async (req, res) => {
 
     await invite.save();
 
-    return res.status(200).json({ message: "Invite declined and invalidated successfully." });
+    return res
+      .status(200)
+      .json({ message: "Invite declined and invalidated successfully." });
   } catch (error) {
     console.error("Error in declineInvite:", error);
-    return res.status(500).json({ message: "Internal server error in declineInvite", error: error.message });
+    return res
+      .status(500)
+      .json({
+        message: "Internal server error in declineInvite",
+        error: error.message,
+      });
   }
 };
 
-
 export const getOrganizationInvite = async (req, res) => {
   try {
-    const { id } = req.body;
-    const invite = await OrganizationInvite.find({ orgId: id });
+   
+    const orgId = req.orgUser.orgId;
+   
+     const invitations = await OrganizationInvite.find({
+      orgId: new mongoose.Types.ObjectId(orgId),
+    });
 
-    if (!invite) {
-      return res.status(404).json({ message: "no inivitation found" });
+     if (!invitations.length) {
+      return res.status(404).json({ message: "No invitations found for this org" });
     }
-    res.status(200).json({ message: "Invite fetched successfully.", invite });
+    res.status(200).json({ message: "Invite fetched successfully.", invitations });
   } catch (error) {
     console.error("Error in fetching invite:", error); // Add this
     res.status(500).json({

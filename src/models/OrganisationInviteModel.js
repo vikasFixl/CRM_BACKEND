@@ -17,5 +17,6 @@ const OrganizationInviteSchema = new Schema({
 },
 }, { timestamps: true });
 
+OrganizationInviteSchema.index({ orgId: 1, email: 1 }, { unique: true });
 
 export const OrganizationInvite = mongoose.model("OrganizationInvite", OrganizationInviteSchema);

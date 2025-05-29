@@ -63,6 +63,10 @@ const OrganizationSchema = new Schema(
   { timestamps: true }
 );
 
+OrganizationSchema.index({ name: 1 }, { unique: true });
+
+
+
 OrganizationSchema.pre("save", async function (next) {
   if (this.isModified("billingPlan") && this.billingPlan) {
     const BillingPlan = mongoose.model("BillingPlan");
@@ -78,6 +82,7 @@ OrganizationSchema.path("contactEmail").validate(function (email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }, "Invalid email format.");
+
 
 const Org = mongoose.model("Organization", OrganizationSchema);
 export default Org;
