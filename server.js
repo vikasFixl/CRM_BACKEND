@@ -71,11 +71,28 @@ app.use(
   })
 );
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE',"PATCH"]
-}));
+const allowedOrigins = [
+  'http://localhost:5173',
+  "http://localhost:3000",
+  "http://localhost:3001",
+]
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true); // Origin allowed
+    } else {
+      callback(new Error('Not allowed by CORS')); // Origin not allowed
+    }
+  },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],  // Allowed HTTP methods
+  credentials: true,  // to allow cookies/auth headers
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 app.use(cookieParser());
 // autmation funtion s
