@@ -23,13 +23,23 @@ const HOST = process.env.SMTP_HOST;
 const PORT = process.env.SMTP_PORT;
 const USER = process.env.SMTP_USER;
 const PASS = process.env.SMTP_PASS;
+// global use variables
+const isProd = process.env.NODE_ENV === "production";
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const login = async (req, res) => {
   const { email, password } = req.body || {};
 
-  if (!email?.trim() || !password) {
-    return res.status(400).json({ message: "Please enter email and password" });
-  }
+  // Check if fields are empty
+if (!email.trim() || !password.trim()) {
+  return res.status(400).json({ message: "Please enter email and password" });
+}
+
+// Email validation regex
+
+if (!emailRegex.test(email)) {
+  return res.status(400).json({ message: "Invalid email address" });
+}
 
   try {
     const user = await User.findOne({ email: email.trim().toLowerCase() });
@@ -54,6 +64,12 @@ export const login = async (req, res) => {
 
     // Reset login attempts on successful login
     user.loginAttempts = 0;
+    user.lastLogin = new Date();
+   user.isDeleted = false;
+    
+    user.isActive = true;
+    user.deletedAt = null; // Optional audit field
+   
     await user.save();
 
     // Find an organization created by the user (if any)
@@ -75,10 +91,9 @@ export const login = async (req, res) => {
     };
 
     const accessToken = generateGlobalToken(user);
-    const isProd = process.env.NODE_ENV === "production";
 
     res.cookie("token", accessToken, {
-      httpOnly: isProd, // true in production for security
+      httpOnly: isProd, // true in production for security isprod defined at top
       secure: isProd, // ensures cookie is only sent over HTTPS
       sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
@@ -104,7 +119,7 @@ export const signup = async (req, res) => {
   try {
     const result = signupSchema.safeParse(req.body);
     if (!result.success) {
-      return res.status(400).json({ errors: result.error.errors });
+      return res.status(400).json({ errors: result.error.errors.map((err) => err.message) }); 
     }
 
     const data = result.data;
@@ -132,8 +147,8 @@ export const signup = async (req, res) => {
     const accessToken = generateGlobalToken(user);
 
     res.cookie("token", accessToken, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
+      httpOnly: isProd,
+      secure: isProd,
       sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
@@ -145,7 +160,7 @@ export const signup = async (req, res) => {
         id: user._id,
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
-        uuid: user.uuid,
+      role: user.role,
         token: accessToken,
       },
     });
@@ -165,39 +180,39 @@ export const logout = async (req, res) => {
 
     // 🧹 Optionally: Explicitly overwrite the cookie with empty string
     res.cookie("token", "", {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
+      httpOnly:isProd,
+      secure: isProd,
       sameSite: "None",
       maxAge: 0,
     });
     res.cookie("orgtoken", "", {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
+      httpOnly:isProd,
+      secure: isProd,
       sameSite: "None",
       maxAge: 0,
     });
 
     res.cookie("Token", "", {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
+      httpOnly:isProd,
+      secure: isProd,
       sameSite: "None",
       maxAge: 0,
     });
 
     // ✅ Clear cookies as well
     res.clearCookie("Token", "", {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
+      httpOnly: isProd,
+      secure: isProd,
       sameSite: "None",
     });
     res.clearCookie("orgToken", "", {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
+      httpOnly: isProd,
+      secure: isProd,
       sameSite: "None",
     });
     res.clearCookie("token", "", {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
+      httpOnly: isProd,
+      secure: isProd,
       sameSite: "None",
     });
 
@@ -219,7 +234,9 @@ export const forgotPassword = async (req, res) => {
   if (!email) {
     return res.status(422).json({ error: "Email is required" });
   }
-
+if (!emailRegex.test(email)) {
+  return res.status(400).json({ message: "Invalid email address" });
+}
   try {
     const user = await User.findOne({ email });
     if (!user) {
@@ -253,20 +270,27 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+// RESET PASSWORD
 export const resetPassword = async (req, res) => {
   const { password, token } = req.body;
+  console.log(token);
   try {
-    const user = await User.findOne({
-      resetToken: token,
-      expireToken: { $gt: Date.now() },
-    });
+  const user = await User.findOne({
+  resetPasswordToken: token,
+  resetPasswordExpires: { $gt: Date.now() },
+})
+
+
     if (!user)
       return res.status(422).json({ error: "Session expired. Try again." });
 
-    user.password = await bcrypt.hash(password, 12);
-    user.resetToken = undefined;
-    user.expireToken = undefined;
+    console.log( "before update", user);
+    user.password = password;
+    user.resetPasswordExpires = undefined;
+    user.resetPasswordToken = undefined;
     await user.save();
+
+    console.log( "after update", user);
 
     res.json({ message: "Password updated successfully" });
   } catch (err) {
@@ -274,6 +298,8 @@ export const resetPassword = async (req, res) => {
   }
 };
 
+
+// GET  user profile
 export const getUser = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -289,42 +315,10 @@ export const getUser = async (req, res) => {
   }
 };
 
-export const getUserList = async (req, res) => {
-  try {
-    const users = await User.find().select("-password");
-    res.status(200).json({
-      data: users.map(
-        ({
-          firstName,
-          lastName,
-          email,
-          role,
-          department,
-          phone,
-          permissions,
-          avatar,
-          _id,
-        }) => ({
-          firstName,
-          lastName,
-          email,
-          role,
-          department,
-          phone,
-          permissions,
-          avatar,
-          _id,
-        })
-      ),
-      success: true,
-      code: 200,
-      message: "All users fetched!",
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, code: 500, message: error.message });
-  }
-};
+// admin route to view all users
 
+
+// get all organization users
 export const getAllusers = async (req, res) => {
   try {
     const { orgId } = req.params;
@@ -355,32 +349,59 @@ export const getAllusers = async (req, res) => {
   }
 };
 
-export const getUsersByDept = async (req, res) => {
-  try {
-    const { orgId, department } = req.body;
-    const data = await User.find({ orgId, department })
-      .select("firstName")
-      .sort({ _id: -1 });
+// get users by department
+// currently not using in future we can use
+// export const getUsersByDept = async (req, res) => {
+//   try {
+//     const { orgId, department } = req.body;
+//     const data = await User.find({ orgId, department })
+//       .select("firstName")
+//       .sort({ _id: -1 });
 
-    res.status(200).json({
-      data,
-      success: true,
-      code: 200,
-      message: "Department users fetched",
-    });
-  } catch (error) {
-    res.status(409).json({ message: error.message });
-  }
-};
+//     res.status(200).json({
+//       data,
+//       success: true,
+//       code: 200,
+//       message: "Department users fetched",
+//     });
+//   } catch (error) {
+//     res.status(409).json({ message: error.message });
+//   }
+// };
 
 export const deleteUser = async (req, res) => {
   const _id = req.params.id;
-  if (!mongoose.Types.ObjectId.isValid(_id))
-    return res.status(404).send("No user with that ID.");
 
-  await User.findByIdAndRemove(_id);
-  res.json({ message: "User deleted successfully!" });
+  if (!mongoose.Types.ObjectId.isValid(_id)) {
+    return res.status(404).send("No user with that ID.");
+  }
+
+  try {
+    const user = await User.findById(_id).select("+deletedAt");
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    console.log(user);
+
+  
+
+    // Soft delete the user
+    user.isDeleted = true;
+  
+    user.isActive = false;
+    user.deletedAt = new Date(); // Optional audit field
+   
+
+    await user.save();
+
+    res.json({ message: "User soft-deleted successfully." });
+  } catch (error) {
+    console.error("Error in soft delete:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
+
+
 
 export const updateUser = async (req, res) => {
   const { id: _id } = req.params;
@@ -403,7 +424,7 @@ export const updateUser = async (req, res) => {
       _id,
       { ...parseResult.data },
       { new: true }
-    );
+    ).select("-password");
     res.status(200).json({
       success: true,
       code: 200,
@@ -415,10 +436,13 @@ export const updateUser = async (req, res) => {
   }
 };
 
+// need to implement cloudinary cloud upload
 export const updateProfileimage = async (req, res) => {
   try {
     const url = `${req.protocol}://${req.get("host")}`;
     const _id = req.params.id;
+    if(!mongoose.Types.ObjectId.isValid(_id)) return res.status(404).send("No User with that ID.");
+    if(!req.file) return res.status(400).json({ message: "Please upload a file" });
     const image = await User.findByIdAndUpdate(
       _id,
       { profilePhoto: `${url}/public/user/${req.file.filename}` },
@@ -434,69 +458,109 @@ export const updateProfileimage = async (req, res) => {
     res.status(400).json({ message: "Something went wrong!" });
   }
 };
-export const email = async (req, res) => {
-  const { userName, from, to, link } = req.body;
-  if (!userName || !from || !to || !link) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
 
-  try {
-    const htmlContent = `
-      <div style="width: 100%; color: #000; background: #fff; padding: 2rem; margin-top: 0; display: flex; justify-content: center; align-items: center">
-        <div style="width: 40%; margin-left: 25%; border: 1px solid #c8c9ca; padding: 2rem">
-          <div style="text-align: center">
-            <h1 style="text-align: center; color: #000; font-weight: 900">CRM</h1>
-            <p style="font-size: 18px; padding: 1rem; border-bottom: 1px solid #c8c9ca">
-              ${userName} has invited you to join <span style="font-size: 20px; font-weight: 600">CRM</span>
-            </p>
-            <p style="margin: 1rem auto; font-size: 13px">
-              We're thrilled to invite you to join our 
-              <span style="color: blue">CRM</span>,
-              designed to supercharge our team collaboration and streamline our workflow.
-            </p>
-            <a href="${link}" style="display: inline-block; color: #fff; background: blue; border-radius: 5px; text-decoration: none; font-size: 14px; font-weight: 600; margin: 1rem auto; padding: 6px 12px">
-              View Invitation
-            </a>
-            <p style="margin: 1rem auto; font-size: 13px; padding-bottom: 2rem; border-bottom: 1px solid #c8c9ca">
-              We believe that by embracing our platform, we can take our
-              collaboration and efficiency to new heights. This is an exciting step forward for our team, and we're
-              eager to have you on board.
-            </p>
-            <div style="font-size: 12px; text-align: left">
-              <strong>Note:</strong>
-              <span>This invitation was intended for 
-                <span style="color: blue; font-weight: 600">${to}</span>.
-                If you were not expecting this invitation, you can ignore this email.
-              </span>
-            </div>
-            <div style="font-size: 12px; text-align: left; margin-top: 1rem">
-              <strong style="color: gray">Button not working? :</strong>
-              <span style="color: gray">Copy and paste this link to your browser:</span>
-              <p><a href="${link}" target="_blank" style="color: blue">${link}</a></p>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+// note email invitation is handlied in org controller 
 
-    const mailOptions = {
-      from: `${userName} <${from}>`,
-      to: to,
-      subject: `${userName} sent an invitation to join CRM ✔`,
-      text: "You have been invited to join CRM.",
-      html: htmlContent,
-    };
 
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) {
-        return res
-          .status(500)
-          .json({ message: "Error occurred. " + err.message });
-      } else {
-        return res.status(201).json({ message: `Invitation sent to: ${to}` });
-      }
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
+// export const email = async (req, res) => {
+//   const { userName, from, to, link } = req.body;
+//   if (!userName || !from || !to || !link) {
+//     return res.status(400).json({ message: "All fields are required" });
+//   }
+
+//   try {
+//     const htmlContent = `
+//       <div style="width: 100%; color: #000; background: #fff; padding: 2rem; margin-top: 0; display: flex; justify-content: center; align-items: center">
+//         <div style="width: 40%; margin-left: 25%; border: 1px solid #c8c9ca; padding: 2rem">
+//           <div style="text-align: center">
+//             <h1 style="text-align: center; color: #000; font-weight: 900">CRM</h1>
+//             <p style="font-size: 18px; padding: 1rem; border-bottom: 1px solid #c8c9ca">
+//               ${userName} has invited you to join <span style="font-size: 20px; font-weight: 600">CRM</span>
+//             </p>
+//             <p style="margin: 1rem auto; font-size: 13px">
+//               We're thrilled to invite you to join our 
+//               <span style="color: blue">CRM</span>,
+//               designed to supercharge our team collaboration and streamline our workflow.
+//             </p>
+//             <a href="${link}" style="display: inline-block; color: #fff; background: blue; border-radius: 5px; text-decoration: none; font-size: 14px; font-weight: 600; margin: 1rem auto; padding: 6px 12px">
+//               View Invitation
+//             </a>
+//             <p style="margin: 1rem auto; font-size: 13px; padding-bottom: 2rem; border-bottom: 1px solid #c8c9ca">
+//               We believe that by embracing our platform, we can take our
+//               collaboration and efficiency to new heights. This is an exciting step forward for our team, and we're
+//               eager to have you on board.
+//             </p>
+//             <div style="font-size: 12px; text-align: left">
+//               <strong>Note:</strong>
+//               <span>This invitation was intended for 
+//                 <span style="color: blue; font-weight: 600">${to}</span>.
+//                 If you were not expecting this invitation, you can ignore this email.
+//               </span>
+//             </div>
+//             <div style="font-size: 12px; text-align: left; margin-top: 1rem">
+//               <strong style="color: gray">Button not working? :</strong>
+//               <span style="color: gray">Copy and paste this link to your browser:</span>
+//               <p><a href="${link}" target="_blank" style="color: blue">${link}</a></p>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     `;
+
+//     const mailOptions = {
+//       from: `${userName} <${from}>`,
+//       to: to,
+//       subject: `${userName} sent an invitation to join CRM ✔`,
+//       text: "You have been invited to join CRM.",
+//       html: htmlContent,
+//     };
+
+//     transporter.sendMail(mailOptions, (err, info) => {
+//       if (err) {
+//         return res
+//           .status(500)
+//           .json({ message: "Error occurred. " + err.message });
+//       } else {
+//         return res.status(201).json({ message: `Invitation sent to: ${to}` });
+//       }
+//     });
+//   } catch (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+// };
+
+// export const getUserList = async (req, res) => {
+//   try {
+//     const users = await User.find().select("-password");
+//     res.status(200).json({
+//       data: users.map(
+//         ({
+//           firstName,
+//           lastName,
+//           email,
+//           role,
+//           department,
+//           phone,
+//           permissions,
+//           avatar,
+//           _id,
+//         }) => ({
+//           firstName,
+//           lastName,
+//           email,
+//           role,
+//           department,
+//           phone,
+//           permissions,
+//           avatar,
+//           _id,
+//         })
+//       ),
+//       success: true,
+//       code: 200,
+//       message: "All users fetched!",
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, code: 500, message: error.message });
+//   }
+// };

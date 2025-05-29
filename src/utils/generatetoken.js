@@ -17,7 +17,7 @@ export const generateGlobalToken = (user, options = {expiresIn: "7d"}) => {
     {
       userId: user._id,
       uuid: user.uuid,
-      globalRole: user.role,
+      role: user.role,
       email: user.email,
       firstName: user.firstName,
       

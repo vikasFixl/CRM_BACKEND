@@ -10,10 +10,10 @@ import {
   signup,
   forgotPassword,
   resetPassword,
-  email,
-  getUsersByDept,
+
+  // getUsersByDept,
+  // getUserList,
   updateProfileimage,
-  getUserList,
   getUser,
   getAllusers,
   deleteUser,
@@ -21,13 +21,15 @@ import {
   logout,
 } from "../controllers/user.js";
 
-import { isAuthenticated } from "../middleweare/middleware.js";
+import { isAuthenticated, isAdminOrSelf } from "../middleweare/middleware.js";
+import {authenticateOrgToken} from "../middleweare/orgmiddleware.js"
 
 // Directory setup for ES module (__dirname alternative)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const router = express.Router();
+const Router = express.Router();
+
 
 const uploadDir = path.join(__dirname, "../../public/user/");
 
@@ -45,22 +47,25 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// User Routes (only active module)
-router.post("/signin", login);
-router.post("/signup", upload.single("profilePhoto"), signup);
-router.post("/forgot",forgotPassword);
-router.post("/invitation", email);
-router.post("/reset", resetPassword);
-router.post("/getUsersByDept", getUsersByDept);
-router.post("/logout",logout);
+// POST routes
+Router.route("/signin").post(login); // login user
+Router.route("/signup").post(signup); // signup user
+Router.route("/forgot").post(forgotPassword);// forgot password
 
-router.get("/getUser/:id", isAuthenticated,getUser);
-router.get("/getAllusers/:orgId", getAllusers);
-router.get("/getUserList", getUserList);
+Router.route("/reset").post(resetPassword); // reset password
+Router.route("/logout").post(logout); // logout
 
-router.delete("/delete/:id", deleteUser);
+// GET routes
 
-router.patch("/updateUser/:id", isAuthenticated, updateUser);
-router.patch("/updateProfilephoto/:id", upload.single("profilePhoto"),updateProfileimage);
+Router.route("/getprofile").get(isAuthenticated, getUser); // user profile
+Router.route("/getAllusers/:orgId").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),getAllusers); // get all org users
+// Router.route("/getUserList").get(getUserList); // admin route to view all users
 
-export default router;
+// DELETE route
+Router.route("/delete/:id").delete(isAuthenticated,isAdminOrSelf,deleteUser); // delete user(admin or self) and soft delete for 30 days then automaticallydelete
+
+// PATCH routes
+Router.route("/updateUser/:id").patch(isAuthenticated,isAdminOrSelf,updateUser); // update user (admin or self)
+Router.route("/updateProfilephoto/:id").patch(isAuthenticated, updateProfileimage); // update user profile photo
+
+export default Router;
