@@ -95,7 +95,8 @@ if (!emailRegex.test(email)) {
     res.cookie("token", accessToken, {
       httpOnly: isProd, // true in production for security isprod defined at top
       secure: isProd, // ensures cookie is only sent over HTTPS
-      sameSite: "None",
+      sameSite: "Lax",
+
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -149,7 +150,8 @@ export const signup = async (req, res) => {
     res.cookie("token", accessToken, {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "None",
+      sameSite: "Lax",
+
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     });
     res.status(201).json({
@@ -182,20 +184,23 @@ export const logout = async (req, res) => {
     res.cookie("token", "", {
       httpOnly:isProd,
       secure: isProd,
-      sameSite: "None",
+      sameSite: "Lax",
+
       maxAge: 0,
     });
     res.cookie("orgtoken", "", {
       httpOnly:isProd,
       secure: isProd,
-      sameSite: "None",
+      sameSite: "Lax",
+
       maxAge: 0,
     });
 
     res.cookie("Token", "", {
       httpOnly:isProd,
       secure: isProd,
-      sameSite: "None",
+      sameSite: "Lax",
+
       maxAge: 0,
     });
 
@@ -203,17 +208,20 @@ export const logout = async (req, res) => {
     res.clearCookie("Token", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "None",
+      sameSite: "Lax",
+
     });
     res.clearCookie("orgToken", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "None",
+      sameSite: "Lax",
+
     });
     res.clearCookie("token", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "None",
+      sameSite: "Lax",
+
     });
 
     // ⚠️ req.cookies still shows the old token, it won’t change until the next request
