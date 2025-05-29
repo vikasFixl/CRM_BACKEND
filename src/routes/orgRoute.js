@@ -62,7 +62,7 @@ Router.route("/deleteuser/:id").delete(isAuthenticated,authenticateOrgToken(["Or
 Router.route("/createInvite").post(isAuthenticated,authenticateOrgToken(["OrgAdmin","Manager"]),CreateInvite);
 Router.route("/acceptInvite/:token").post(acceptInvite);
 Router.route("/declineInvite/:token").post(declineInvite);
-Router.route("/declineInvite/:token").post(declineInvite);
+// Router.route("/declineInvite/:token").post(declineInvite);
 Router.route("/orgInvite").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),getOrganizationInvite);
 
 

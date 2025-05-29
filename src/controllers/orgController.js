@@ -339,6 +339,7 @@ export const getUserOrganizations = async (req, res) => {
 export const getOrganizationBYId = async (req, res) => {
   try {
     const organizationId = req.params.orgId;
+    
     const organization = await Org.findById(organizationId);
     if (!organization) {
       return res.status(404).json({ message: "Organization not found" });
@@ -553,17 +554,18 @@ export const CreateInvite = async (req, res) => {
     }
 
     // Check for existing pending invite
-    const existingInvite = await OrganizationInvite.findOne({
-      email,
-    orgId,
-      expiresAt: { $gt: new Date() },
-    });
 
-    if (existingInvite) {
-      return res
-        .status(400)
-        .json({ message: "An invite for this user already exists." });
-    }
+    // const existingInvite = await OrganizationInvite.findOne({
+    //   email,
+    // orgId,
+    //   expiresAt: { $gt: new Date() },
+    // });
+
+    // if (existingInvite) {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "An invite for this user already exists." });
+    // }
 
     // Generate a secure token
     const token = crypto.randomBytes(64).toString("hex");
@@ -581,7 +583,7 @@ export const CreateInvite = async (req, res) => {
 
     await invite.save();
     // Construct join link
-    const INVITE_LINK = `https://localhost:5173/accept-invite?token=${token}`;
+    const INVITE_LINK = `http://localhost:5173/accept-invite?token=${token}`;
 
    
     
@@ -649,7 +651,7 @@ const mailOptions = {
 
    
     // await sendEmail(email, "You're invited!", `Click here to join: ${inviteLink}`);
-  await   transporter.sendMail(mailOptions, (error, info) => {
+   transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
         res.status(500).json({ error: error.message,message: "Failed to send email." });
         console.error("Error sending email:", error);

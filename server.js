@@ -135,6 +135,9 @@ async function startServer() {
 }
 
 startServer();
+app.get("/", (req, res) => {
+  res.send("server running");
+})
 
 // Global error handlers
 process.on("unhandledRejection", (reason, p) => {
