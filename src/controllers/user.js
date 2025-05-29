@@ -96,7 +96,9 @@ if (!emailRegex.test(email)) {
     res.cookie("token", accessToken, {
       httpOnly: isProd, // true in production for security isprod defined at top
       secure: isProd, // ensures cookie is only sent over HTTPS
-      sameSite: "Strict",
+    SameSite:'None'
+
+,
 
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -151,7 +153,9 @@ export const signup = async (req, res) => {
     res.cookie("token", accessToken, {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "Strict"
+    SameSite:'None'
+
+
 ,
 
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
@@ -186,7 +190,9 @@ export const logout = async (req, res) => {
     res.cookie("token", "", {
       httpOnly:isProd,
       secure: isProd,
-      sameSite: "Strict"
+    SameSite:'None'
+
+
 ,
 
       maxAge: 0,
@@ -194,7 +200,9 @@ export const logout = async (req, res) => {
     res.cookie("orgtoken", "", {
       httpOnly:isProd,
       secure: isProd,
-      sameSite: "Strict"
+    SameSite:'None'
+
+
 ,
 
       maxAge: 0,
@@ -203,7 +211,9 @@ export const logout = async (req, res) => {
     res.cookie("Token", "", {
       httpOnly:isProd,
       secure: isProd,
-      sameSite: "Strict"
+    SameSite:'None'
+
+
 ,
 
       maxAge: 0,
@@ -213,7 +223,9 @@ export const logout = async (req, res) => {
     res.clearCookie("Token", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "Strict",
+    SameSite:'None'
+
+,
       maxAge: 0,
 
 
@@ -221,7 +233,9 @@ export const logout = async (req, res) => {
     res.clearCookie("orgToken", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "Strict"
+    SameSite:'None'
+
+
 ,
 
       maxAge: 0
@@ -230,7 +244,9 @@ export const logout = async (req, res) => {
     res.clearCookie("token", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "Strict"
+    SameSite:'None'
+
+
 ,
 
       maxAge: 0
