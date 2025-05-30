@@ -49,23 +49,17 @@ const OrganizationSchema = new Schema(
     billingPlan: { type: Schema.Types.ObjectId, ref: "BillingPlan" },
 
     isActive: { type: Boolean, default: true, index: true },
-    Archive: { type: Boolean, default: false },
 
-
-
-
-    
     isdeleted: { type: Boolean, default: false },
-
+    deletedAt: { type: Date },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    isSuspended: { type: Boolean, default: false ,select: false},
   },
   { timestamps: true }
 );
 
 OrganizationSchema.index({ name: 1 }, { unique: true });
-
-
 
 OrganizationSchema.pre("save", async function (next) {
   if (this.isModified("billingPlan") && this.billingPlan) {
@@ -82,7 +76,6 @@ OrganizationSchema.path("contactEmail").validate(function (email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }, "Invalid email format.");
-
 
 const Org = mongoose.model("Organization", OrganizationSchema);
 export default Org;

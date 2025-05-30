@@ -8,11 +8,13 @@ import { RolePermission } from "../models/RolePermission.js";
 import { v4 as uuidv4 } from "uuid";
 import { generateOrgToken } from "../utils/generatetoken.js";
 import { OrganizationInvite } from "../models/OrganisationInviteModel.js";
-import transporter from "../../config/nodemailer.config.js";
+import { sendEmail} from "../../config/nodemailer.config.js"
+import { InviteEmailTemplate } from "../utils/helperfuntions/emailtemplate.js";
+
 
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
 // import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
-// Assuming the 'User' model exists and the user is related to the org
+
 
 const generateEmployeeId = () => {
   const short = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6-char hex
@@ -29,10 +31,12 @@ export const createOrganization = async (req, res) => {
       contactPhone,
       contactName,
       address,
+       CurrentActive,
       orgCity,
       orgState,
       orgCountry,
     } = req.body;
+    
 
     // ✅ Validate required fields
     if (
@@ -77,6 +81,7 @@ export const createOrganization = async (req, res) => {
       address,
       orgCity,
       orgState,
+    
       orgCountry,
       createdBy: userId,
       updatedBy: userId,
@@ -134,6 +139,7 @@ export const createOrganization = async (req, res) => {
       $push: {
         organizations: {
           org: savedOrg._id,
+          CurrentActive,
           role,
           permissions,
           employeeId,
@@ -145,19 +151,19 @@ export const createOrganization = async (req, res) => {
     // console.log("orgtoken", orgtoken);
     // console.log("employeeId", employeeId);
 
-    res.cookie("orgtoken", orgtoken, {
-      httpOnly: isProd,
-      secure: isProd,
-      sameSite: "none",
+    // res.cookie("orgtoken", orgtoken, {
+    //   httpOnly: isProd,
+    //   secure: isProd,
+    //   sameSite: "none",
 
-      maxAge: 1000 * 60 * 60 * 24, // 1 day
-    });
+    //   maxAge: 1000 * 60 * 60 * 24, // 1 day
+    // });
 
     return res.status(201).json({
       message: "Organization and Billing created successfully",
       orgId: savedOrg._id,
       employeeId,
-      token: orgtoken,
+      orgtoken: orgtoken,
     });
   } catch (error) {
     console.error("Org creation failed:", error);
@@ -170,50 +176,56 @@ export const createOrganization = async (req, res) => {
 // switchOrgController.js
 export const switchOrg = async (req, res) => {
   try {
-    const userId = req.user.userId; // from base login token (global JWT)
+    const userId = req.user.userId; // from global JWT
     const orgId = req.body.orgId;
 
     if (!orgId) {
-      return res.status(400).json({ message: "no orgId provided" });
+      return res.status(400).json({ message: "No orgId provided" });
     }
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const orgRecord = user.organizations.find(
+    const orgIndex = user.organizations.findIndex(
       (o) => o.org.toString() === orgId
     );
-    console.log("orgRecord", orgRecord);
-    if (!orgRecord) {
+
+    if (orgIndex === -1) {
       return res
         .status(403)
         .json({ message: "User not part of this organization" });
     }
 
+    // Set all currentActive to false
+    user.organizations.forEach((org) => {
+      org.CurrentActive = false;
+    });
+
+    // Set currentActive = true for selected org
+    user.organizations[orgIndex].CurrentActive = true;
+
+    // Save changes
+    await user.save();
+
+    const activeOrg = user.organizations[orgIndex];
+// console.log("activeOrg", activeOrg);
+
+    // Generate new token
     const orgtoken = generateOrgToken({
       userId,
       orgId,
-      employeeId: orgRecord.employeeId,
-      role: orgRecord.role,
-      permissions: orgRecord.permissions,
+      employeeId: activeOrg.employeeId,
+      role: activeOrg.role,
+      permissions: activeOrg.permissions,
     });
 
-    const token = orgtoken;
-   
-    res.cookie("orgtoken", token, {
-      secure: isProd,
-      httpOnly: isProd,
-      sameSite: "none",
-
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-
-    return res.status(200).json({ token });
+    return res.status(200).json({ orgtoken });
   } catch (err) {
     console.error("Switch Org Error", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // export const AddUserToOrganization = async (req, res) => {
 //   try {
@@ -316,20 +328,24 @@ export const getUserOrganizations = async (req, res) => {
     const userId = req.user.userId;
     console.log("userId", userId);
 
-    // Find orgs where user is either in users array or is the creator
-    const organizations = await Org.find({
+    let  organizations = await Org.find({
       $or: [
         { "users.userId": userId },
         { createdBy: userId },
-      ],
-    }).populate({
-      path: "users.userId",
-      select: "firstName lastName email phone jobTitle",
-    });
+      ]
+     
+    })
+      .populate({
+        path: "users.userId",
+        select: "firstName lastName email phone jobTitle",
+      })
+      .select("name contactEmail contactPhone contactName address orgCity orgState orgCountry timezone modules isSuspended billingPlan isActive  createdBy users createdAt updatedAt");
 
     if (!organizations.length) {
-      return res.status(404).json({ message: "No organizations found for this user." });
+      return res.status(404).json({ message: "No active organizations found for this user." });
     }
+ // 🔍 Explicitly filter out suspended orgs (just in case DB inconsistency)
+    organizations = organizations.filter(org => org.isSuspended === false);
 
     res.status(200).json({
       message: "Organizations fetched successfully",
@@ -340,6 +356,7 @@ export const getUserOrganizations = async (req, res) => {
     res.status(500).json({ error: "Failed to get organizations" });
   }
 };
+
 
 
 export const getOrganizationBYId = async (req, res) => {
@@ -530,7 +547,7 @@ export const CreateInvite = async (req, res) => {
   try {
     const { email, role } = req.body || {};
     const orgId = req.orgUser.orgId;
-    const { invitedBy, firstName, email: invitedByEmail, userId } = req.user;
+    const {  userId } = req.user;
     console.log("orgId", orgId);
 
     // Validate org
@@ -574,9 +591,9 @@ export const CreateInvite = async (req, res) => {
         .json({ message: "User is already in this organization." });
     }
 
-    // Check for existing pending invite
+   
 
-    // const existingInvite = await OrganizationInvite.findOne({
+ 
     //   email,
     // orgId,
     //   expiresAt: { $gt: new Date() },
@@ -606,89 +623,25 @@ export const CreateInvite = async (req, res) => {
     console.log("invite", invite);
     // Construct join link
     const INVITE_LINK = `http://localhost:5173/accept-invite?token=${token}`;
+ const html= await InviteEmailTemplate(organization.name,role,email,INVITE_LINK);
 
-    const htmlcontent = `
-  <html>
-    <body style="font-family: Arial, sans-serif; background-color: #f7f7f7; margin:0; padding:0;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f7f7; padding: 40px 0;">
-        <tr>
-          <td align="center">
-            <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 20px;">
-              <tr>
-                <td style="color:#333333; font-size: 24px; font-weight: bold; padding-bottom: 20px;">
-                  You're Invited to Join ${organization.name}!
-                </td>
-              </tr>
-              <tr>
-                <td style="color:#555555; font-size: 16px; line-height: 1.5; padding-bottom: 10px;">
-                  Hello <strong>${email}</strong>,
-                </td>
-              </tr>
-              <tr>
-                <td style="color:#555555; font-size: 16px; line-height: 1.5; padding-bottom: 10px;">
-                  You have been invited to join the organization <strong>${
-                    organization.name
-                  }</strong> as a <strong>${role}</strong>.
-                </td>
-              </tr>
-              <tr>
-                <td style="color:#555555; font-size: 16px; line-height: 1.5; padding-bottom: 20px;">
-                  To accept the invitation and get started, please click the link below:
-                </td>
-              </tr>
-              <tr>
-                <td align="center" style="padding-bottom: 20px;">
-                  <a href="${INVITE_LINK}" target="_blank" style="background-color:#007bff; color:#ffffff; padding: 12px 20px; text-decoration:none; border-radius: 5px; font-weight: bold; display: inline-block;">
-                    Accept Invitation
-                  </a>
-                </td>
-              </tr>
-              <tr>
-                <td style="color:#555555; font-size: 14px; line-height: 1.5; padding-bottom: 10px;">
-                  If you did not expect this invitation, you can safely ignore this email.
-                </td>
-              </tr>
-              <tr>
-                <td style="color:#999999; font-size: 12px; text-align: center; padding-top: 30px;">
-                  &copy; ${new Date().getFullYear()} ${
-      organization.name
-    }. All rights reserved.
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>`;
-
-    const mailOptions = {
-      from: `${firstName} <${`${invitedByEmail}`}>`,
-      to: email,
-      subject: `${firstName} sent an invitation to join CRM ✔`,
-      text: "You have been invited to join CRM.",
-      html: htmlcontent,
-    };
-
-    // await sendEmail(email, "You're invited!", `Click here to join: ${inviteLink}`);
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        res
-          .status(500)
-          .json({ error: error.message, message: "Failed to send email." });
-        console.error("Error sending email:", error);
-      } else {
-        console.log("Email sent:", info.response);
-        res.status(200).json({ message: "Invite sent successfully.", token });
-      }
-    });
-
+    // Send reset email (mocked)
     console.log("Invite link:", INVITE_LINK); // for testing/dev
+     try {
+      await sendEmail(email, "Organization Invite", html);
+      return res.status(200).json({
+        success: true,
+        message: "Invite sent successfully.",
+      });
+    } catch (error) {
+     await  OrganizationInvite.findByIdAndDelete(invite._id);
+     
+     
+      return res.status(500).json({ error: "Failed to send invite email" });
+    }
   } catch (error) {
-    console.error("Error creating invite:", error);
-    return res
-      .status(500)
-      .json({ message: "Failed to create invite.", error: error.message });
+    console.log(error,"email error");
+    return res.status(500).json({ error: "Server error" });
   }
 };
 

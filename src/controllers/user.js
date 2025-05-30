@@ -4,10 +4,12 @@ import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import transporter from "../../config/nodemailer.config.js";
+import { sendEmail } from "../../config/nodemailer.config.js";
 import {
   generateGlobalToken,
   generateOrgToken,
 } from "../utils/generatetoken.js";
+import { resetPasswordTemplate } from "../utils/helperfuntions/emailtemplate.js";
 import {
   signupSchema,
   updateUserSchema,
@@ -20,10 +22,7 @@ import Employee from "../models/employeeModel.js";
 
 dotenv.config();
 
-const HOST = process.env.SMTP_HOST;
-const PORT = process.env.SMTP_PORT;
-const USER = process.env.SMTP_USER;
-const PASS = process.env.SMTP_PASS;
+
 // global use variables
 const isProd = process.env.NODE_ENV === "production";
 
@@ -44,9 +43,13 @@ if (!emailRegex.test(email)) {
 }
 
   try {
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    const user = await User.findOne({ email: email.trim().toLowerCase() }).select("+isSuspended");
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
+    }
+
+    if(user.isSuspended==true){
+      return res.status(400).json({ message: "this account is suspended contact admin" });
     }
 
     // Check login attempts
@@ -74,10 +77,15 @@ if (!emailRegex.test(email)) {
    
     await user.save();
 
-    // Find an organization created by the user (if any)
-    const org = await Org.findOne({ createdBy: user._id })
-      .select("name contactEmail _id")
-      .lean();
+    
+   // Find active organization from user's organizations
+const activeOrgEntry = user.organizations.find(org => org.CurrentActive === true);
+
+let org = null;
+if (activeOrgEntry) {
+  org = await Org.findById(activeOrgEntry.org).select("name contactEmail _id").lean();
+}
+
 
     const responseData = {
       id: user._id,
@@ -95,14 +103,14 @@ if (!emailRegex.test(email)) {
 
     const accessToken = generateGlobalToken(user, { expiresIn: "7d" });
 
-    res.cookie("token", accessToken, {
-      httpOnly: isProd, // true in production for security isprod defined at top
-      secure: isProd, // ensures cookie is only sent over HTTPS
-    sameSite: 'none'
+    // res.cookie("token", accessToken, {
+    //   httpOnly: isProd, // true in production for security isprod defined at top
+    //   secure: isProd, // ensures cookie is only sent over HTTPS
+    // sameSite: 'none'
 
-,
- maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+// ,
+//  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+//     });
 
     res.status(200).json({
       message: "You have logged in successfully",
@@ -151,23 +159,16 @@ export const signup = async (req, res) => {
 
     const accessToken = generateGlobalToken(user, { expiresIn: "7d" });
 
-    res.cookie("token", accessToken, {
-      httpOnly: isProd,
-      secure: isProd,
-    sameSite: 'none'
-
-
-
-
-,
-
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-    });
+    // res.cookie("token", accessToken, {
+    //   httpOnly: isProd,   
+    //   secure: isProd,
+    // sameSite: 'none', maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    // });
     res.status(201).json({
       message: "You have signed up successfully",
       success: true,
       code: 201,
-      user: {
+      user: {       
         id: user._id,
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
@@ -303,29 +304,34 @@ if (!emailRegex.test(email)) {
 
     await user.save();
 
-    // Send reset email (mocked)
-    await transporter.sendMail({
-      to: user.email,
-      from: USER,
-      subject: "Password Reset",
-      html: `<p>You requested for password reset</p><p>Click this <a href="${"http://localhost:3000"}/reset-password/${token}">link</a> to reset password</p>`,
-    });
+const  resetUrl=`${"http://localhost:3000"}/reset-password/${token}`
 
-    res.status(200).json({
-      message: "Reset link sent to your email",
-      success: true,
-    });
+    const html= await resetPasswordTemplate(user.firstName,resetUrl)
+
+    // Send reset email (mocked)
+     try {
+      await sendEmail(email, "Password Reset Request", html);
+      return res.status(200).json({
+        success: true,
+        message: "If an account exists, a reset link has been sent.",
+      });
+    } catch (error) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+      return res.status(500).json({ error: "Failed to send reset email" });
+    }
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Something went wrong", error: error.message });
+    console.log(error,"email error");
+    return res.status(500).json({ error: "Server error" });
+    
   }
 };
 
 // RESET PASSWORD
 export const resetPassword = async (req, res) => {
   const { password, token } = req.body;
-  console.log(token);
+  // console.log(token);
   try {
   const user = await User.findOne({
   resetPasswordToken: token,
@@ -334,15 +340,15 @@ export const resetPassword = async (req, res) => {
 
 
     if (!user)
-      return res.status(422).json({ error: "Session expired. Try again." });
+      return res.status(422).json({ error: "Password reset link expired. Try again." });
 
-    console.log( "before update", user);
+    // console.log( "before update", user);
     user.password = password;
     user.resetPasswordExpires = undefined;
     user.resetPasswordToken = undefined;
     await user.save();
 
-    console.log( "after update", user);
+    // console.log( "after update", user);
 
     res.json({ message: "Password updated successfully" });
   } catch (err) {
@@ -355,13 +361,13 @@ export const resetPassword = async (req, res) => {
 export const getUser = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const user = await User.findById(userId).select("-password");
+    const user = await User.findById(userId).select("-password")
     res.status(200).json({
       user,
       success: true,
       code: 200,
       message: "User fetched successfully",
-    });
+    })
   } catch (error) {
     res.status(409).json({ message: error.message });
   }
@@ -446,7 +452,7 @@ export const deleteUser = async (req, res) => {
 
     await user.save();
 
-    res.json({ message: "User soft-deleted successfully." });
+    res.json({ message: "User deleted successfully." });
   } catch (error) {
     console.error("Error in soft delete:", error);
     res.status(500).json({ message: "Server error", error: error.message });

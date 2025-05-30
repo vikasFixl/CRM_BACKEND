@@ -22,6 +22,8 @@ const UserSchema = new Schema(
           ref: "Organization",
           index: true,
         },
+        // help us to log the last logged org
+        CurrentActive: { type: Boolean, default: true },
         role: {
           type: String,
           enum: ["OrgAdmin", "Manager", "SupportAgent", "User", "Custom"],
@@ -34,11 +36,6 @@ const UserSchema = new Schema(
         token: {
           type: String,
           required: true,
-        },
-        status: {
-          type: String,
-          enum: ["active", "inactive"],
-          default: "active",
         },
         permissions:{
           type:[Object],
@@ -64,6 +61,8 @@ const UserSchema = new Schema(
     //   zip: { type: String, trim: true },
     //   country: { type: String, trim: true },
     // },
+     isSuspended: { type: Boolean, default: false,select: false },
+  
     resetPasswordToken: {
       type: String,
       default: null,

@@ -19,6 +19,11 @@ import {
 } from "../controllers/orgController.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
+import {
+  lightLimiter,
+  moderateLimiter,
+  moderatePlusLimiter,
+} from "../middleweare/ratelimitter.js";
 const Router = express.Router();
 
 const url = "./public/org/";
@@ -54,7 +59,7 @@ const upload = multer({ storage });
 // );
 
 // creates a new organisation
-Router.route("/").post(isAuthenticated, createOrganization);
+Router.route("/").post(isAuthenticated, moderateLimiter, createOrganization);
 // gets user organisation (admin organization)
 
 // Router.route("/").get(isAuthenticated,getAllOrganizations);
@@ -74,24 +79,27 @@ Router.route("/:id").get(
 Router.route("/user/all").get(isAuthenticated, getUserOrganizations);
 
 // provides access token based on org
-Router.route("/switch").post(isAuthenticated, switchOrg);
+Router.route("/switch").post(isAuthenticated, moderatePlusLimiter, switchOrg);
 Router.route("/updateuser/:id").put(
   isAuthenticated,
   authenticateOrgToken(["OrgAdmin"]),
+  moderateLimiter,
   UpdateOrganizationUser
 );
 Router.route("/deleteuser/:id").delete(
   isAuthenticated,
   authenticateOrgToken(["OrgAdmin"]),
+  moderateLimiter,
   DeleteOrganizationUser
 );
 Router.route("/createInvite").post(
   isAuthenticated,
   authenticateOrgToken(["OrgAdmin", "Manager"]),
+  moderatePlusLimiter,
   CreateInvite
 );
-Router.route("/acceptInvite/:token").post(acceptInvite);
-Router.route("/declineInvite/:token").post(declineInvite);
+Router.route("/acceptInvite/:token").post(lightLimiter, acceptInvite);
+Router.route("/declineInvite/:token").post(lightLimiter, declineInvite);
 // Router.route("/declineInvite/:token").post(declineInvite);
 Router.route("/all/Invite").get(
   isAuthenticated,

@@ -23,6 +23,7 @@ import {
 
 import { isAuthenticated, isAdminOrSelf } from "../middleweare/middleware.js";
 import {authenticateOrgToken} from "../middleweare/orgmiddleware.js"
+import { loginEmailRateLimiter, signupEmailRateLimiter,resetEmailRateLimiter,forgotEmailRateLimiter } from "../middleweare/ratelimitter.js";
 
 // Directory setup for ES module (__dirname alternative)
 const __filename = fileURLToPath(import.meta.url);
@@ -48,11 +49,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // POST routes
-Router.route("/signin").post(login); // login user
-Router.route("/signup").post(signup); // signup user
-Router.route("/forgot").post(forgotPassword);// forgot password
+Router.route("/signin").post(loginEmailRateLimiter,login); // login user
+Router.route("/signup").post(signupEmailRateLimiter,signup); // signup user
+Router.route("/forgot").post(forgotEmailRateLimiter,forgotPassword);// forgot password
 
-Router.route("/reset").post(resetPassword); // reset password
+Router.route("/reset").post(resetEmailRateLimiter,resetPassword); // reset password
 Router.route("/logout").post(logout); // logout
 
 // GET routes

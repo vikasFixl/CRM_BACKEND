@@ -10,10 +10,11 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-
+import helmet from "helmet"
 import fileUpload from "express-fileupload";
 import { connectDB } from "./config/db.config.js";
 import{startUserCleanupCron} from  "./src/automation/UserDeleteAutomation.js"
+import { globalLimiter } from "./src/middleweare/ratelimitter.js";
 
 // const invoiceRoutes = require("./src/routes/invoiceRoute");
 // const clientRoutes = require("./src/routes/clientRoute");
@@ -50,6 +51,8 @@ import userRoutes from "./src/routes/userRoute.js";
 import orgRoutes from "./src/routes/orgRoute.js";
 import BillingRoutes from "./src/routes/HRM/BillingRoute.js"
 import RoleRoutes from "./src/routes/rolepermissionroute.js"
+import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
+
 
 // PayPal config
 paypal.configure({
@@ -62,16 +65,17 @@ paypal.configure({
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-
+// File upload configuration
 app.use(
   fileUpload({
-    limits: { fileSize: 50 * 1024 * 1024 },
+    limits: { fileSize: 50 * 1024 * 1024 }, // Max file size: 50MB
     useTempFiles: true,
     tempFileDir: "/tmp/",
   })
 );
+// Parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: true }));
-
+// cors configuration
 app.use(cors(
   {
     origin:  "http://localhost:5173",
@@ -79,11 +83,13 @@ app.use(cors(
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   }
 ));
+// parse cookies
 app.use(express.json());
 app.use(cookieParser());
+app.use(helmet());
 
 // ✅ Active route
-app.use("/api/auth", userRoutes);
+app.use("/api/auth", globalLimiter, userRoutes);
 app.use("/api/organization", orgRoutes);
 app.use("/api/billingplan", BillingRoutes);
 app.use("/api/role", RoleRoutes);
@@ -110,7 +116,7 @@ app.use("/api/Reminder", Reminder);
 app.use("/api/hrm", appRouter);
 app.use("/api/activities", activitRoutes);
 */
-
+// request logger middleware
 app.use((req, res, next) => {
   console.log(`Request hit: ${req.method} ${req.originalUrl}`);
 
@@ -125,23 +131,39 @@ app.use((req, res, next) => {
   next();
 });
 
-async function startServer() {
-  try {
-    await connectDB(); // Wait for DB connection
-    app.listen(PORT, () => {
-      console.log(`✅ Server started on port ${PORT}`);
+// Start the server
+ 
+const server =  app.listen(PORT, async() => {
+  console.log(`✅ Server started on port ${PORT}`);
+  await connectDB(); // Wait for DB connection
     });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1); // Exit process on DB failure
-  }
-}
 
-startServer();
-startUserCleanupCron();
+
+
+startUserCleanupCron(); //background task/cron job
+runWelcomeEmail();
+
+
+
+// health check route
 app.get("/", (req, res) => {
   res.send("server running");
 })
+// global 404 handler 
+app.all('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+  });
+});
+// global error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: err.message || 'Something went wrong',
+  });
+});
 
 // Global error handlers
 process.on("unhandledRejection", (reason, p) => {
@@ -150,4 +172,10 @@ process.on("unhandledRejection", (reason, p) => {
 
 process.on("uncaughtException", (err, origin) => {
   console.log("Uncaught Exception at:", origin, "error:", err);
+});
+process.on("SIGINT", () => {
+  console.log("🛑 Gracefully shutting down...");
+  server.close(() => {
+    process.exit(0);
+  });
 });

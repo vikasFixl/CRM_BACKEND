@@ -5,8 +5,14 @@ import jwtDecode from "jwt-decode";
 
 export const isAuthenticated = (req, res, next) => {
   // console.log("req.cookies", req.cookies);
-  const token = req.cookies?.token;
-  if (!token) return res.status(401).json({ message: "Unauthorized" });
+   const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized: No Bearer token provided" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
 
   try {
     const decoded = jwtDecode(token);
