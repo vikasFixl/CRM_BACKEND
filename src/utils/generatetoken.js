@@ -1,8 +1,11 @@
-import e from "express";
-import jwt from "jsonwebtoken";
 
-const SECRET = process.env.JWT_SECRET || "your-secret-key";
-const ORGSECRET = process.env.JWT_SECRET || "your-org-secret-key";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config({ path: "../../.env" });
+
+const SECRET = process.env.JWT_SECRET
+const ORGSECRET = process.env.ORG_SECRET 
 
 // Default JWT options for all tokens
 const jwtOptions = {
@@ -12,7 +15,8 @@ const jwtOptions = {
 };
 
 // 1. Global token — used after login
-export const generateGlobalToken = (user, options = {expiresIn: "7d"}) => {
+
+export const generateGlobalToken = (user) => {
   return jwt.sign(
     {
       userId: user._id,
@@ -23,16 +27,17 @@ export const generateGlobalToken = (user, options = {expiresIn: "7d"}) => {
       
     },
     SECRET,
-    { ...jwtOptions, ...options } // merge custom overrides
+    { ...jwtOptions, expiresIn: "7d" } // merge custom overrides
   );
 
   
 };
 
 // 2. Org-scoped token — used for org-specific access
+
 export const generateOrgToken = (
   { userId, orgId, employeeId, role, permissions },
-  options = {expiresIn: "1d"}
+  
 ) => {
   return jwt.sign(
     {
@@ -43,6 +48,6 @@ export const generateOrgToken = (
       permissions,
     },
     ORGSECRET,
-    { ...jwtOptions, ...options }
+    { ...jwtOptions, expiresIn: "2d" }
   );
 };

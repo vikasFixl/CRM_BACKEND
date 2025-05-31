@@ -10,6 +10,7 @@ import { generateOrgToken } from "../utils/generatetoken.js";
 import { OrganizationInvite } from "../models/OrganisationInviteModel.js";
 import { sendEmail} from "../../config/nodemailer.config.js"
 import { InviteEmailTemplate } from "../utils/helperfuntions/emailtemplate.js";
+import jwt from "jsonwebtoken";
 
 
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
@@ -158,12 +159,13 @@ export const createOrganization = async (req, res) => {
 
     //   maxAge: 1000 * 60 * 60 * 24, // 1 day
     // });
-
+const {exp}=jwt.decode(orgtoken)
     return res.status(201).json({
       message: "Organization and Billing created successfully",
       orgId: savedOrg._id,
       employeeId,
       orgtoken: orgtoken,
+      expiresAt: exp*1000
     });
   } catch (error) {
     console.error("Org creation failed:", error);
@@ -218,8 +220,8 @@ export const switchOrg = async (req, res) => {
       role: activeOrg.role,
       permissions: activeOrg.permissions,
     });
-
-    return res.status(200).json({ orgtoken });
+const {exp} = jwt.decode(orgtoken);
+    return res.status(200).json({ orgtoken, expat: exp*1000 });
   } catch (err) {
     console.error("Switch Org Error", err);
     res.status(500).json({ message: "Server error" });
@@ -323,39 +325,71 @@ export const switchOrg = async (req, res) => {
 // };
 
 // get user organizations all (whether he is admin or not)
+
+
 export const getUserOrganizations = async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log("userId", userId);
 
-    let  organizations = await Org.find({
-      $or: [
-        { "users.userId": userId },
-        { createdBy: userId },
-      ]
-     
-    })
-      .populate({
-        path: "users.userId",
-        select: "firstName lastName email phone jobTitle",
-      })
-      .select("name contactEmail contactPhone contactName address orgCity orgState orgCountry timezone modules isSuspended billingPlan isActive  createdBy users createdAt updatedAt");
+    // ✅ Get user with embedded org info
+    const user = await User.findById(userId).lean();
 
-    if (!organizations.length) {
-      return res.status(404).json({ message: "No active organizations found for this user." });
+    if (!user || !user.organizations || user.organizations.length === 0) {
+      return res.status(404).json({ message: "No organizations found for this user." });
     }
- // 🔍 Explicitly filter out suspended orgs (just in case DB inconsistency)
-    organizations = organizations.filter(org => org.isSuspended === false);
+
+    // ✅ Extract org IDs
+    const orgIds = user.organizations.map((entry) => entry.org);
+
+    // ✅ Fetch full org info from Org collection
+    const orgDetails = await Org.find({ _id: { $in: orgIds }, isSuspended: false })
+      .select("name contactEmail contactPhone contactName address orgCity orgState orgCountry timezone modules billingPlan isActive createdBy createdAt updatedAt")
+      .lean();
+
+    // ✅ Build enriched response combining org metadata + user-specific values
+    const enrichedOrgs = user.organizations.map((entry) => {
+      const orgInfo = orgDetails.find((org) => org._id.toString() === entry.org.toString());
+
+      if (!orgInfo) return null; // skip suspended or missing orgs
+
+      return {
+        orgId: orgInfo._id,
+        name: orgInfo.name,
+        contactEmail: orgInfo.contactEmail,
+        contactPhone: orgInfo.contactPhone,
+        location: {
+          city: orgInfo.orgCity,
+          state: orgInfo.orgState,
+          country: orgInfo.orgCountry,
+        },
+        modules: orgInfo.modules,
+        timezone: orgInfo.timezone,
+        billingPlan: orgInfo.billingPlan,
+        isActive: orgInfo.isActive,
+        createdAt: orgInfo.createdAt,
+        updatedAt: orgInfo.updatedAt,
+        createdBy: orgInfo.createdBy,
+
+        // 🧠 Embedded org-specific user data
+        role: entry.role,
+        employeeId: entry.employeeId,
+        permissions: entry.permissions,
+        jobTitle: entry.jobTitle,
+        token: entry.token,
+        currentActive: entry.CurrentActive,
+      };
+    }).filter(Boolean); // remove nulls if orgInfo was missing
 
     res.status(200).json({
       message: "Organizations fetched successfully",
-      organizations,
+      organizations: enrichedOrgs,
     });
   } catch (error) {
     console.error("Error fetching organizations:", error);
     res.status(500).json({ error: "Failed to get organizations" });
   }
 };
+
 
 
 

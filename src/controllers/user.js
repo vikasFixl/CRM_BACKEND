@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import transporter from "../../config/nodemailer.config.js";
+import jwt from "jsonwebtoken";
 import { sendEmail } from "../../config/nodemailer.config.js";
 import {
   generateGlobalToken,
@@ -19,9 +19,7 @@ import User from "../models/userModel.js";
 import Org from "../models/OrgModel.js";
 import Employee from "../models/employeeModel.js";
 
-
 dotenv.config();
-
 
 // global use variables
 const isProd = process.env.NODE_ENV === "production";
@@ -32,24 +30,28 @@ export const login = async (req, res) => {
   const { email, password } = req.body || {};
 
   // Check if fields are empty
-if (!email.trim() || !password.trim()) {
-  return res.status(400).json({ message: "Please enter email and password" });
-}
+  if (!email.trim() || !password.trim()) {
+    return res.status(400).json({ message: "Please enter email and password" });
+  }
 
-// Email validation regex
+  // Email validation regex
 
-if (!emailRegex.test(email)) {
-  return res.status(400).json({ message: "Invalid email address" });
-}
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: "Invalid email address" });
+  }
 
   try {
-    const user = await User.findOne({ email: email.trim().toLowerCase() }).select("+isSuspended");
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+    }).select("+isSuspended");
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
     }
 
-    if(user.isSuspended==true){
-      return res.status(400).json({ message: "this account is suspended contact admin" });
+    if (user.isSuspended == true) {
+      return res
+        .status(400)
+        .json({ message: "this account is suspended contact admin" });
     }
 
     // Check login attempts
@@ -70,22 +72,45 @@ if (!emailRegex.test(email)) {
     // Reset login attempts on successful login
     user.loginAttempts = 0;
     user.lastLogin = new Date();
-   user.isDeleted = false;
-    
+    user.isDeleted = false;
+
     user.isActive = true;
     user.deletedAt = null; // Optional audit field
-   
+
     await user.save();
 
+ 
+
+    // ✅ Find the active org entry inside the user's organizations array
+    const activeOrgEntry = user.organizations.find(
+      (orgEntry) => orgEntry.CurrentActive === true
+    );
+// console.log("activeOrgEntry", activeOrgEntry);
+    let org = null;
+    let orgToken = null;
+    // ✅ Generate org token using user-org-level fields
+    const orgPayload = {
+      userId: user._id,
+      orgId: activeOrgEntry.org,
+      employeeId: activeOrgEntry.employeeId,
+      role: activeOrgEntry.role,
+      permissions: activeOrgEntry.permissions,
+    };
+    // console.log("orgPayload", orgPayload);
+
+    if (activeOrgEntry) {
+      // Optional: fetch org details if needed
+      org = await Org.findById(activeOrgEntry.org)
+        .select("name contactEmail _id")
+        .lean();
+
+      orgToken = generateOrgToken(orgPayload);
+
+      activeOrgEntry.token = orgToken;
+      await user.save();
+    }
     
-   // Find active organization from user's organizations
-const activeOrgEntry = user.organizations.find(org => org.CurrentActive === true);
-
-let org = null;
-if (activeOrgEntry) {
-  org = await Org.findById(activeOrgEntry.org).select("name contactEmail _id").lean();
-}
-
+    const accessToken = generateGlobalToken(user);
 
     const responseData = {
       id: user._id,
@@ -101,23 +126,26 @@ if (activeOrgEntry) {
       orgId: org?._id || null,
     };
 
-    const accessToken = generateGlobalToken(user, { expiresIn: "7d" });
+    // const orgtoken=generateOrgToken(userId, orgId, employeeId, role, permissions);
 
     // res.cookie("token", accessToken, {
     //   httpOnly: isProd, // true in production for security isprod defined at top
     //   secure: isProd, // ensures cookie is only sent over HTTPS
     // sameSite: 'none'
 
-// ,
-//  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-//     });
-
+    // ,
+    //  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    //     });
+    // Decode it to get `exp` (in seconds)
+    const { exp } = jwt.decode(accessToken);
     res.status(200).json({
       message: "You have logged in successfully",
       success: true,
       code: 200,
       data: responseData,
+      orgtoken: orgToken,
       token: accessToken,
+      exp: exp * 1000,
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -132,7 +160,9 @@ export const signup = async (req, res) => {
   try {
     const result = signupSchema.safeParse(req.body);
     if (!result.success) {
-      return res.status(400).json({ errors: result.error.errors.map((err) => err.message) }); 
+      return res
+        .status(400)
+        .json({ errors: result.error.errors.map((err) => err.message) });
     }
 
     const data = result.data;
@@ -157,23 +187,25 @@ export const signup = async (req, res) => {
     });
     await user.save();
 
-    const accessToken = generateGlobalToken(user, { expiresIn: "7d" });
+    const accessToken = generateGlobalToken(user);
 
     // res.cookie("token", accessToken, {
-    //   httpOnly: isProd,   
+    //   httpOnly: isProd,
     //   secure: isProd,
     // sameSite: 'none', maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-    // });
+    // Decode it to get `exp` (in seconds)
+    const { exp } = jwt.decode(accessToken);
     res.status(201).json({
       message: "You have signed up successfully",
       success: true,
       code: 201,
-      user: {       
+      user: {
         id: user._id,
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
-      role: user.role,
+        role: user.role,
         token: accessToken,
+        exp: exp * 1000,
       },
     });
   } catch (error) {
@@ -192,39 +224,24 @@ export const logout = async (req, res) => {
 
     // 🧹 Optionally: Explicitly overwrite the cookie with empty string
     res.cookie("token", "", {
-      httpOnly:isProd,
+      httpOnly: isProd,
       secure: isProd,
-    sameSite: 'none'
-
-
-
-
-,
+      sameSite: "none",
 
       maxAge: 0,
     });
     res.cookie("orgtoken", "", {
-      httpOnly:isProd,
+      httpOnly: isProd,
       secure: isProd,
-    sameSite: 'none'
-
-
-
-
-,
+      sameSite: "none",
 
       maxAge: 0,
     });
 
     res.cookie("Token", "", {
-      httpOnly:isProd,
+      httpOnly: isProd,
       secure: isProd,
-    sameSite: 'none'
-
-
-
-
-,
+      sameSite: "none",
 
       maxAge: 0,
     });
@@ -233,40 +250,23 @@ export const logout = async (req, res) => {
     res.clearCookie("Token", "", {
       httpOnly: isProd,
       secure: isProd,
-    sameSite: 'none'
+      sameSite: "none",
 
-
-
-,
       maxAge: 0,
-
-
     });
     res.clearCookie("orgToken", "", {
       httpOnly: isProd,
       secure: isProd,
-    sameSite: 'none'
+      sameSite: "none",
 
-
-
-
-,
-
-      maxAge: 0
-
+      maxAge: 0,
     });
     res.clearCookie("token", "", {
       httpOnly: isProd,
       secure: isProd,
-    sameSite: 'none'
+      sameSite: "none",
 
-
-
-
-,
-
-      maxAge: 0
-
+      maxAge: 0,
     });
 
     // ⚠️ req.cookies still shows the old token, it won’t change until the next request
@@ -287,9 +287,9 @@ export const forgotPassword = async (req, res) => {
   if (!email) {
     return res.status(422).json({ error: "Email is required" });
   }
-if (!emailRegex.test(email)) {
-  return res.status(400).json({ message: "Invalid email address" });
-}
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: "Invalid email address" });
+  }
   try {
     const user = await User.findOne({ email });
     if (!user) {
@@ -304,12 +304,12 @@ if (!emailRegex.test(email)) {
 
     await user.save();
 
-const  resetUrl=`${"http://localhost:3000"}/reset-password/${token}`
+    const resetUrl = `${"http://localhost:3000"}/reset-password/${token}`;
 
-    const html= await resetPasswordTemplate(user.firstName,resetUrl)
+    const html = await resetPasswordTemplate(user.firstName, resetUrl);
 
     // Send reset email (mocked)
-     try {
+    try {
       await sendEmail(email, "Password Reset Request", html);
       return res.status(200).json({
         success: true,
@@ -322,9 +322,8 @@ const  resetUrl=`${"http://localhost:3000"}/reset-password/${token}`
       return res.status(500).json({ error: "Failed to send reset email" });
     }
   } catch (error) {
-    console.log(error,"email error");
+    console.log(error, "email error");
     return res.status(500).json({ error: "Server error" });
-    
   }
 };
 
@@ -333,17 +332,19 @@ export const resetPassword = async (req, res) => {
   const { password, token } = req.body;
   // console.log(token);
   try {
-  const user = await User.findOne({
-  resetPasswordToken: token,
-  resetPasswordExpires: { $gt: Date.now() },
-})
-
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
 
     if (!user)
-      return res.status(422).json({ error: "Password reset link expired. Try again." });
+      return res
+        .status(422)
+        .json({ error: "Password reset link expired. Try again." });
 
     // console.log( "before update", user);
     user.password = password;
+    user.loginAttempts = 0;
     user.resetPasswordExpires = undefined;
     user.resetPasswordToken = undefined;
     await user.save();
@@ -356,25 +357,23 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-
 // GET  user profile
 export const getUser = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const user = await User.findById(userId).select("-password")
+    const user = await User.findById(userId).select("-password");
     res.status(200).json({
       user,
       success: true,
       code: 200,
       message: "User fetched successfully",
-    })
+    });
   } catch (error) {
     res.status(409).json({ message: error.message });
   }
 };
 
 // admin route to view all users
-
 
 // get all organization users
 export const getAllusers = async (req, res) => {
@@ -441,14 +440,11 @@ export const deleteUser = async (req, res) => {
     }
     console.log(user);
 
-  
-
     // Soft delete the user
     user.isDeleted = true;
-  
+
     user.isActive = false;
     user.deletedAt = new Date(); // Optional audit field
-   
 
     await user.save();
 
@@ -458,8 +454,6 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
-
 
 export const updateUser = async (req, res) => {
   const { id: _id } = req.params;
@@ -499,8 +493,10 @@ export const updateProfileimage = async (req, res) => {
   try {
     const url = `${req.protocol}://${req.get("host")}`;
     const _id = req.params.id;
-    if(!mongoose.Types.ObjectId.isValid(_id)) return res.status(404).send("No User with that ID.");
-    if(!req.file) return res.status(400).json({ message: "Please upload a file" });
+    if (!mongoose.Types.ObjectId.isValid(_id))
+      return res.status(404).send("No User with that ID.");
+    if (!req.file)
+      return res.status(400).json({ message: "Please upload a file" });
     const image = await User.findByIdAndUpdate(
       _id,
       { profilePhoto: `${url}/public/user/${req.file.filename}` },
@@ -517,8 +513,7 @@ export const updateProfileimage = async (req, res) => {
   }
 };
 
-// note email invitation is handlied in org controller 
-
+// note email invitation is handlied in org controller
 
 // export const email = async (req, res) => {
 //   const { userName, from, to, link } = req.body;
@@ -536,7 +531,7 @@ export const updateProfileimage = async (req, res) => {
 //               ${userName} has invited you to join <span style="font-size: 20px; font-weight: 600">CRM</span>
 //             </p>
 //             <p style="margin: 1rem auto; font-size: 13px">
-//               We're thrilled to invite you to join our 
+//               We're thrilled to invite you to join our
 //               <span style="color: blue">CRM</span>,
 //               designed to supercharge our team collaboration and streamline our workflow.
 //             </p>
@@ -550,7 +545,7 @@ export const updateProfileimage = async (req, res) => {
 //             </p>
 //             <div style="font-size: 12px; text-align: left">
 //               <strong>Note:</strong>
-//               <span>This invitation was intended for 
+//               <span>This invitation was intended for
 //                 <span style="color: blue; font-weight: 600">${to}</span>.
 //                 If you were not expecting this invitation, you can ignore this email.
 //               </span>
