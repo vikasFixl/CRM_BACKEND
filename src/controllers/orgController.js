@@ -22,6 +22,7 @@ const generateEmployeeId = () => {
   return `EMP_${short}`; // like EMP_1F2A9C
 };
 const isProd = process.env.NODE_ENV === "production";
+const frontendUrl =process.env.FRONTEND_URL;
 
 export const createOrganization = async (req, res) => {
   try {
@@ -390,6 +391,44 @@ export const getUserOrganizations = async (req, res) => {
   }
 };
 
+// return all user in org
+export const getAllUserInOrg = async (req, res) => {
+  try {
+    const orgId = req.orgUser.orgId;
+    console.log("orgId", orgId);
+
+    const org = await Org.findById(orgId).lean();
+    if (!org) {
+      return res.status(404).json({ message: "Organization not found" });
+    }
+
+    // Filter out Admins
+    const nonAdminUsers = org.users.filter(user => user.role !== "OrgAdmin");
+
+    // Fetch user details from User model
+    const userIds = nonAdminUsers.map(user => user.userId);
+
+    const users = await User.find({ _id: { $in: userIds } })
+      .select("firstName lastName email phone jobTitle")
+      .lean();
+
+    // Merge additional org-specific data (like employeeId, joinedAt)
+    const enrichedUsers = users.map(user => {
+      const orgInfo = nonAdminUsers.find(u => u.userId.toString() === user._id.toString());
+      return {
+        ...user,
+        role: orgInfo.role,
+        employeeId: orgInfo.employeeId,
+        joinedAt: orgInfo.joinedAt,
+      };
+    });
+
+    res.status(200).json({ message: "Users fetched successfully", users: enrichedUsers });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 
 
@@ -656,7 +695,7 @@ export const CreateInvite = async (req, res) => {
     await invite.save();
     console.log("invite", invite);
     // Construct join link
-    const INVITE_LINK = `http://localhost:5173/accept-invite?token=${token}`;
+    const INVITE_LINK = `${frontendUrl}/accept-invite?token=${token}`;
  const html= await InviteEmailTemplate(organization.name,role,email,INVITE_LINK);
 
     // Send reset email (mocked)

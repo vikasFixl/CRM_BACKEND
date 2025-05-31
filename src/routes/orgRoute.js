@@ -10,6 +10,7 @@ import {
   createOrganization,
   declineInvite,
   DeleteOrganizationUser,
+  getAllUserInOrg,
   // getAllOrganizations,
   getOrganizationBYId,
   getOrganizationInvite,
@@ -89,6 +90,7 @@ Router.route("/:id").get(
 );
 // get user org where user is in
 Router.route("/user/all").get(isAuthenticated, getUserOrganizations);
+Router.route("/org/users").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]), getAllUserInOrg);
 
 // provides access token based on org
 Router.route("/switch").post(isAuthenticated, switchOrg);

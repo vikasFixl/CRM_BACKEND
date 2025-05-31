@@ -1,3 +1,5 @@
+
+
 export function generateWelcomeEmail() {
   return `
  <!DOCTYPE html>

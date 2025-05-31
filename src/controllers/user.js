@@ -24,6 +24,8 @@ dotenv.config();
 // global use variables
 const isProd = process.env.NODE_ENV === "production";
 
+
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const login = async (req, res) => {
@@ -304,7 +306,7 @@ export const forgotPassword = async (req, res) => {
 
     await user.save();
 
-    const resetUrl = `${"http://localhost:3000"}/reset-password/${token}`;
+    const resetUrl = `${frontendUrl}/reset-password/${token}`;
 
     const html = await resetPasswordTemplate(user.firstName, resetUrl);
 
