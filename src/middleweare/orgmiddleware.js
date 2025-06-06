@@ -18,9 +18,7 @@ export const authenticateOrgToken = (allowedRoles = []) => {
      
       const decoded = jwt.verify(token, ORGSECRET);
 
-      if (!allowedRoles.includes(decoded.role)) {
-        return res.status(403).json({ message: "You are not authorized" });
-      }
+    
 
       req.orgUser = {
         userId: decoded.userId,

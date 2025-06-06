@@ -13,6 +13,7 @@ import { InviteEmailTemplate } from "../utils/helperfuntions/emailtemplate.js";
 import jwt from "jsonwebtoken";
 
 
+
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
 // import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
 
@@ -325,71 +326,65 @@ const {exp} = jwt.decode(orgtoken);
 //   }
 // };
 
-// get user organizations all (whether he is admin or not)
 
 
+
+// returns all the organizations that the user is part of
 export const getUserOrganizations = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // ✅ Get user with embedded org info
     const user = await User.findById(userId).lean();
 
     if (!user || !user.organizations || user.organizations.length === 0) {
       return res.status(404).json({ message: "No organizations found for this user." });
     }
 
-    // ✅ Extract org IDs
     const orgIds = user.organizations.map((entry) => entry.org);
 
-    // ✅ Fetch full org info from Org collection
-    const orgDetails = await Org.find({ _id: { $in: orgIds }, isSuspended: false })
-      .select("name contactEmail contactPhone contactName address orgCity orgState orgCountry timezone modules billingPlan isActive createdBy createdAt updatedAt")
+    const orgDetails = await Org.find(
+      { _id: { $in: orgIds }, isSuspended: false }
+    )
+      .select("name contactEmail createdAt") // fetch minimal fields
       .lean();
 
-    // ✅ Build enriched response combining org metadata + user-specific values
-    const enrichedOrgs = user.organizations.map((entry) => {
-      const orgInfo = orgDetails.find((org) => org._id.toString() === entry.org.toString());
+    const enrichedOrgs = await Promise.all(
+      user.organizations.map(async (entry) => {
+        const orgInfo = orgDetails.find(
+          (org) => org._id.toString() === entry.org.toString()
+        );
 
-      if (!orgInfo) return null; // skip suspended or missing orgs
+        if (!orgInfo) return null;
 
-      return {
-        orgId: orgInfo._id,
-        name: orgInfo.name,
-        contactEmail: orgInfo.contactEmail,
-        contactPhone: orgInfo.contactPhone,
-        location: {
-          city: orgInfo.orgCity,
-          state: orgInfo.orgState,
-          country: orgInfo.orgCountry,
-        },
-        modules: orgInfo.modules,
-        timezone: orgInfo.timezone,
-        billingPlan: orgInfo.billingPlan,
-        isActive: orgInfo.isActive,
-        createdAt: orgInfo.createdAt,
-        updatedAt: orgInfo.updatedAt,
-        createdBy: orgInfo.createdBy,
+        // Count total users in this org
+        const totalUsers = await User.countDocuments({
+          organizations: {
+            $elemMatch: { org: orgInfo._id }
+          }
+        });
 
-        // 🧠 Embedded org-specific user data
-        role: entry.role,
-        employeeId: entry.employeeId,
-        permissions: entry.permissions,
-        jobTitle: entry.jobTitle,
-        token: entry.token,
-        currentActive: entry.CurrentActive,
-      };
-    }).filter(Boolean); // remove nulls if orgInfo was missing
+        return {
+          orgId: orgInfo._id,
+          orgName: orgInfo.name,
+          contactEmail: orgInfo.contactEmail,
+          joinedAt: orgInfo.createdAt, // or use a `joinedAt` field in user.organizations if exists
+          role: entry.role,
+          employeeId: entry.employeeId,
+          totalUsers,
+        };
+      })
+    );
 
     res.status(200).json({
       message: "Organizations fetched successfully",
-      organizations: enrichedOrgs,
+      organizations: enrichedOrgs.filter(Boolean),
     });
   } catch (error) {
     console.error("Error fetching organizations:", error);
     res.status(500).json({ error: "Failed to get organizations" });
   }
 };
+
 
 // return all user in org
 export const getAllUserInOrg = async (req, res) => {
@@ -435,32 +430,88 @@ export const getAllUserInOrg = async (req, res) => {
 export const getOrganizationBYId = async (req, res) => {
   try {
     const organizationId = req.params.id;
-    // this is form middlwware
-    const owner = req.orgUser.userId;
+    const currentLoggedUserId = req.user.userId;
+    console.log("organizationId", organizationId);
+    console.log("currentLoggedUserId", currentLoggedUserId);
 
     if (!organizationId) {
       return res.status(400).json({ message: "Organization ID is required" });
     }
 
-    const organization = await Org.findOne({
-      _id: organizationId,
-      createdBy: owner,
-    }).populate({
-      path: "users.userId",
-      select: "firstName lastName email phone jobTitle employeeId",
-    });
+    // Fetch organization with populated user info and billingPlan (if needed)
+    const organization = await Org.findOne({ _id: organizationId })
+      .populate({
+        path: "users.userId",
+        select: "firstName lastName email phone jobTitle employeeId OrgLogo",
+      })
+      .lean(); // convert to plain JS object for easier manipulation
 
     if (!organization) {
       return res.status(404).json({ message: "Organization not found" });
     }
-    res
-      .status(200)
-      .json({ message: "Organization fetched successfully", organization });
+
+    // Check if current user is the owner (createdBy)
+    const isOwner = organization.createdBy.toString() === currentLoggedUserId;
+
+    // Build a custom response object with only allowed fields
+    const customOrg = {
+      id: organization._id,
+      OrgLogo: organization.OrgLogo,
+      name: organization.name,
+      contactEmail: organization.contactEmail,
+      contactPhone: organization.contactPhone,
+      contactName: organization.contactName,
+      address: organization.address,
+      orgCity: organization.orgCity,
+      orgState: organization.orgState,
+      orgCountry: organization.orgCountry,
+      timezone: organization.timezone,
+      modules: organization.modules,
+      users: organization.users.map((u) => ({
+        id: u.userId._id,
+        firstName: u.userId.firstName,
+        lastName: u.userId.lastName,
+        email: u.userId.email,
+        phone: u.userId.phone,
+        jobTitle: u.userId.jobTitle,
+        employeeId: u.employeeId,
+        role: u.role,
+        joinedAt: u.joinedAt,
+      })),
+    };
+
+    if (isOwner) {
+      // If owner, include sensitive fields like billing plan info
+      const billingPlan = await BillingPlan.findById(organization.billingPlan).lean();
+      customOrg.billingPlan = billingPlan
+        ? {
+            id: billingPlan._id,
+            name: billingPlan.name,
+            price: billingPlan.price,
+            features: billingPlan.features,
+            maxUsers: billingPlan.maxUsers,
+             billingCycle: billingPlan.billingCycle,
+            maxStorageGB: billingPlan.maxStorageGB,
+            trialDays: billingPlan.trialDays,
+            permissions: billingPlan.permissions,
+     
+          }
+        : null;
+      // Add any other sensitive info you want owners to see
+    }
+
+    return res.status(200).json({
+      message: "Organization fetched successfully",
+      organization: customOrg,
+      isOwner,
+    });
   } catch (error) {
     console.error("Error in getOrganizationBYId:", error);
-    res.status(500).json({ error: "Failed to get organization" });
+    return res.status(500).json({ error: "Failed to get organization" });
   }
 };
+
+
 
 export const UpdateOrganizationUser = async (req, res) => {
   try {
@@ -622,6 +673,7 @@ export const CreateInvite = async (req, res) => {
     const orgId = req.orgUser.orgId;
     const {  userId } = req.user;
     console.log("orgId", orgId);
+    console.log("req.body", req.body);
 
     // Validate org
 

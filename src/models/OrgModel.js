@@ -7,7 +7,8 @@ const OrganizationSchema = new Schema(
     name: { type: String, required: true, trim: true, unique: true },
 
     OrgLogo: {
-      url: { type: String, trim: true },
+      url: { type: String, trim: true ,default:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBix1vtUBBRZ6pP3ASr0573t9-UPW8D5eiNA&s" },
+      
       public_id: { type: String, trim: true },
     },
 

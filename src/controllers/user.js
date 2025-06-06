@@ -24,7 +24,7 @@ dotenv.config();
 // global use variables
 const isProd = process.env.NODE_ENV === "production";
 
-
+const frontendUrl=process.env.FRONTEND_URL
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -121,7 +121,7 @@ export const login = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
-      role: user.role,
+      
       phone: user.phone,
       orgName: org?.name || null,
       orgEmail: org?.contactEmail || null,
@@ -342,7 +342,7 @@ export const resetPassword = async (req, res) => {
     if (!user)
       return res
         .status(422)
-        .json({ error: "Password reset link expired. Try again." });
+        .json({ message: "Password reset link expired.generate new link" });
 
     // console.log( "before update", user);
     user.password = password;
@@ -353,9 +353,10 @@ export const resetPassword = async (req, res) => {
 
     // console.log( "after update", user);
 
-    res.json({ message: "Password updated successfully" });
+    res.status(200).json({ message: "Password reset successfully" });
   } catch (err) {
-    res.status(500).json({ error: "Server error", details: err.message });
+    console.log(err);
+    res.status(500).json({ message: "Server error", details: err.message });
   }
 };
 
@@ -363,17 +364,55 @@ export const resetPassword = async (req, res) => {
 export const getUser = async (req, res) => {
   try {
     const userId = req.user.userId;
+
     const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        code: 404,
+        message: "User not found",
+      });
+    }
+
+    // Pick safe fields to send to frontend
+    const sanitizedUser = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive,
+      hasReceivedWelcomeEmail: user.hasReceivedWelcomeEmail,
+      organizations: user.organizations.map((org) => ({
+        org: org.org,
+        CurrentActive: org.CurrentActive,
+        role: org.role,
+        employeeId: org.employeeId,
+        // Optional: include limited permissions if needed
+        // permissions: org.permissions?.map(p => ({
+        //   module: p.module,
+        //   actions: p.actions
+        // }))
+      })),
+    };
+
     res.status(200).json({
-      user,
+      user: sanitizedUser,
       success: true,
       code: 200,
       message: "User fetched successfully",
     });
   } catch (error) {
-    res.status(409).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Failed to fetch user profile",
+      error: error.message,
+    });
   }
 };
+
 
 // admin route to view all users
 
