@@ -173,7 +173,7 @@ export const updateFirm = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(_id))
     return res.status(404).send("No firm with that id.");
 
-  const parsed = firmUpdateValidationSchema.safeParse(req.body);
+  const parsed = firmValidationSchemae.safeParse(req.body);
   if (!parsed.success) {
     const errors = parsed.error.errors.map(e => e.message);
     return res.status(400).json({ success: false, code: 400, message: "Validation failed", errors });

@@ -49,7 +49,7 @@ const firmSchema = new mongoose.Schema(
     cinNo: { type: String },
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ORG",
+      ref: "Oraganization",
       required: true,
     },
   },
