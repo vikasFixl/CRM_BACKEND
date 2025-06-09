@@ -84,7 +84,7 @@ export const login = async (req, res) => {
     await user.save();
 
  // find user permisons from member
- 
+ if(user.currentOrganization){
  const member = await OrgMember.findOne({
   userId: user._id,
   organizationId: user.currentOrganization,
@@ -110,7 +110,7 @@ export const login = async (req, res) => {
 
       orgToken = generateOrgToken(orgPayload);
 
-    
+  }
     
     const accessToken = generateGlobalToken(user);
 
@@ -145,7 +145,7 @@ export const login = async (req, res) => {
       success: true,
       code: 200,
       data: responseData,
-      orgtoken: orgToken,
+      orgtoken: user.currentOrganization?orgToken:null,
       token: accessToken,
       exp: exp * 1000,
     });

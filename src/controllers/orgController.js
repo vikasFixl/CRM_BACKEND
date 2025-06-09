@@ -739,8 +739,10 @@ export const acceptInvite = async (req, res) => {
       status: "active",
     });
 
+    existingUser.currentOrganization = organization._id;
     // console.log("newmember", newmember);
     await newmember.save();
+
 
     // 8. Mark invite as accepted
     invite.status = "accepted";
