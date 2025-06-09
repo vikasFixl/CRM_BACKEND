@@ -8,22 +8,21 @@ import { RolePermission } from "../models/RolePermission.js";
 import { v4 as uuidv4 } from "uuid";
 import { generateOrgToken } from "../utils/generatetoken.js";
 import { OrganizationInvite } from "../models/OrganisationInviteModel.js";
-import { sendEmail} from "../../config/nodemailer.config.js"
+import { sendEmail } from "../../config/nodemailer.config.js";
 import { InviteEmailTemplate } from "../utils/helperfuntions/emailtemplate.js";
 import jwt from "jsonwebtoken";
-
-
+import { OrgMember } from "../models/OrganisationMemberSchema.js";
+import { ROLES } from "../enums/role.enums.js";
 
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
 // import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
-
 
 const generateEmployeeId = () => {
   const short = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6-char hex
   return `EMP_${short}`; // like EMP_1F2A9C
 };
 const isProd = process.env.NODE_ENV === "production";
-const frontendUrl =process.env.FRONTEND_URL;
+const frontendUrl = process.env.FRONTEND_URL;
 
 export const createOrganization = async (req, res) => {
   try {
@@ -34,12 +33,11 @@ export const createOrganization = async (req, res) => {
       contactPhone,
       contactName,
       address,
-       CurrentActive,
+
       orgCity,
       orgState,
       orgCountry,
     } = req.body;
-    
 
     // ✅ Validate required fields
     if (
@@ -56,9 +54,11 @@ export const createOrganization = async (req, res) => {
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
-
-
-
+    // find the user in the database
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
     // ✅ Check for duplicate organization
     const existingOrg = await Org.findOne({ name });
     if (existingOrg) {
@@ -84,7 +84,7 @@ export const createOrganization = async (req, res) => {
       address,
       orgCity,
       orgState,
-    
+
       orgCountry,
       createdBy: userId,
       updatedBy: userId,
@@ -110,67 +110,46 @@ export const createOrganization = async (req, res) => {
 
     await newBilling.save();
 
-    // ✅ Assign OrgAdmin role with permissions
     const role = "OrgAdmin";
-    const rolePermissions = await RolePermission.findOne({ role });
-    const permissions = rolePermissions ? rolePermissions.permissions : [];
-    // console.log("permissions", permissions);
+
+    const OrgAdminRole = await RolePermission.findOne({ role });
+    // console.log(OrgAdminRole);
 
     const employeeId = generateEmployeeId(savedOrg._id);
+
+    // add user to organization member schema
+    const orgmember = new OrgMember({
+      userId,
+      employeeId,
+      organizationId: savedOrg._id,
+      role: OrgAdminRole._id,
+    });
+
+    await orgmember.save();
     // ✅ OPTIONAL: Return org-scoped JWT token
     const orgtoken = generateOrgToken({
       userId,
       orgId: savedOrg._id,
       employeeId,
-      role,
-      permissions,
-    });
-    // ✅ Update organization users array
-    await Org.findByIdAndUpdate(savedOrg._id, {
-      $push: {
-        users: {
-          userId,
-          role,
-          employeeId,
-          joinedAt: new Date(),
-        },
-      },
+      role: OrgAdminRole.role,
+      permissions: OrgAdminRole.permissions,
     });
 
-    // ✅ Update user organizations array
-    await User.findByIdAndUpdate(userId, {
-      $push: {
-        organizations: {
-          org: savedOrg._id,
-          CurrentActive,
-          role,
-          permissions,
-          employeeId,
-          token: orgtoken,
-        },
-      },
-    });
+    // set user curret org
+    user.currentOrganization = savedOrg._id;
+    await user.save();
+    const { exp } = jwt.decode(orgtoken);
 
-    // console.log("orgtoken", orgtoken);
-    // console.log("employeeId", employeeId);
-
-    // res.cookie("orgtoken", orgtoken, {
-    //   httpOnly: isProd,
-    //   secure: isProd,
-    //   sameSite: "none",
-
-    //   maxAge: 1000 * 60 * 60 * 24, // 1 day
-    // });
-const {exp}=jwt.decode(orgtoken)
     return res.status(201).json({
       message: "Organization and Billing created successfully",
       orgId: savedOrg._id,
       employeeId,
       orgtoken: orgtoken,
-      expiresAt: exp*1000
+      expiresAt: exp * 1000,
     });
   } catch (error) {
     console.error("Org creation failed:", error);
+
     return res.status(500).json({
       message: "Error creating organization and billing",
       error: error.message,
@@ -180,56 +159,61 @@ const {exp}=jwt.decode(orgtoken)
 // switchOrgController.js
 export const switchOrg = async (req, res) => {
   try {
-    const userId = req.user.userId; // from global JWT
+    const userId = req.user.userId; // from JWT
     const orgId = req.body.orgId;
 
     if (!orgId) {
       return res.status(400).json({ message: "No orgId provided" });
     }
-
+    // find user
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    const orgIndex = user.organizations.findIndex(
-      (o) => o.org.toString() === orgId
-    );
+    // Check if the user is a member of this organization
+    const member = await OrgMember.findOne({
+      userId,
+      organizationId: orgId,
+      status: "active",
+    })
+      .populate("role") // populate role name + permissions
+      .lean();
 
-    if (orgIndex === -1) {
+    console.log("member", member);
+    if (!member) {
       return res
         .status(403)
         .json({ message: "User not part of this organization" });
     }
 
-    // Set all currentActive to false
-    user.organizations.forEach((org) => {
-      org.CurrentActive = false;
-    });
+    // Optionally: Update user's current active org info in DB if needed
 
-    // Set currentActive = true for selected org
-    user.organizations[orgIndex].CurrentActive = true;
-
-    // Save changes
-    await user.save();
-
-    const activeOrg = user.organizations[orgIndex];
-// console.log("activeOrg", activeOrg);
-
-    // Generate new token
+    // Generate new token scoped to the selected org
     const orgtoken = generateOrgToken({
       userId,
       orgId,
-      employeeId: activeOrg.employeeId,
-      role: activeOrg.role,
-      permissions: activeOrg.permissions,
+      employeeId: member.employeeId,
+      role: member.role?.role,
+      permissions:
+        member.permissionsOverride?.length > 0
+          ? member.permissionsOverride
+          : member.role?.permissions || [],
     });
-const {exp} = jwt.decode(orgtoken);
-    return res.status(200).json({ orgtoken, expat: exp*1000 });
+    user.currentOrganization = orgId;
+    await user.save();
+
+    const { exp } = jwt.decode(orgtoken);
+
+    return res.status(200).json({
+      orgtoken,
+      expat: exp * 1000, // optional: expiration in ms
+    });
   } catch (err) {
-    console.error("Switch Org Error", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Switch Org Error:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 // export const AddUserToOrganization = async (req, res) => {
 //   try {
@@ -309,7 +293,6 @@ const {exp} = jwt.decode(orgtoken);
 //       permissions: permissions,
 //     };
 
-  
 //     user.organizations.push(organizationObject);
 //     await user.save();
 
@@ -326,134 +309,123 @@ const {exp} = jwt.decode(orgtoken);
 //   }
 // };
 
-
-
-
 // returns all the organizations that the user is part of
+
+// return all user in org
+
 export const getUserOrganizations = async (req, res) => {
   try {
-    const userId = req.user.userId;
-
-    const user = await User.findById(userId).lean();
-
-    if (!user || !user.organizations || user.organizations.length === 0) {
-      return res.status(404).json({ message: "No organizations found for this user." });
-    }
-
-    const orgIds = user.organizations.map((entry) => entry.org);
-
-    const orgDetails = await Org.find(
-      { _id: { $in: orgIds }, isSuspended: false }
-    )
-      .select("name contactEmail createdAt") // fetch minimal fields
+    const userId = req.user.userId; // assuming this is set by auth middleware
+    // fetch user org form the member model
+    const memberships = await OrgMember.find({ userId, status: "active" })
+      .populate("organizationId") // populate org details
+      .populate("role") // populate role details
       .lean();
 
-    const enrichedOrgs = await Promise.all(
-      user.organizations.map(async (entry) => {
-        const orgInfo = orgDetails.find(
-          (org) => org._id.toString() === entry.org.toString()
-        );
-
-        if (!orgInfo) return null;
-
-        // Count total users in this org
-        const totalUsers = await User.countDocuments({
-          organizations: {
-            $elemMatch: { org: orgInfo._id }
-          }
-        });
-
-        return {
-          orgId: orgInfo._id,
-          orgName: orgInfo.name,
-          contactEmail: orgInfo.contactEmail,
-          joinedAt: orgInfo.createdAt, // or use a `joinedAt` field in user.organizations if exists
-          role: entry.role,
-          employeeId: entry.employeeId,
-          totalUsers,
-        };
-      })
-    );
+    console.log("memberships", memberships);
+    const organizations = memberships.map((member) => ({
+      orgId: member.organizationId._id,
+      orgName: member.organizationId.name,
+      orgLogo: member.organizationId.logo,
+      orgActive: member.organizationId.isActive,
+      employeeId: member.employeeId,
+      role: member.role.role,
+      permissions:
+        member.permissionsOverride?.length > 0
+          ? member.permissionsOverride
+          : member.role.permissions, // use override if exists
+    }));
 
     res.status(200).json({
+      success: true,
+      code: 200,
+      organizations,
       message: "Organizations fetched successfully",
-      organizations: enrichedOrgs.filter(Boolean),
     });
   } catch (error) {
-    console.error("Error fetching organizations:", error);
-    res.status(500).json({ error: "Failed to get organizations" });
+    res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Failed to fetch organizations",
+      error: error.message,
+    });
   }
 };
 
-
-// return all user in org
 export const getAllUserInOrg = async (req, res) => {
   try {
+    // orgid from middleware
     const orgId = req.orgUser.orgId;
     console.log("orgId", orgId);
 
-    const org = await Org.findById(orgId).lean();
-    if (!org) {
-      return res.status(404).json({ message: "Organization not found" });
-    }
-
-    // Filter out Admins
-    const nonAdminUsers = org.users.filter(user => user.role !== "OrgAdmin");
-
-    // Fetch user details from User model
-    const userIds = nonAdminUsers.map(user => user.userId);
-
-    const users = await User.find({ _id: { $in: userIds } })
-      .select("firstName lastName email phone jobTitle")
+    // Get all members in the org excluding OrgAdmins
+    const members = await OrgMember.find({
+      organizationId: orgId,
+      status: "active",
+    })
+      .populate("userId", "firstName lastName email phone")
+      .populate("role") // Optional: you can populate permissions too if needed
       .lean();
 
-    // Merge additional org-specific data (like employeeId, joinedAt)
-    const enrichedUsers = users.map(user => {
-      const orgInfo = nonAdminUsers.find(u => u.userId.toString() === user._id.toString());
-      return {
-        ...user,
-        role: orgInfo.role,
-        employeeId: orgInfo.employeeId,
-        joinedAt: orgInfo.joinedAt,
-      };
-    });
+    console.log("members at users", members);
+    const nonAdminUsers = members.filter(
+      (member) => member.role?.role !== "OrgAdmin"
+    );
 
-    res.status(200).json({ message: "Users fetched successfully", users: enrichedUsers });
+    const enrichedUsers = nonAdminUsers.map((member) => ({
+      _id: member.userId._id,
+      firstName: member.userId.firstName,
+      lastName: member.userId.lastName,
+      email: member.userId.email,
+      phone: member.userId.phone,
+
+      role: member.role?.role,
+      employeeId: member.employeeId,
+      joinedAt: member.joinedAt,
+    }));
+
+    res.status(200).json({
+      message: "Users fetched successfully",
+      users: enrichedUsers,
+    });
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
-
-
 export const getOrganizationBYId = async (req, res) => {
   try {
     const organizationId = req.params.id;
     const currentLoggedUserId = req.user.userId;
-    console.log("organizationId", organizationId);
-    console.log("currentLoggedUserId", currentLoggedUserId);
 
     if (!organizationId) {
       return res.status(400).json({ message: "Organization ID is required" });
     }
 
-    // Fetch organization with populated user info and billingPlan (if needed)
-    const organization = await Org.findOne({ _id: organizationId })
-      .populate({
-        path: "users.userId",
-        select: "firstName lastName email phone jobTitle employeeId OrgLogo",
-      })
-      .lean(); // convert to plain JS object for easier manipulation
+    // 1. Fetch the organization
+    const organization = await Org.findById(organizationId).lean();
 
     if (!organization) {
       return res.status(404).json({ message: "Organization not found" });
     }
 
-    // Check if current user is the owner (createdBy)
+    // 2. Fetch all members for the org and populate user + role
+    const members = await OrgMember.find({ organizationId })
+      .populate({
+        path: "userId",
+        select: "firstName lastName email phone  OrgLogo",
+      })
+      .populate({
+        path: "role",
+        select: "role", // adjust as needed
+      })
+      .lean();
+
+    // 3. Check if current user is the creator
     const isOwner = organization.createdBy.toString() === currentLoggedUserId;
 
-    // Build a custom response object with only allowed fields
+    // 4. Build sanitized org response
     const customOrg = {
       id: organization._id,
       OrgLogo: organization.OrgLogo,
@@ -467,22 +439,25 @@ export const getOrganizationBYId = async (req, res) => {
       orgCountry: organization.orgCountry,
       timezone: organization.timezone,
       modules: organization.modules,
-      users: organization.users.map((u) => ({
-        id: u.userId._id,
-        firstName: u.userId.firstName,
-        lastName: u.userId.lastName,
-        email: u.userId.email,
-        phone: u.userId.phone,
-        jobTitle: u.userId.jobTitle,
-        employeeId: u.employeeId,
-        role: u.role,
-        joinedAt: u.joinedAt,
+      users: members.map((m) => ({
+        id: m.userId._id,
+        firstName: m.userId.firstName,
+        lastName: m.userId.lastName,
+        email: m.userId.email,
+        phone: m.userId.phone,
+    
+        OrgLogo: m.userId.OrgLogo,
+        employeeId: m.employeeId,
+        role: m.role?.role || "N/A",
+        joinedAt: m.joinedAt,
       })),
     };
 
+    // 5. If owner, include billing plan
     if (isOwner) {
-      // If owner, include sensitive fields like billing plan info
-      const billingPlan = await BillingPlan.findById(organization.billingPlan).lean();
+      const billingPlan = await BillingPlan.findById(
+        organization.billingPlan
+      ).lean();
       customOrg.billingPlan = billingPlan
         ? {
             id: billingPlan._id,
@@ -490,14 +465,12 @@ export const getOrganizationBYId = async (req, res) => {
             price: billingPlan.price,
             features: billingPlan.features,
             maxUsers: billingPlan.maxUsers,
-             billingCycle: billingPlan.billingCycle,
+            billingCycle: billingPlan.billingCycle,
             maxStorageGB: billingPlan.maxStorageGB,
             trialDays: billingPlan.trialDays,
             permissions: billingPlan.permissions,
-     
           }
         : null;
-      // Add any other sensitive info you want owners to see
     }
 
     return res.status(200).json({
@@ -510,8 +483,6 @@ export const getOrganizationBYId = async (req, res) => {
     return res.status(500).json({ error: "Failed to get organization" });
   }
 };
-
-
 
 export const UpdateOrganizationUser = async (req, res) => {
   try {
@@ -588,6 +559,8 @@ export const UpdateOrganizationUser = async (req, res) => {
 
 // Delete a user from an organization
 
+
+
 export const DeleteOrganizationUser = async (req, res) => {
   try {
     const { id } = req.params; // User ID to be removed
@@ -597,36 +570,17 @@ export const DeleteOrganizationUser = async (req, res) => {
       return res.status(400).json({ error: "User ID is required" });
     }
 
-    // Fetch the user
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Check if user belongs to this organization
-    const orgEntry = user.organizations.find(
-      (orgObj) => orgObj.org.toString() === orgId.toString()
-    );
-
-    if (!orgEntry) {
+    // Find membership document for user and org
+    const membership = await OrgMember.findOne({ userId: id, organizationId: orgId });
+    if (!membership) {
       return res.status(403).json({
         error: "User does not belong to this organization",
       });
     }
 
-    // Remove org entry from user's organizations array
-    await User.findByIdAndUpdate(id, {
-      $pull: { organizations: { org: orgId } },
-    });
-
-    // Remove user from organization.users array
-    const updatedOrg = await Org.findByIdAndUpdate(
-      orgId,
-      {
-        $pull: { users: { userId: id } },
-      },
-      { new: true }
-    );
+    
+    // Delete membership
+    await OrgMember.deleteOne({ _id: membership._id });
 
     return res.status(200).json({
       message: "User removed from organization successfully",
@@ -639,102 +593,59 @@ export const DeleteOrganizationUser = async (req, res) => {
   }
 };
 
-// export const getAllOrganizations = async (req, res) => {
-//   try {
-//     const userId = req.user.userId;
 
-//     // Find all organizations where the user is in the `users` array
-//     const organizations = await Org.find({
-//       createdBy: userId,
-//     })
-//       .select("-password")
-//       .populate("billingPlan");
-
-//     if (!organizations || organizations.length === 0) {
-//       return res
-//         .status(404)
-//         .json({ message: "No organizations found for this user." });
-//     }
-
-//     res.status(200).json({
-//       message: "Organizations fetched successfully.",
-//       organizations,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching user organizations:", error);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// };
-
-// todo inivte schema
+// export const getAllOrganizations = async (req, res) => {export const CreateInvite = async (req, res) => {
 export const CreateInvite = async (req, res) => {
   try {
     const { email, role } = req.body || {};
     const orgId = req.orgUser.orgId;
-    const {  userId } = req.user;
-    console.log("orgId", orgId);
-    console.log("req.body", req.body);
+    const { userId } = req.user;
 
-    // Validate org
-
-    if (req.body == "" || req.body == undefined) {
+    if (!email || !role) {
       return res.status(400).json({ message: "All fields are required" });
     }
-    const useronplatform = await User.findOne({email});
-    if(!useronplatform){
-      return res.status(400).json({ message: "User does not exists on the platform" });
+
+    // Prevent assigning SuperAdmin via invite
+    if (role === ROLES.SUPER_ADMIN) {
+      return res
+        .status(403)
+        .json({ message: "You are not allowed to assign SuperAdmin role." });
     }
 
-    const organization = await Org.findOne({
-      _id: orgId,
-      // ensures only the creator can access/modify
-    });
+    const useronplatform = await User.findOne({ email });
+    if (!useronplatform) {
+      return res
+        .status(400)
+        .json({ message: "User does not exist on the platform" });
+    }
 
-    console.log("organization", organization);
+    const organization = await Org.findById(orgId);
     if (!organization) {
       return res
         .status(404)
         .json({ message: "Organization not found || you are not the creator" });
     }
-    // Validate role
+
     const roleExists = await RolePermission.findOne({ role });
     if (!roleExists) {
       return res.status(400).json({ message: "Invalid role." });
     }
-
-    // Check if user is already in the org
-    const existingUser = await User.findOne({
-      email,
-      "organizations.org": orgId,
+    //check if user already exits
+    // Check if user is already in the org (via Member collection)
+    const existingMember = await OrgMember.findOne({
+      userId: useronplatform._id,
+      organizationId: orgId,
     });
 
-    console.log("existingUser", existingUser);
-
-    if (existingUser) {
+    if (existingMember) {
       return res
         .status(400)
         .json({ message: "User is already in this organization." });
     }
 
-   
-
- 
-    //   email,
-    // orgId,
-    //   expiresAt: { $gt: new Date() },
-    // });
-
-    // if (existingInvite) {
-    //   return res
-    //     .status(400)
-    //     .json({ message: "An invite for this user already exists." });
-    // }
-
-    // Generate a secure token
     const token = crypto.randomBytes(64).toString("hex");
-    console.log("token", token);
 
-    // Save the invite
+
     const invite = await OrganizationInvite.create({
       email,
       role,
@@ -744,28 +655,26 @@ export const CreateInvite = async (req, res) => {
       status: "pending",
     });
 
-    await invite.save();
-    console.log("invite", invite);
-    // Construct join link
     const INVITE_LINK = `${frontendUrl}/accept-invite?token=${token}`;
- const html= await InviteEmailTemplate(organization.name,role,email,INVITE_LINK);
+    const html = await InviteEmailTemplate(
+      organization.name,
+      role,
+      email,
+      INVITE_LINK
+    );
 
-    // Send reset email (mocked)
-    console.log("Invite link:", INVITE_LINK); // for testing/dev
-     try {
+    try {
       await sendEmail(email, "Organization Invite", html);
       return res.status(200).json({
         success: true,
         message: "Invite sent successfully.",
       });
     } catch (error) {
-     await  OrganizationInvite.findByIdAndDelete(invite._id);
-     
-     
+      await OrganizationInvite.findByIdAndDelete(invite._id);
       return res.status(500).json({ error: "Failed to send invite email" });
     }
   } catch (error) {
-    console.log(error,"email error");
+    console.log(error, "email error");
     return res.status(500).json({ error: "Server error" });
   }
 };
@@ -773,7 +682,8 @@ export const CreateInvite = async (req, res) => {
 export const acceptInvite = async (req, res) => {
   try {
     const { token } = req.params;
-    console.log("token", token);
+   
+    // console.log("token", token);
 
     // 1. Find invite by token & check it's still valid (not expired & pending)
     const invite = await OrganizationInvite.findOne({
@@ -782,6 +692,7 @@ export const acceptInvite = async (req, res) => {
       status: "pending",
     });
 
+    // console.log("invite", invite);
     if (!invite) {
       return res
         .status(404)
@@ -790,6 +701,7 @@ export const acceptInvite = async (req, res) => {
 
     // 2. Find the user by email from the invite
     const existingUser = await User.findOne({ email: invite.email });
+    // console.log("existingUser", existingUser);
     if (!existingUser) {
       return res
         .status(404)
@@ -802,10 +714,12 @@ export const acceptInvite = async (req, res) => {
       return res.status(404).json({ message: "Organization not found." });
     }
 
-    // 4. Check if user already in org.users to avoid duplicates
-    const alreadyMember = organization.users.some(
-      (userEntry) => userEntry.userId.toString() === existingUser._id.toString()
-    );
+    // 4. Check if user already in org using member
+    const alreadyMember = await OrgMember.findOne({
+      userId: existingUser._id,
+      organizationId: organization._id,
+    });
+// console.log("alreadyMember", alreadyMember);
     if (alreadyMember) {
       return res
         .status(400)
@@ -813,44 +727,29 @@ export const acceptInvite = async (req, res) => {
     }
 
     // 5. Find role permissions
-    const rolePermissions = await RolePermission.findOne({ role: invite.role });
-    const permissions = rolePermissions ? rolePermissions.permissions : [];
+    const roles = await RolePermission.findOne({ role: invite.role });
+    // console.log("roles", roles);
     const employeeId = generateEmployeeId(organization._id);
-    // 6. Add user to organization users array
-    organization.users.push({
+
+    const newmember = await OrgMember.create({
       userId: existingUser._id,
-      role: invite.role,
+      organizationId: organization._id,
       employeeId: employeeId,
-      joinedAt: new Date(),
+      role: roles._id,
+      status: "active",
     });
-    await organization.save();
 
-    // 7. Add organization info to user's organizations array
-    const organizationObject = {
-      org: organization._id,
-      role: invite.role,
-      employeeId,
-      token: generateOrgToken({
-        userId: existingUser._id,
-        orgId: organization._id,
-        employeeId,
-        role: invite.role,
-        permissions,
-      }),
-
-      permissions: permissions,
-      jobTitle: invite.role,
-    };
-    existingUser.organizations.push(organizationObject);
-    await existingUser.save();
+    // console.log("newmember", newmember);
+    await newmember.save();
 
     // 8. Mark invite as accepted
     invite.status = "accepted";
     invite.expiresAt = null;
+    invite.token = "";
+    // console.log("aftertoken", invite);
     await invite.save();
 
-    console.log("User successfully added to organization and invite accepted.");
-
+    
     return res
       .status(200)
       .json({ message: "Successfully joined the organization." });
@@ -887,28 +786,29 @@ export const declineInvite = async (req, res) => {
       .json({ message: "Invite declined and invalidated successfully." });
   } catch (error) {
     console.error("Error in declineInvite:", error);
-    return res
-      .status(500)
-      .json({
-        message: "Internal server error in declineInvite",
-        error: error.message,
-      });
+    return res.status(500).json({
+      message: "Internal server error in declineInvite",
+      error: error.message,
+    });
   }
 };
 
 export const getOrganizationInvite = async (req, res) => {
   try {
-   
     const orgId = req.orgUser.orgId;
-   
-     const invitations = await OrganizationInvite.find({
+
+    const invitations = await OrganizationInvite.find({
       orgId: new mongoose.Types.ObjectId(orgId),
     });
 
-     if (!invitations.length) {
-      return res.status(404).json({ message: "No invitations found for this org" });
+    if (!invitations.length) {
+      return res
+        .status(404)
+        .json({ message: "No invitations found for this org" });
     }
-    res.status(200).json({ message: "Invite fetched successfully.", invitations });
+    res
+      .status(200)
+      .json({ message: "Invite fetched successfully.", invitations });
   } catch (error) {
     console.error("Error in fetching invite:", error); // Add this
     res.status(500).json({

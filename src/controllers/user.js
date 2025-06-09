@@ -18,6 +18,7 @@ import {
 import User from "../models/userModel.js";
 import Org from "../models/OrgModel.js";
 import Employee from "../models/employeeModel.js";
+import { OrgMember } from "../models/OrganisationMemberSchema.js";
 
 dotenv.config();
 
@@ -45,11 +46,12 @@ export const login = async (req, res) => {
   try {
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
-    }).select("+isSuspended");
+    }).select("+isSuspended").populate("currentOrganization", "_id name contactEmail");
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
     }
 
+    // console.log("user", user);
     if (user.isSuspended == true) {
       return res
         .status(400)
@@ -81,36 +83,34 @@ export const login = async (req, res) => {
 
     await user.save();
 
+ // find user permisons from member
  
+ const member = await OrgMember.findOne({
+  userId: user._id,
+  organizationId: user.currentOrganization,
+  status: "active",
+}).populate("role");
 
-    // ✅ Find the active org entry inside the user's organizations array
-    const activeOrgEntry = user.organizations.find(
-      (orgEntry) => orgEntry.CurrentActive === true
-    );
+
+
 // console.log("activeOrgEntry", activeOrgEntry);
-    let org = null;
+   
     let orgToken = null;
     // ✅ Generate org token using user-org-level fields
     const orgPayload = {
       userId: user._id,
-      orgId: activeOrgEntry.org,
-      employeeId: activeOrgEntry.employeeId,
-      role: activeOrgEntry.role,
-      permissions: activeOrgEntry.permissions,
+      orgId: member.organizationId,
+      employeeId: member.employeeId,
+      role: member.role.role,
+      permissions: member.role. permissions,
     };
     // console.log("orgPayload", orgPayload);
 
-    if (activeOrgEntry) {
-      // Optional: fetch org details if needed
-      org = await Org.findById(activeOrgEntry.org)
-        .select("name contactEmail _id")
-        .lean();
+    
 
       orgToken = generateOrgToken(orgPayload);
 
-      activeOrgEntry.token = orgToken;
-      await user.save();
-    }
+    
     
     const accessToken = generateGlobalToken(user);
 
@@ -120,12 +120,12 @@ export const login = async (req, res) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role,
+      Globalrole: user.Globalrole,
       
       phone: user.phone,
-      orgName: org?.name || null,
-      orgEmail: org?.contactEmail || null,
-      orgId: org?._id || null,
+      orgName: user.currentOrganization?.name || null,
+      orgEmail: user.currentOrganization?.contactEmail || null,
+      orgId: user.currentOrganization?._id || null,
     };
 
     // const orgtoken=generateOrgToken(userId, orgId, employeeId, role, permissions);
@@ -141,7 +141,7 @@ export const login = async (req, res) => {
     // Decode it to get `exp` (in seconds)
     const { exp } = jwt.decode(accessToken);
     res.status(200).json({
-      message: "You have logged in successfully",
+      message: `welcome back ${user.firstName}`,
       success: true,
       code: 200,
       data: responseData,
@@ -205,7 +205,7 @@ export const signup = async (req, res) => {
         id: user._id,
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
-        role: user.role,
+        Globalrole: user.Globalrole,
         token: accessToken,
         exp: exp * 1000,
       },
@@ -384,17 +384,6 @@ export const getUser = async (req, res) => {
       role: user.role,
       isActive: user.isActive,
       hasReceivedWelcomeEmail: user.hasReceivedWelcomeEmail,
-      organizations: user.organizations.map((org) => ({
-        org: org.org,
-        CurrentActive: org.CurrentActive,
-        role: org.role,
-        employeeId: org.employeeId,
-        // Optional: include limited permissions if needed
-        // permissions: org.permissions?.map(p => ({
-        //   module: p.module,
-        //   actions: p.actions
-        // }))
-      })),
     };
 
     res.status(200).json({
@@ -414,58 +403,41 @@ export const getUser = async (req, res) => {
 };
 
 
-// admin route to view all users
+
+
 
 // get all organization users
-export const getAllusers = async (req, res) => {
-  try {
-    const { orgId } = req.params;
-    const { email } = req.body;
-
-    const org = await Org.findById(orgId);
-    if (!org)
-      return res
-        .status(404)
-        .json({ message: "Organization not found", data: [] });
-
-    if (org.orgEmail !== email) {
-      return res.status(403).json({ message: "Unauthorized", data: [] });
-    }
-
-    const data = await User.find({ orgId })
-      .select("-password")
-      .sort({ _id: -1 });
-
-    res.status(200).json({
-      data,
-      success: true,
-      code: 200,
-      message: "All users fetched successfully",
-    });
-  } catch (error) {
-    res.status(409).json({ message: error.message });
-  }
-};
-
-// get users by department
-// currently not using in future we can use
-// export const getUsersByDept = async (req, res) => {
+// export const getAllusers = async (req, res) => {
 //   try {
-//     const { orgId, department } = req.body;
-//     const data = await User.find({ orgId, department })
-//       .select("firstName")
+//     const { orgId } = req.params;
+//     const { email } = req.body;
+
+//     const org = await Org.findById(orgId);
+//     if (!org)
+//       return res
+//         .status(404)
+//         .json({ message: "Organization not found", data: [] });
+
+//     if (org.orgEmail !== email) {
+//       return res.status(403).json({ message: "Unauthorized", data: [] });
+//     }
+
+//     const data = await User.find({ orgId })
+//       .select("-password")
 //       .sort({ _id: -1 });
 
 //     res.status(200).json({
 //       data,
 //       success: true,
 //       code: 200,
-//       message: "Department users fetched",
+//       message: "All users fetched successfully",
 //     });
 //   } catch (error) {
 //     res.status(409).json({ message: error.message });
 //   }
 // };
+
+
 
 export const deleteUser = async (req, res) => {
   const _id = req.params.id;

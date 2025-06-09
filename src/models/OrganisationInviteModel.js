@@ -6,7 +6,7 @@ const OrganizationInviteSchema = new Schema({
   orgId: { type: Schema.Types.ObjectId, ref: "Organization" ,required: true},
   email: { type: String, required: true,required: true },
   role: { type: String, default: "User" },
-  token: { type: String, required: true },
+  token: { type: String },
   status: { type: String, enum: ["pending", "accepted", "expired", "rejected"], default: "pending" },
   invitedBy: { type: Schema.Types.ObjectId, ref: "User" },
   expiresAt: {

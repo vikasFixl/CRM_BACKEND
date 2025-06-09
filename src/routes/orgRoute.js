@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { checkPermission } from "../middleweare/orgmiddleware.js";
 // import { authorize } from "../middleweare/middleware.js";
 import {
   acceptInvite,
@@ -103,7 +104,8 @@ Router.route("/updateuser/:id").put(
 );
 Router.route("/deleteuser/:id").delete(
   isAuthenticated,
-  authenticateOrgToken(["OrgAdmin"]),
+   authenticateOrgToken(),
+  checkPermission("user", "DELETE_USER"),
 
   DeleteOrganizationUser
 );

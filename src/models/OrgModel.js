@@ -1,14 +1,16 @@
 import mongoose, { Schema } from "mongoose";
 
-// const DEFAULT_MODULES = ['leads', 'deals', 'contacts', 'invoices', 'projects', 'hrm'];
-
 const OrganizationSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, unique: true },
 
     OrgLogo: {
-      url: { type: String, trim: true ,default:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBix1vtUBBRZ6pP3ASr0573t9-UPW8D5eiNA&s" },
-      
+      url: {
+        type: String,
+        trim: true,
+        default:
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBix1vtUBBRZ6pP3ASr0573t9-UPW8D5eiNA&s",
+      },
       public_id: { type: String, trim: true },
     },
 
@@ -18,12 +20,18 @@ const OrganizationSchema = new Schema(
       trim: true,
       unique: true,
       lowercase: true,
+      validate: {
+        validator: function (email) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          return emailRegex.test(email);
+        },
+        message: "Invalid email format.",
+      },
     },
+
     contactPhone: { type: String, trim: true },
-    contactEmail: { type: String, trim: true },
     contactName: { type: String, trim: true },
 
-    // Optional password for org (usually better to keep in User model)
     password: { type: String, trim: true, minlength: 6 },
 
     address: { type: String, trim: true },
@@ -33,29 +41,18 @@ const OrganizationSchema = new Schema(
 
     timezone: { type: String, default: "UTC" },
     fiscalYearStart: { type: Date },
-
     curConvert: { type: String, trim: true },
 
-    // Add this block for managing organization users and their roles
-    users: [
-      {
-        userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-        role: { type: String, required: true }, // e.g., 'Admin', 'Manager', 'SupportAgent', etc.
-        employeeId: { type: String },
-        joinedAt: { type: Date, default: Date.now },
-      },
-    ],
     modules: { type: [String], default: [] },
 
     billingPlan: { type: Schema.Types.ObjectId, ref: "BillingPlan" },
 
     isActive: { type: Boolean, default: true, index: true },
-
     isdeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
-    isSuspended: { type: Boolean, default: false ,select: false},
+    isSuspended: { type: Boolean, default: false, select: false },
   },
   { timestamps: true }
 );
@@ -72,11 +69,6 @@ OrganizationSchema.pre("save", async function (next) {
   }
   next();
 });
-
-OrganizationSchema.path("contactEmail").validate(function (email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}, "Invalid email format.");
 
 const Org = mongoose.model("Organization", OrganizationSchema);
 export default Org;

@@ -37,6 +37,7 @@ export const isAdminOrSelf = (req, res, next) => {
   return res.status(403).json({ message: "Access denied" });
 };
 
+
 // export const permited = (allowedRoles) => {
 //   return (req, res, next) => {
 //     const token = req.cookies?.token;

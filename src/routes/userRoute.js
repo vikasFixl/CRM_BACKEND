@@ -15,7 +15,7 @@ import {
   // getUserList,
   updateProfileimage,
   getUser,
-  getAllusers,
+  // getAllusers,
   deleteUser,
   updateUser,
   logout,
@@ -68,7 +68,7 @@ Router.route("/logout").post(logout); // logout
 // GET routes
 
 Router.route("/getprofile").get(isAuthenticated, getUser); // user profile
-Router.route("/getAllusers/:orgId").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),getAllusers); // get all org users
+// Router.route("/getAllusers/:orgId").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),getAllusers); // get all org users
 // Router.route("/getUserList").get(getUserList); // admin route to view all users
 
 // DELETE route
