@@ -20,6 +20,9 @@ export const rolepermission = {
         PERMISSIONS.EDIT_ORGANIZATION,
         PERMISSIONS.DELETE_ORGANIZATION,
         PERMISSIONS.SEND_INVITATION,
+        PERMISSIONS.DELETE_ORG_USER,
+        PERMISSIONS.VIEW_ORG_USER,
+        PERMISSIONS.UPDATE_ORG_USER,
       ],
     },
     {
@@ -51,6 +54,9 @@ export const rolepermission = {
         PERMISSIONS.EDIT_ORGANIZATION,
         PERMISSIONS.DELETE_ORGANIZATION,
         PERMISSIONS.SEND_INVITATION,
+         PERMISSIONS.DELETE_ORG_USER,
+        PERMISSIONS.VIEW_ORG_USER,
+        PERMISSIONS.UPDATE_ORG_USER,
       ],
     },
     {
@@ -72,7 +78,8 @@ export const rolepermission = {
     {
       module: MODULES.ORGANIZATION,
       actions: [PERMISSIONS.VIEW_ORGANIZATION,
-        PERMISSIONS.SEND_INVITATION
+        PERMISSIONS.SEND_INVITATION,
+       
       ],
     },
     {

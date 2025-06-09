@@ -92,26 +92,33 @@ Router.route("/:id").get(
 // return all organizations for a user
 Router.route("/user/all").get(isAuthenticated, getUserOrganizations);
 // return all users in an organization
-Router.route("/org/users").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]), getAllUserInOrg);
+Router.route("/org/users").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  checkPermission("organization", "VIEW_ORG_USER"),
+  getAllUserInOrg
+);
 
 // provides access token based on org
 Router.route("/switch").post(isAuthenticated, switchOrg);
 Router.route("/updateuser/:id").put(
   isAuthenticated,
-  authenticateOrgToken(["OrgAdmin"]),
+  authenticateOrgToken(),
+  checkPermission("organization", "UPDATE_ORG_USER"),
 
   UpdateOrganizationUser
 );
 Router.route("/deleteuser/:id").delete(
   isAuthenticated,
-   authenticateOrgToken(),
-  checkPermission("user", "DELETE_USER"),
+  authenticateOrgToken(),
+  checkPermission("organization", "DELETE_ORG_USER"),
 
   DeleteOrganizationUser
 );
 Router.route("/createInvite").post(
   isAuthenticated,
   authenticateOrgToken(["OrgAdmin", "Manager"]),
+  checkPermission("organization", "SEND_INVITATION"),
 
   CreateInvite
 );

@@ -69,7 +69,7 @@ export const checkPermission = (moduleName, actionName) => {
         return res
           .status(403)
           .json({
-            error: "you don't have permission . contact admin for permission",
+            error:  `you don't have permission for this action . contact admin for permission`,
           });
       }
 
