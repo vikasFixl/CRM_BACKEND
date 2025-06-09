@@ -48,16 +48,37 @@ const OrganizationSchema = new Schema(
     billingPlan: { type: Schema.Types.ObjectId, ref: "BillingPlan" },
 
     isActive: { type: Boolean, default: true, index: true },
-    isdeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date },
-    createdBy: { type: Schema.Types.ObjectId, ref: "User" },
-    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
-    isSuspended: { type: Boolean, default: false, select: false },
+    isDeleted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  deletedAt: { type: Date },
+
+  createdBy: {
+    type: Schema.Types.ObjectId,
+    ref: "User"
+  },
+
+  updatedBy: {
+    type: Schema.Types.ObjectId,
+    ref: "User"
+  },
+
+  isSuspended: {
+    type: Boolean,
+    default: false,
+    select: false
+  }
   },
   { timestamps: true }
 );
 
 OrganizationSchema.index({ name: 1 }, { unique: true });
+OrganizationSchema.index({ contactEmail: 1 }, { unique: true });
+OrganizationSchema.index({ isDeleted: 1 });
+OrganizationSchema.index({ billingPlan: 1 });
 
 OrganizationSchema.pre("save", async function (next) {
   if (this.isModified("billingPlan") && this.billingPlan) {
