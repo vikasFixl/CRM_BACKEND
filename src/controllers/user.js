@@ -32,12 +32,9 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const login = async (req, res) => {
   const { email, password } = req.body || {};
 
-  // Check if fields are empty
-  if (!email.trim() || !password.trim()) {
+  if (!email?.trim() || !password?.trim()) {
     return res.status(400).json({ message: "Please enter email and password" });
   }
-
-  // Email validation regex
 
   if (!emailRegex.test(email)) {
     return res.status(400).json({ message: "Invalid email address" });
@@ -47,22 +44,18 @@ export const login = async (req, res) => {
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
     }).select("+isSuspended").populate("currentOrganization", "_id name contactEmail");
+
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
     }
 
-    // console.log("user", user);
-    if (user.isSuspended == true) {
-      return res
-        .status(400)
-        .json({ message: "this account is suspended contact admin" });
+    if (user.isSuspended) {
+      return res.status(400).json({ message: "This account is suspended. Contact admin." });
     }
 
-    // Check login attempts
     if (user.loginAttempts >= 5) {
       return res.status(400).json({
-        message:
-          "You have exceeded the maximum number of login attempts. Please reset your password.",
+        message: "Too many login attempts. Please reset your password.",
       });
     }
 
@@ -73,46 +66,37 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Reset login attempts on successful login
+    // Successful login
     user.loginAttempts = 0;
     user.lastLogin = new Date();
     user.isDeleted = false;
-
     user.isActive = true;
-    user.deletedAt = null; // Optional audit field
+    user.deletedAt = null;
 
     await user.save();
 
- // find user permisons from member
- if(user.currentOrganization){
- const member = await OrgMember.findOne({
-  userId: user._id,
-  organizationId: user.currentOrganization,
-  status: "active",
-}).populate("role");
-
-
-
-// console.log("activeOrgEntry", activeOrgEntry);
-   
     let orgToken = null;
-    // ✅ Generate org token using user-org-level fields
-    const orgPayload = {
-      userId: user._id,
-      orgId: member.organizationId,
-      employeeId: member.employeeId,
-      role: member.role.role,
-      permissions: member.role. permissions,
-    };
-    // console.log("orgPayload", orgPayload);
+    if (user.currentOrganization) {
+      const member = await OrgMember.findOne({
+        userId: user._id,
+        organizationId: user.currentOrganization._id,
+        status: "active",
+      }).populate("role");
 
-    
+      if (member && member.role) {
+        const orgPayload = {
+          userId: user._id,
+          orgId: member.organizationId,
+          employeeId: member.employeeId,
+          role: member.role.role,
+          permissions: member.role.permissions,
+        };
+        orgToken = generateOrgToken(orgPayload);
+      }
+    }
 
-      orgToken = generateOrgToken(orgPayload);
-
-  }
-    
     const accessToken = generateGlobalToken(user);
+    const { exp } = jwt.decode(accessToken);
 
     const responseData = {
       id: user._id,
@@ -121,31 +105,18 @@ export const login = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       Globalrole: user.Globalrole,
-      
       phone: user.phone,
       orgName: user.currentOrganization?.name || null,
       orgEmail: user.currentOrganization?.contactEmail || null,
       orgId: user.currentOrganization?._id || null,
     };
 
-    // const orgtoken=generateOrgToken(userId, orgId, employeeId, role, permissions);
-
-    // res.cookie("token", accessToken, {
-    //   httpOnly: isProd, // true in production for security isprod defined at top
-    //   secure: isProd, // ensures cookie is only sent over HTTPS
-    // sameSite: 'none'
-
-    // ,
-    //  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    //     });
-    // Decode it to get `exp` (in seconds)
-    const { exp } = jwt.decode(accessToken);
     res.status(200).json({
-      message: `welcome back ${user.firstName}`,
+      message: `Welcome back ${user.firstName}`,
       success: true,
       code: 200,
       data: responseData,
-      orgtoken: user.currentOrganization?orgToken:null,
+      orgtoken: orgToken, // returns null if no org
       token: accessToken,
       exp: exp * 1000,
     });
@@ -157,6 +128,7 @@ export const login = async (req, res) => {
     });
   }
 };
+
 
 export const signup = async (req, res) => {
   try {

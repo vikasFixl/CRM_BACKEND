@@ -328,6 +328,10 @@ export const getUserOrganizations = async (req, res) => {
       orgName: member.organizationId.name,
       orgLogo: member.organizationId.logo,
       orgActive: member.organizationId.isActive,
+      orgEmail: member.organizationId.contactEmail,
+      orgcontact: member.organizationId.contactName,
+      orgPhone: member.organizationId.contactPhone,
+      joinedAt: member.createdAt,
       employeeId: member.employeeId,
       role: member.role.role,
       permissions:
