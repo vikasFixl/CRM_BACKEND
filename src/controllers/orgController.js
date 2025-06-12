@@ -14,6 +14,8 @@ import jwt from "jsonwebtoken";
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { ROLES } from "../enums/role.enums.js";
 
+
+
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
 // import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
 
@@ -376,17 +378,30 @@ export const getAllUserInOrg = async (req, res) => {
       (member) => member.role?.role !== "OrgAdmin"
     );
 
-    const enrichedUsers = nonAdminUsers.map((member) => ({
-      _id: member.userId._id,
-      firstName: member.userId.firstName,
-      lastName: member.userId.lastName,
-      email: member.userId.email,
-      phone: member.userId.phone,
+  // Construct enriched user data
+    const enrichedUsers = nonAdminUsers.map((member) => {
+      const useCustom =
+        member.hasCustomPermission ||
+        (member.permissionsOverride && member.permissionsOverride.length > 0);
 
-      role: member.role?.role,
-      employeeId: member.employeeId,
-      joinedAt: member.joinedAt,
-    }));
+      const permissions = useCustom
+        ? member.permissionsOverride
+        : member.role?.permissions || [];
+
+      return {
+        _id: member.userId._id,
+        firstName: member.userId.firstName,
+        lastName: member.userId.lastName,
+        email: member.userId.email,
+        phone: member.userId.phone,
+        role: member.role?.role || "Unknown",
+        permissions,
+        employeeId: member.employeeId,
+        joinedAt: member.joinedAt,
+        roleid: member.role?._id,
+        hasCustomPermission: member.hasCustomPermission || false,
+      };
+    });
 
     res.status(200).json({
       message: "Users fetched successfully",
@@ -489,75 +504,63 @@ export const getOrganizationBYId = async (req, res) => {
 };
 
 export const UpdateOrganizationUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const orgId = req.orgUser.orgId; // From auth middleware
+  
+   try {
+    const { userId } = req.params;
+    const orgId = req.orgUser.orgId; // securely extracted from auth middleware
+    const { Role, overridePermissions } = req.body;
+    console.log(orgId, userId, Role, overridePermissions);
 
-    if (!id) {
-      return res.status(400).json({ error: "User ID is required" });
+    // Find member
+  // Find member using userId + orgId
+    const member = await OrgMember.findOne({
+      userId,
+      organizationId: orgId,
+    }).populate("role", "role");
+    if (!member) {
+      return res.status(404).json({ error: "you are not part of this organization" });
     }
 
-    const { role, status, permissions } = req.body;
+     let updates = {};
+    const isRoleChanged = member.role?.role !== Role;
+   
 
-    // Check if there's anything to update
-    if (!role && !status) {
-      return res.status(400).json({
-        error: "At least one of 'role' or 'status' must be provided",
-      });
-    }
 
-    // Fetch the user
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+     // ✅ 1. Handle role change
+    if (isRoleChanged) {
+      const newRole = await RolePermission.findOne({role: Role});
+      console.log("newRole", newRole);
+      if (!newRole) return res.status(404).json({ error: "Role not found" });
 
-    // Check if user belongs to this org
-    const orgEntry = user.organizations.find(
-      (orgObj) => orgObj.org.toString() === orgId.toString()
-    );
-
-    if (!orgEntry) {
-      return res.status(403).json({
-        error: "User does not belong to this organization",
-      });
-    }
-
-    // Handle role update logic
-    if (role) {
-      orgEntry.role = role;
-
-      if (role === "Custom") {
-        if (!Array.isArray(permissions) || permissions.length === 0) {
-          return res.status(400).json({
-            error: "Permissions are required when role is 'Custom'",
-          });
-        }
-
-        orgEntry.permissions = permissions;
-      } else {
-        const rolePermissions = await RolePermission.findOne({ role });
-        if (!rolePermissions) {
-          return res.status(404).json({ error: "Role not found" });
-        }
-
-        orgEntry.permissions = rolePermissions.permissions || [];
+      if (newRole.name === "SuperAdmin") {
+        return res.status(403).json({ error: "Forbidden: Cannot assign SuperAdmin role" });
       }
+
+      updates.role = newRole._id;
+      updates.permissionsOverride = []; // Clear override
+      updates.hasCustomPermission = false;
     }
 
-    // Update other fields
-    if (status) orgEntry.status = status;
-    // if (jobTitle) orgEntry.jobTitle = jobTitle;
-    // if (contactInfo) orgEntry.contactInfo = contactInfo;
 
-    await user.save();
+       // ✅ 2. Apply override permissions ONLY if role is not changed
+    if (
+      !isRoleChanged &&
+      Array.isArray(overridePermissions) &&
+      overridePermissions.length > 0
+    ) {
+      updates.permissionsOverride = overridePermissions;
+      updates.hasCustomPermission = true;
+    }
 
-    return res.status(200).json({ message: "User updated successfully" });
+    // ✅ 3. Apply updates and save
+    Object.assign(member, updates);
+    await member.save();
+   
+
+    return res.status(200).json({ message:`member role updated to ${Role} successfully ${isRoleChanged?"":"with custom permisisons"}`, member });
   } catch (error) {
-    console.error("Update user error:", error);
-    return res.status(500).json({
-      error: "Failed to update organization user",
-    });
+    console.error("updateOrgMember error:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 

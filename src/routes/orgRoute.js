@@ -101,7 +101,7 @@ Router.route("/org/users").get(
 
 // provides access token based on org
 Router.route("/switch").post(isAuthenticated, switchOrg);
-Router.route("/updateuser/:id").put(
+Router.route("/updateuser/:userId").put(
   isAuthenticated,
   authenticateOrgToken(),
   checkPermission("organization", "UPDATE_ORG_USER"),

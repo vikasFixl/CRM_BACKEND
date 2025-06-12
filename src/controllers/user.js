@@ -45,6 +45,7 @@ export const login = async (req, res) => {
       email: email.trim().toLowerCase(),
     }).select("+isSuspended").populate("currentOrganization", "_id name contactEmail");
 
+    
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
     }
@@ -106,6 +107,7 @@ export const login = async (req, res) => {
       lastName: user.lastName,
       Globalrole: user.Globalrole,
       phone: user.phone,
+      currentOrganization: user.currentOrganization._id,
       orgName: user.currentOrganization?.name || null,
       orgEmail: user.currentOrganization?.contactEmail || null,
       orgId: user.currentOrganization?._id || null,

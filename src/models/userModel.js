@@ -28,11 +28,11 @@ const UserSchema = new Schema(
       enum: ["SuperAdmin", "None"],
       default: "None",
     },
-currentOrganization: {
-  type: Schema.Types.ObjectId,
-  ref: "Organization",
-  index: true,
-},
+    currentOrganization: {
+      type: Schema.Types.ObjectId,
+      ref: "Organization",
+      index: true,
+    },
     isSuspended: { type: Boolean, default: false, select: false },
 
     resetPasswordToken: { type: String, default: null },
