@@ -5,6 +5,7 @@ import Firm from "../models/FirmModel.js";
 
 export const createFirm = async (req, res) => {
   try {
+    const orgId=req.orgUser.orgId;
     // ✅ Validate with Zod
     const parsed = firmValidationSchema.safeParse(req.body);
 
@@ -45,10 +46,10 @@ export const createFirm = async (req, res) => {
       uin,
       tinNo,
       cinNo,
-      orgId,
+  
     } = form;
 
-    // 🏗️ Create and save new firm
+    //  Create and save new firm
     const newFirm = new Firm({
       name,
       email,
@@ -86,9 +87,10 @@ export const createFirm = async (req, res) => {
 
 
 
-export const getFirm = async (req, res) => {
+export const getFirmbyId = async (req, res) => {
   try {
-    const { orgId, id } = req.params;
+    const {  id } = req.params;
+    const orgId=req.orgUser.orgId;
 
     // ✅ Validate parameters
     if (!orgId) {
@@ -108,7 +110,7 @@ export const getFirm = async (req, res) => {
     }
 
     // ✅ Fetch all firms for the given org
-    const firmList = await Firm.find({ orgId });
+    const firmList = await Firm.findOne({ orgId: orgId, _id: id });
 
     // ✅ Filter for the specific firm by _id
     const matchedFirm = firmList.find((firm) => firm._id.toString() === id);
@@ -140,7 +142,7 @@ export const getFirm = async (req, res) => {
 
 export const getFirmList = async (req, res) => {
   try {
-    const { orgId } = req.params;
+ const orgId=req.orgUser.orgId;
 
     if (!orgId) {
       return res.status(400).json({
@@ -239,7 +241,7 @@ export const deleteFirm = async (req, res) => {
 };
 
 export const getAllFirm = async (req, res) => {
-  const { orgId } = req.params;
+const orgId=req.orgUser.orgId;
 
   if (!mongoose.Types.ObjectId.isValid(orgId)) {
     return res.status(400).json({
