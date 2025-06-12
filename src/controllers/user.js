@@ -281,6 +281,7 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     const resetUrl = `${frontendUrl}/reset-password/${token}`;
+    console.log("resetUrl", resetUrl);
 
     const html = await resetPasswordTemplate(user.firstName, resetUrl);
 

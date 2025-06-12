@@ -662,15 +662,16 @@ export const CreateInvite = async (req, res) => {
       status: "pending",
     });
 
+    await invite.save();
+  
+    // Construct join link
     const INVITE_LINK = `${frontendUrl}/accept-invite?token=${token}`;
-    const html = await InviteEmailTemplate(
-      organization.name,
-      role,
-      email,
-      INVITE_LINK
-    );
+    console.log("INVITE_LINK", INVITE_LINK);
+ const html= await InviteEmailTemplate(organization.name,role,email,INVITE_LINK);
 
-    try {
+    // Send reset email (mocked)
+    console.log("Invite link:", INVITE_LINK); // for testing/dev
+     try {
       await sendEmail(email, "Organization Invite", html);
       return res.status(200).json({
         success: true,
