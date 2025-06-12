@@ -54,6 +54,7 @@ import orgRoutes from "./src/routes/orgRoute.js";
 import BillingRoutes from "./src/routes/HRM/BillingRoute.js";
 import RoleRoutes from "./src/routes/rolepermissionroute.js";
 import firmRoutes from "./src/routes/firmRoute.js";
+import LeadRouter from "./src/routes/leadRoute.js";
 import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
 
 // PayPal config
@@ -125,6 +126,7 @@ app.use("/api/organization", globalLimiter, orgRoutes);
 app.use("/api/billingplan", BillingRoutes);
 app.use("/api/role", RoleRoutes);
 app.use("/api/firm", firmRoutes);
+app.use("/api/lead", LeadRouter);
 /**
  * 
 app.use("/api/invoice", invoiceRoutes);

@@ -40,5 +40,5 @@ export const firmValidationSchema = z.object({
   tinNo: z.string().optional(),
   cinNo: z.string().optional(),
   
-  orgId: z.string({ required_error: "Organization ID is required." }),
+  orgId: z.string().optional(),
 });

@@ -1,32 +1,48 @@
-const express = require("express");
-const router = express.Router();
-const leadController = require("../controllers/leadController");
-const { authorize } = require("../middleweare/middleware");
+import express from "express";
+import {
+  bulkDeleteLeads,
+  createLead,
+  getAllLeads,
+  getLeadById,
+  getLeadStageHistory,
+  updateLead,
+  updateLeadStage,
+} from "../controllers/leadController.js";
+import {
+  checkPermission,
+  authenticateOrgToken,
+} from "../middleweare/orgmiddleware.js";
+import { isAuthenticated } from "../middleweare/middleware.js";
+const LeadRouter = express.Router();
 
-/* Lead By Org */
+// Create lead | Get all leads
+LeadRouter.route("/create").post(
+  isAuthenticated,
+  authenticateOrgToken(),
+  createLead
+);
+// GET ALL LEADS
+LeadRouter.route("/getAllLeads").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getAllLeads
+);
+// get lead stage-history
+LeadRouter.route("/:id/stage-history").get(isAuthenticated,authenticateOrgToken(),getLeadStageHistory);
 
-router.post("/getListByOrg", authorize("Read", "lead", ["Admin", "subAdmin", "Custom"]), leadController.getListByOrg);
-router.post("/getByStatusByOrg", authorize("Read", "lead", ["Admin", "subAdmin", "Custom"]), leadController.getByStatusByOrg);
-router.post("/getUserLeadsByStatus", authorize("Read", "lead", ["Admin", "subAdmin", "Custom"]), leadController.getUserLeadsByStatus);
-router.post("/getManagerLeadsByStatus", authorize("Read", "lead", ["Admin", "subAdmin", "Custom"]), leadController.getManagerLeadsByStatus);
+// Upload leads via Excel
+// LeadRouter.route("/leads/upload-excel")
+//   .post(uploadLeadsByExcel);
 
-/* Lead By Firm */
+// Get single lead | Update lead
+LeadRouter.route("/:id").get(getLeadById);
+LeadRouter.route("/update/:id").patch(updateLead);
 
-router.post("/getListByFirm", leadController.getListByFirm);
-router.post("/getByStatusByFirm", leadController.getByStatusByFirm);
+// Update stage of a lead
+LeadRouter.route("/:id/stage").patch(updateLeadStage);
 
-/* Comman API's */
+// Bulk delete leads
+LeadRouter.route("/bulk-delete")
+  .delete(isAuthenticated,authenticateOrgToken(),bulkDeleteLeads);
 
-router.get("/leadById/:id", authorize("Read", "lead", ["Admin", "subAdmin", "Custom"]), leadController.leadById);
-router.get("/leadsByUser/:id", authorize("Read", "lead", ["Admin", "subAdmin", "Custom"]), leadController.leadByUser);
-router.get("/leadsByManager/:id", authorize("Read", "lead", ["Admin", "subAdmin", "Custom"]), leadController.leadByManager);
-
-router.post("/add-lead", authorize("Create", "lead", ["Admin", "subAdmin", "Custom"]), leadController.addLead);
-router.post("/add-leadbyExcel", authorize("Create", "lead", ["Admin", "subAdmin", "Custom"]), leadController.addLeadByExcel);
-router.post("/leadSearch", authorize("Read", "lead", ["Admin", "subAdmin", "Custom"]), leadController.leadSearch);
-
-router.patch("/update-lead/:id", authorize("Update", "lead", ["Admin", "subAdmin", "Custom"]), leadController.updateLead);
-router.patch("/update-stage/:id", authorize("Update", "lead", ["Admin", "subAdmin", "Custom"]), leadController.updateLeadStage);
-router.post("/bulkDelete", authorize("Delete", "lead", ["Admin", "Custom"]), leadController.bulkDelete);
-
-module.exports = router
+export default LeadRouter;

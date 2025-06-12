@@ -1,539 +1,261 @@
-const Lead = require("../models/leadModel");
-const Client = require("../models/ClientModel");
-const { default: mongoose } = require("mongoose");
+import { Lead } from "../models/leadModel.js";
+import {
+  leadSchema,
+  updateLeadSchema,
+  updateLeadStageSchema,
+} from "../validations/lead/leadValidation.js";
 
-/* Lead By Org */
-
-exports.getListByOrg = async (req, res) => {
-  try {
-    const { orgId, deleted } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(orgId)) {
-      return res.status(400).json({
-        message: "Invaild Org Id.",
-        success: false,
-        status: 400,
-      });
-    }
-    const lead = await Lead.find({ orgId: orgId, delete: deleted }).sort({
-      _id: -1,
-    });
-    if (!lead) {
-      res.json({
-        success: true,
-        message: "Leads not found.",
-        status: 200,
-      });
-    } else {
-      res.json({
-        data: lead,
-        success: true,
-        message: "List of all Leads.",
-        status: 200,
-      });
-    }
-  } catch (err) {
-    res.status(400).json({
-      err: err,
-    });
-  }
-};
-
-exports.getByStatusByOrg = async (req, res) => {
-  const { orgId, status } = req.body;
-  if (!mongoose.Types.ObjectId.isValid(orgId)) {
-    return res.status(400).json({
-      message: "Invaild Org Id.",
-      success: false,
-      status: 400,
-    });
-  }
-  const lead = await Lead.find({
-    orgId: orgId,
-    delete: false,
-    status: status,
-  }).sort({ _id: -1 });
-  if (!lead) {
-    res.json({
-      success: true,
-      message: "Leads not found.",
-      status: 200,
-    });
-  } else {
-    res.json({
-      data: lead,
-      success: true,
-      message: "List of all Leads with status " + status,
-      status: 200,
-    });
-  }
-};
-
-exports.getUserLeadsByStatus = async (req, res) => {
-  const { userId, status } = req.body;
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({
-      message: "Invaild User",
-      success: false,
-      status: 400,
-    });
-  }
-  const lead = await Lead.find({
-    "assignedTo.userId": userId,
-    delete: false,
-    status: status,
-  }).sort({ _id: -1 });
-  if (!lead) {
-    res.json({
-      success: true,
-      message: "Leads not found.",
-      status: 200,
-    });
-  } else {
-    res.json({
-      data: lead,
-      success: true,
-      message: "List of all Leads with status " + status,
-      status: 200,
-    });
-  }
-};
-
-exports.getManagerLeadsByStatus = async (req, res) => {
-  const { id, status } = req.body;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({
-      message: "Invaild User",
-      success: false,
-      status: 400,
-    });
-  }
-  const lead = await Lead.find({
-    "leadManager.id": id,
-    delete: false,
-    status: status,
-  }).sort({ _id: -1 });
-  if (!lead) {
-    res.json({
-      success: true,
-      message: "Leads not found.",
-      status: 200,
-    });
-  } else {
-    res.json({
-      data: lead,
-      success: true,
-      message: "List of all Leads with status " + status,
-      status: 200,
-    });
-  }
-};
-
-/* Lead By Firm */
-
-exports.getListByFirm = async (req, res) => {
-  const { firmId, deleted } = req.body;
-  if (!mongoose.Types.ObjectId.isValid(firmId)) {
-    return res.status(400).json({
-      message: "Invaild firm Id.",
-      success: false,
-      status: 400,
-    });
-  }
-  const lead = await Lead.find({ firmId: firmId, delete: deleted }).sort({
-    _id: -1,
-  });
-  if (!lead) {
-    res.json({
-      success: true,
-      message: "Leads not found.",
-      status: 200,
-    });
-  } else {
-    res.json({
-      data: lead,
-      success: true,
-      message: "List of all Leads.",
-      status: 200,
-    });
-  }
-};
-
-exports.getByStatusByFirm = async (req, res) => {
-  const { firmId, status } = req.body;
-  if (!mongoose.Types.ObjectId.isValid(firmId)) {
-    return res.status(400).json({
-      message: "Invaild firm Id.",
-      success: false,
-      status: 400,
-    });
-  }
-  const lead = await Lead.find({
-    firmId: firmId,
-    delete: false,
-    status: status,
-  }).sort({ _id: -1 });
-  if (!lead) {
-    res.json({
-      success: true,
-      message: "Leads not found.",
-      status: 200,
-    });
-  } else {
-    res.json({
-      data: lead,
-      success: true,
-      message: "List of all Leads with status " + status,
-      status: 200,
-    });
-  }
-};
-
-/* Comman API's */
-
-exports.leadById = async (req, res) => {
-  let id = req.params.id;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    res.status(400).json({
-      success: false,
-      status: 404,
-      message: "Invalid id.",
-    });
-  }
-  const data = await Lead.findById(id);
-  if (!data) {
-    res.json({
-      success: false,
-      status: 404,
-      message: "Lead not found",
-    });
-  } else {
-    res.json({
-      data: data,
-      success: true,
-      status: 200,
-      message: `Lead with ${id}`,
-    });
-  }
-};
-
-exports.leadByUser = async (req, res) => {
-  let id = req.params.id;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    res.status(400).json({
-      success: false,
-      status: 404,
-      message: "Invalid id.",
-    });
-  }
-  const data = await Lead.find({ "assignedTo.userId": id }).sort({ _id: -1 });
-  if (!data) {
-    res.json({
-      success: false,
-      status: 404,
-      message: "Lead not found",
-    });
-  } else {
-    res.json({
-      data: data,
-      success: true,
-      status: 200,
-      message: `Lead with ${id}`,
-    });
-  }
-};
-
-exports.leadByManager = async (req, res) => {
-  let id = req.params.id;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    res.status(400).json({
-      success: false,
-      status: 404,
-      message: "Invalid id.",
-    });
-  }
-  const data = await Lead.find({ "leadManager.id": id }).sort({ _id: -1 });
-  if (!data) {
-    res.json({
-      success: false,
-      status: 404,
-      message: "Lead not found",
-    });
-  } else {
-    res.json({
-      data: data,
-      success: true,
-      status: 200,
-      message: `Lead with ${id}`,
-    });
-  }
-};
-
-exports.addLeadByExcel = async (req, res) => {
-  let leads = req.body;
-
-  function generateUniqueRandomNumbers(min, max, count) {
-    if (max - min + 1 < count) {
-      throw new Error(
-        "Cannot generate unique random numbers with given constraints."
-      );
-    }
-
-    const numbers = Array.from({ length: max - min + 1 }, (_, i) => i + min);
-    const uniqueRandomNumbers = [];
-
-    while (uniqueRandomNumbers.length < count) {
-      const randomIndex = Math.floor(Math.random() * numbers.length);
-      const selectedNumber = numbers[randomIndex];
-
-      // Remove the selected number from the list
-      numbers.splice(randomIndex, 1);
-
-      uniqueRandomNumbers.push(selectedNumber);
-    }
-
-    return uniqueRandomNumbers;
-  }
-
-  const min = 100;
-  const max = 99999;
-  const count = leads.length; // Change this to the number of unique random numbers you need
-
-  const uniqueRandomNumbers = generateUniqueRandomNumbers(min, max, count);
-  for (let i = 0; i < leads.length; i++) {
-    await Lead.create({
-      ...leads[i],
-      randomLeadId: uniqueRandomNumbers[i],
-    });
-  }
-  res.json({
-    success: true,
-    message: "Lead Excel Saved successfully",
-    status: 201,
-    // data: lead1
-  });
-};
-
-exports.addLead = async (req, res) => {
-  function generateUniqueRandomNumbers(min, max, count) {
-    if (max - min + 1 < count) {
-      throw new Error(
-        "Cannot generate unique random numbers with given constraints."
-      );
-    }
-
-    const numbers = Array.from({ length: max - min + 1 }, (_, i) => i + min);
-    const uniqueRandomNumbers = [];
-
-    while (uniqueRandomNumbers.length < count) {
-      const randomIndex = Math.floor(Math.random() * numbers.length);
-      const selectedNumber = numbers[randomIndex];
-
-      // Remove the selected number from the list
-      numbers.splice(randomIndex, 1);
-
-      uniqueRandomNumbers.push(selectedNumber);
-    }
-
-    return uniqueRandomNumbers;
-  }
-
-  const min = 100;
-  const max = 99999;
-  const count = 1; // Change this to the number of unique random numbers you need
-
-  const uniqueRandomNumbers = generateUniqueRandomNumbers(min, max, count);
-
-  const newLead = new Lead({
-    ...req.body,
-    randomLeadId: uniqueRandomNumbers[0],
-  });
-
-  const lead1 = new Lead(newLead);
-  await lead1.save();
-  res.json({
-    success: true,
-    message: "Lead saved successfully",
-    status: 201,
-    data: lead1,
-  });
-};
-
-exports.updateLead = async (req, res) => {
-  const id = req.params.id;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.json({
-      success: true,
-      status: 404,
-      message: "Invaild id.",
-    });
-  }
-  const data = await Lead.findById(id);
-  if (!data) {
-    res.json({
-      success: true,
-      status: 404,
-      message: "Lead not found!",
-    });
-  } else {
-    const updatedData = req.body;
-    const options = { new: true };
-    await Lead.findByIdAndUpdate(id, updatedData, options);
-    res.json({
-      success: true,
-      status: 201,
-      message: "Lead Updated Successfully.",
-    });
-  }
-};
-
-exports.updateLeadStage = async (req, res) => {
-
-  const id = req.params.id;
-
-  // if (!mongoose.Types.ObjectId.isValid(id)) {
-  //   return res.json({
-  //     success: true,
-  //     status: 404,
-  //     message: "Invaild id.",
-  //   });
-  // };
-
-  // const data = await Lead.findById(id);
-  // if (!data) {
-  //   res.json({
-  //     success: true,
-  //     status: 404,
-  //     message: "Lead not found!",
-  //   });
-  // } else {
-
-  await Lead.findByIdAndUpdate(id, { stage: req.body.stage, orgId: req.body.orgId });
-
-  const updatedElements = req.body.stageHistory;
+// Create a new lead
+export const createLead = async (req, res) => {
+  const userId = req.user.userId;
+  const orgId = req.orgUser.orgId;
 
   try {
-    const resultPromises = updatedElements.map(async element => {
-      const stageName = element.stageName;
-      const startDate = element.startDate;
-      const endDate = element.endDate;
 
-      const days = Number(element.days);
+    const parsed = leadSchema.safeParse(req.body);
+    const {
+      title,
+      description,
+      client,
+      address,
+      estimatedWorth,
+      currency,
+      status,
+      stage,
+      pipeline,
+      tags,
+      timezone,
+      interactions, // Assuming a single interaction object from body
+      closureDate,
+      followUpDate,
+      priority,
+      nextAction,
+      customNextAction,
+      notes,
+      firmId,
+    } = parsed.data;
 
-      const result = await Lead.updateOne(
-        { _id: id, 'stageHistory.stageName': stageName },
-        { $set: { 'stageHistory.$.days': days, 'stageHistory.$.startDate': startDate, 'stageHistory.$.endDate': endDate } },
-      );
-      return result;
-    });
+    // Build interaction array (if interaction is provided)
+    const totalinteractions = interactions.map((interaction) => ({
+      type: interaction.type,
+      description: interaction.description,
+      createdBy: userId,
+    }));
 
-    const results = await Promise.all(resultPromises);
+    // Create initial stageHistory entry
+    const stageHistory = [
+      {
+        stageName: stage,
+        startedAt: new Date(),
+      },
+    ];
+// check if lead name already present 
+const existingLead = await Lead.findOne({ title, deleted: false ,orgId:orgId});
+console.log(existingLead,"existingLead");
 
-    res.status(200).json({ message: 'All updates completed', results });
-  } catch (err) {
-    console.error('Error updating:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-
-  // }
-
+if (existingLead) {
+  return res.status(400).json({ message: "Lead name already taken" });
 }
+    const lead = await Lead.create({
+      title,
+      description,
+      client,
+      address,
+      estimatedWorth,
+      currency,
+      stage,
+      stageHistory,
+      status,
+      pipeline,
+      tags,
+      orgId,
+      firmId,
+      leadManagerId: userId,
+      assignedToId: userId,
+      timezone,
+      interactions: totalinteractions,
+      closureDate,
+      followUpDate,
+      priority,
+      nextAction,
+      customNextAction,
+      notes,
+    });
+    await lead.save();
 
-exports.leadSearch = async (req, res) => {
+    res.status(201).json({
+      message: "Lead created successfully",
+    });
+  } catch (error) {
+    console.error("Error creating lead:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to create lead", error: error.message });
+  }
+};
+export const getAllLeads = async (req, res) => {
   try {
-    const { search, orgId } = req.body;
-    const newData = [];
-    const data = await Lead.find({ orgId: orgId, delete: false }).sort({
-      _id: -1,
-    });
-    data.filter((doc) => {
-      for (const key in doc.toObject()) {
-        if (doc[key] === search) {
-          newData.push(doc);
-        }
-      }
-      for (const key in doc.clientAddress.toObject()) {
-        if (doc.clientAddress[key] === search) {
-          newData.push(doc);
-        }
-      }
-      for (const key in doc.pipeline.toObject()) {
-        if (doc.pipeline[key] === search) {
-          newData.push(doc);
-        }
-      }
-      for (const key in doc.orgDetails.toObject()) {
-        if (doc.orgDetails[key] === search) {
-          newData.push(doc);
-        }
-      }
-      for (const key in doc.orgDetails.orgAddress.toObject()) {
-        if (doc.orgDetails.orgAddress[key] === search) {
-          newData.push(doc);
-        }
-      }
-    });
-    res.json({
-      data: newData,
-      message: "Data List",
-      success: false,
-      status: 200,
-      length: newData.length,
-    });
-  } catch (err) {
-    res.json({
-      message: "Someting went wrong !",
-      success: false,
-      status: 400,
-    });
+    const leads = await Lead.find({ orgId: req.orgUser.orgId, deleted: false })
+      .select({
+        _id: 1,
+        LeadId: 1,
+        stage: 1,
+        status: 1,
+        priority: 1,
+        leadScore: 1,
+        followUpDate: 1,
+        nextAction: 1,
+        "client.email": 1,
+      })
+      .lean();
+    if (!leads) {
+      return res.status(404).json({ message: "No leads found" });
+    }
+    res.status(200).json({ message: "Leads fetched successfully", leads });
+  } catch (error) {
+    console.error("Error fetching leads:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch leads", error: error.message });
   }
 };
 
-exports.bulkSoftDelete = async (req, res) => {
+export const getLeadById = async (req, res) => {
   try {
-    const { leadIds } = req.body;
-    const result = await Lead.updateMany({ _id: { $in: leadIds }, delete: true });
-
-    if (result.deletedCount > 0) {
-      res.status(200).json({
-        message: `${result.deletedCount} leads deleted successfully`,
-        success: true,
-      });
-    } else {
-      res.status(404).json({
-        message: "No leads found to delete",
-        success: false,
-      });
+    const lead = await Lead.findOne({ _id: req.params.id, deleted: false })
+      .populate("orgId", "name")
+      .populate("firmId", "name")
+      .lean();
+    if (!lead) {
+      return res.status(404).json({ message: "Lead not found or deleted" });
     }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      message: "Internal server error",
-      success: false,
+    res.status(200).json({ message: "Lead fetched successfully", lead });
+  } catch (error) {
+    console.error("Error fetching lead:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch lead", error: error.message });
+  }
+};
+export const updateLead = async (req, res) => {
+  const { id } = req.params;
+  const parsed = updateLeadSchema.safeParse(req.body);
+  const updateData = parsed.data;
+  const findlead = await Lead.findOne({ _id: id, deleted: false });
+
+  if (!findlead) {
+    return res.status(404).json({ message: "Lead not found or deleted" });
+  }
+  try {
+    const updatedLead = await Lead.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
     });
+
+    if (!updatedLead) {
+      return res.status(404).json({ message: "Lead not found" });
+    }
+
+    res.status(200).json({ message: "Lead updated successfully", updatedLead });
+  } catch (error) {
+    console.error("Error updating lead:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to update lead", error: error.message });
   }
 };
 
-exports.bulkDelete = async (req, res) => {
+export const updateLeadStage = async (req, res) => {
+  const { id } = req.params;
+  const parsed = updateLeadStageSchema.safeParse(req.body);
+  console.log(parsed);
+  const { stage } = parsed.data;
+
+  try {
+    const lead = await Lead.findOne({ _id: id, deleted: false });
+    if (!lead) {
+      return res.status(404).json({ message: "Lead not found" });
+    }
+
+    const currentStage = lead.stage;
+
+    if (currentStage === stage) {
+      return res.status(400).json({ message: "Lead is already in this stage" });
+    }
+
+    // End the last stage in history
+    const lastStage = lead.stageHistory[lead.stageHistory.length - 1];
+    if (lastStage && !lastStage.endedAt) {
+      lastStage.endedAt = new Date();
+    }
+
+    // Add new stage to history
+    lead.stage = stage;
+    lead.stageHistory.push({
+      stageName: stage,
+      startedAt: new Date(),
+    });
+
+    await lead.save();
+
+    res.status(200).json({ message: "Lead stage updated successfully" });
+  } catch (error) {
+    console.error("Error updating lead stage:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to update lead stage", error: error.message });
+  }
+};
+export const getLeadStageHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const lead = await Lead.findOne( {_id: id, deleted: false }).select("stageHistory");
+
+    if (!lead) {
+      return res.status(404).json({ message: "no stage history found" });
+    }
+
+    res
+      .status(200)
+      .json({
+        message: "stage history fetched successfully",
+        stageHistory: lead.stageHistory,
+      });
+  } catch (error) {
+    console.error("Error fetching stage history:", error);
+    res.status(500).json({ message: "Failed to fetch stage history" });
+  }
+};
+
+export const bulkDeleteLeads = async (req, res) => {
   try {
     const { leadIds } = req.body;
-    const result = await Lead.deleteMany({ _id: { $in: leadIds } });
+    const orgId = req.orgUser.orgId;
 
-    if (result.deletedCount > 0) {
-      res.status(200).json({
-        message: `${result.deletedCount} leads deleted successfully`,
-        success: true,
-      });
-    } else {
-      res.status(404).json({
-        message: "No leads found to delete",
-        success: false,
-      });
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "leadIds must be a non-empty array" });
     }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      message: "Internal server error",
-      success: false,
+    // find lead and check orgId
+    const leads = await Lead.find({ orgId: orgId, });
+    if (!leads) {
+      return res.status(404).json({ message: "Leads not found" });
+    }
+    const result = await Lead.updateMany(
+      { _id: { $in: leadIds } },
+      { $set: { deleted: true } },
+      {$set: { deletedAt: new Date() }}
+    );
+
+    res.status(200).json({
+      message: "Leads deleted successfully",
+      modifiedCount: result.modifiedCount,
     });
+  } catch (error) {
+    console.error("Bulk delete failed:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to delete leads", error: error.message });
   }
 };

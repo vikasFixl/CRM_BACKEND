@@ -33,17 +33,16 @@ Router.route("/create").post(isAuthenticated,authenticateOrgToken(),checkPermiss
 // Delete firm by id
 Router.route("/delete/:id").delete(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "DELETE_FIRM"),firmController.deleteFirm);
 
-// Get single firm by orgId and id
-Router.route("/getFirm/:orgId/:id").get(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "VIEW_FIRM"),firmController.getFirm);
+// Get single firm by id
+Router.route("/getFirm/:id").get(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "VIEW_FIRM"),firmController.getFirmbyId);
 
-// Get single firm by orgId and id (invoice recurring)
-Router.route("/getFirmforinvoicerecurring/:orgId/:id").get(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "VIEW_FIRM"),firmController.getFirm);
+
 
 // Get all firms for orgId
-Router.route("/getAllFirm/:orgId").get(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "VIEW_FIRM"),firmController.getAllFirm);
+Router.route("/getAllFirm").get(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "VIEW_FIRM"),firmController.getAllFirm);
 
 // Get firm list for orgId
-Router.route("/getFirmList/:orgId").get(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "VIEW_FIRM"),firmController.getFirmList);
+Router.route("/getFirmList").get(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "VIEW_FIRM"),firmController.getFirmList);
 
 // Update firm by id
 Router.route("/update/:id").patch(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "UPDATE_FIRM"),firmController.updateFirm);
