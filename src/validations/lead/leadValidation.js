@@ -178,20 +178,18 @@ export const updateLeadSchema = z.object({
 
 
 
- const STAGE_ENUM = [
-  "New",
-  "Contacted",
-  "Qualified",
-  "Demo",
-  "Proposal Sent",
-  "Negotiation",
-  "Won",
-  "Lost",
-  "Converted",
-] 
-
-export const updateLeadStageSchema = z.object({
-  stage: z.enum(STAGE_ENUM, {
-    errorMap: () => ({ message: "Invalid stage value" }),
-  }),
+ export const updateLeadStageSchema = z.object({
+  stage: z.enum(
+    [
+      "New",
+      "Contacted",
+      "Qualified",
+      "Demo",
+      "Proposal Sent",
+      "Negotiation",
+      "Won",
+      "Lost",
+      "Converted",
+    ]
+  )
 });

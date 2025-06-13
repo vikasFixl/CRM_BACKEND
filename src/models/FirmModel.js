@@ -2,10 +2,7 @@ import mongoose from "mongoose";
 
 const firmSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-    },
+    FirmName: { type: String, required: true },
     email: {
       type: String,
       required: true,
@@ -43,7 +40,6 @@ const firmSchema = new mongoose.Schema(
     website: { type: String },
     gst_no: { type: String },
     logo: { type: String },
-    registeredFirmName: { type: String },
     uin: { type: String },
     tinNo: { type: String },
     cinNo: { type: String },
@@ -52,11 +48,19 @@ const firmSchema = new mongoose.Schema(
       ref: "Oraganization",
       required: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
   }
 );
-
+firmSchema.index({ orgId: 1, email: 1 }, { unique: true });
+firmSchema.index({ orgId: 1, name: 1 }, { unique: true });
 const Firm = mongoose.model("Firm", firmSchema);
 export default Firm;

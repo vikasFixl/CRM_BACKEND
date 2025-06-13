@@ -45,7 +45,11 @@ Router.route("/getAllFirm").get(isAuthenticated,authenticateOrgToken(),checkPerm
 Router.route("/getFirmList").get(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "VIEW_FIRM"),firmController.getFirmList);
 
 // Update firm by id
-Router.route("/update/:id").patch(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "UPDATE_FIRM"),firmController.updateFirm);
+Router.route("/update/:id").patch(isAuthenticated,authenticateOrgToken(),checkPermission("firm", "EDIT_FIRM"),firmController.updateFirm);
+// PATCH /api/firm/restore/:id
+Router.route("/restore/:id").patch(isAuthenticated, authenticateOrgToken(), firmController.RestoreFirm);
+// get all delted firms
+Router.route("/deleted").get(isAuthenticated, authenticateOrgToken(),firmController.getAllDeletedFirm);
 
 // Upload logo for firm by id
 Router.route("/insertlogo/:id").patch(upload.single("logo"), firmController.logo);

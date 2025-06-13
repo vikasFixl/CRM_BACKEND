@@ -76,12 +76,7 @@ Router.route("/acceptInvite/:token").post(lightLimiter, acceptInvite);
 Router.route("/declineInvite/:token").post(lightLimiter, declineInvite);
 */
 
-// Add a new user to organization
-// Router.route("/adduser").post(
-//   isAuthenticated,
-//   authenticateOrgToken(["OrgAdmin"]),
-//   AddUserToOrganization
-// );
+
 // get Oraganisation by id
 Router.route("/").post(isAuthenticated, createOrganization);
 Router.route("/:id").get(

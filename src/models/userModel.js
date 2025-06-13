@@ -32,6 +32,7 @@ const UserSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Organization",
       index: true,
+      default: null,
     },
     isSuspended: { type: Boolean, default: false, select: false },
 

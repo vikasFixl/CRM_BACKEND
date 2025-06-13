@@ -38,7 +38,7 @@ const stageHistorySchema = new mongoose.Schema(
 const leadSchema = new mongoose.Schema(
   {
     // Basic Info
-    title: { type: String, required: true },
+    title: { type: String, required: true,unique: true },
     description: String,
 
     // Client Info

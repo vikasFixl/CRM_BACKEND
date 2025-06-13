@@ -47,7 +47,8 @@ export const checkPermission = (moduleName, actionName) => {
         userId,
         organizationId: orgId,
       }).populate("role");
-      console.log("member", member);
+      // console.log("member", member);
+      // const permisionscheck=member.role.permissions.map(perm=>console.log(perm));
       if (!member) {
         return res
           .status(403)

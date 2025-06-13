@@ -2,9 +2,11 @@ import express from "express";
 import {
   bulkDeleteLeads,
   createLead,
+  getAllDeletedLead,
   getAllLeads,
   getLeadById,
   getLeadStageHistory,
+  restoreLead,
   updateLead,
   updateLeadStage,
 } from "../controllers/leadController.js";
@@ -44,5 +46,8 @@ LeadRouter.route("/:id/stage").patch(updateLeadStage);
 // Bulk delete leads
 LeadRouter.route("/bulk-delete")
   .delete(isAuthenticated,authenticateOrgToken(),bulkDeleteLeads);
+
+  LeadRouter.route("/deleted/all").get(isAuthenticated,authenticateOrgToken(),getAllDeletedLead);
+  LeadRouter.route("/restore/:id").patch(isAuthenticated,authenticateOrgToken(),restoreLead);
 
 export default LeadRouter;

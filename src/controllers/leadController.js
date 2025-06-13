@@ -4,14 +4,13 @@ import {
   updateLeadSchema,
   updateLeadStageSchema,
 } from "../validations/lead/leadValidation.js";
-
+import mongoose from "mongoose";
 // Create a new lead
 export const createLead = async (req, res) => {
   const userId = req.user.userId;
   const orgId = req.orgUser.orgId;
 
   try {
-
     const parsed = leadSchema.safeParse(req.body);
     const {
       title,
@@ -49,13 +48,16 @@ export const createLead = async (req, res) => {
         startedAt: new Date(),
       },
     ];
-// check if lead name already present 
-const existingLead = await Lead.findOne({ title, deleted: false ,orgId:orgId});
-console.log(existingLead,"existingLead");
+    // check if lead name already present
+    const existingLead = await Lead.findOne({
+      title,
+      deleted: { $ne: true },
+      orgId: orgId,
+    });
 
-if (existingLead) {
-  return res.status(400).json({ message: "Lead name already taken" });
-}
+    if (existingLead) {
+      return res.status(409).json({ message: "Lead name already taken" });
+    }
     const lead = await Lead.create({
       title,
       description,
@@ -94,8 +96,21 @@ if (existingLead) {
   }
 };
 export const getAllLeads = async (req, res) => {
+  const orgId = req.orgUser.orgId;
+  if (!orgId) {
+    return res.status(400).json({ message: "Org id is required" });
+  }
+  if (!mongoose.Types.ObjectId.isValid(orgId))
+    return res.status(400).json({
+      message: "Invalid org id try logging in.",
+      code: 400,
+      success: false,
+    });
   try {
-    const leads = await Lead.find({ orgId: req.orgUser.orgId, deleted: false })
+    const leads = await Lead.find({
+      orgId,
+      deleted: { $ne: true },
+    })
       .select({
         _id: 1,
         LeadId: 1,
@@ -106,6 +121,7 @@ export const getAllLeads = async (req, res) => {
         followUpDate: 1,
         nextAction: 1,
         "client.email": 1,
+        title: 1,
       })
       .lean();
     if (!leads) {
@@ -121,8 +137,21 @@ export const getAllLeads = async (req, res) => {
 };
 
 export const getLeadById = async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ message: "Lead id is required" });
+  }
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(400).json({
+      message: "invalid id.",
+      code: 400,
+      success: false,
+    });
   try {
-    const lead = await Lead.findOne({ _id: req.params.id, deleted: false })
+    const lead = await Lead.findOne({
+      _id: id,
+      deleted: { $ne: true },
+    })
       .populate("orgId", "name")
       .populate("firmId", "name")
       .lean();
@@ -139,6 +168,15 @@ export const getLeadById = async (req, res) => {
 };
 export const updateLead = async (req, res) => {
   const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ message: "Lead id is required" });
+  }
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(400).json({
+      message: "invalid  id.",
+      code: 400,
+      success: false,
+    });
   const parsed = updateLeadSchema.safeParse(req.body);
   const updateData = parsed.data;
   const findlead = await Lead.findOne({ _id: id, deleted: false });
@@ -167,8 +205,18 @@ export const updateLead = async (req, res) => {
 
 export const updateLeadStage = async (req, res) => {
   const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ message: "Lead id is required" });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(400).json({
+      message: "invalid id.",
+      code: 400,
+      success: false,
+    });
   const parsed = updateLeadStageSchema.safeParse(req.body);
-  console.log(parsed);
+
   const { stage } = parsed.data;
 
   try {
@@ -209,18 +257,27 @@ export const updateLeadStage = async (req, res) => {
 export const getLeadStageHistory = async (req, res) => {
   try {
     const { id } = req.params;
-    const lead = await Lead.findOne( {_id: id, deleted: false }).select("stageHistory");
+    if (!id) {
+      return res.status(400).json({ message: "Lead id is required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({
+        message: "invalid id.",
+        code: 400,
+        success: false,
+      });
+    const lead = await Lead.findOne({ _id: id, deleted: false }).select(
+      "stageHistory"
+    );
 
     if (!lead) {
       return res.status(404).json({ message: "no stage history found" });
     }
 
-    res
-      .status(200)
-      .json({
-        message: "stage history fetched successfully",
-        stageHistory: lead.stageHistory,
-      });
+    res.status(200).json({
+      message: "stage history fetched successfully",
+      stageHistory: lead.stageHistory,
+    });
   } catch (error) {
     console.error("Error fetching stage history:", error);
     res.status(500).json({ message: "Failed to fetch stage history" });
@@ -238,14 +295,14 @@ export const bulkDeleteLeads = async (req, res) => {
         .json({ message: "leadIds must be a non-empty array" });
     }
     // find lead and check orgId
-    const leads = await Lead.find({ orgId: orgId, });
+    const leads = await Lead.find({ orgId: orgId });
     if (!leads) {
       return res.status(404).json({ message: "Leads not found" });
     }
     const result = await Lead.updateMany(
       { _id: { $in: leadIds } },
       { $set: { deleted: true } },
-      {$set: { deletedAt: new Date() }}
+      { $set: { deletedAt: new Date() } }
     );
 
     res.status(200).json({
@@ -257,5 +314,65 @@ export const bulkDeleteLeads = async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to delete leads", error: error.message });
+  }
+};
+
+export const getAllDeletedLead = async (req, res) => {
+  try {
+    const orgId = req.orgUser?.orgId;
+    const deletedLeads = await Lead.find({ orgId, deleted: { $ne: false } })
+      .sort({ updatedAt: -1 })
+      .select({
+        _id: 1,
+        LeadId: 1,
+        stage: 1,
+        status: 1,
+        priority: 1,
+        leadScore: 1,
+        title: 1,
+        description: 1,
+      });
+    return res.status(200).json({
+      message: "Soft-deleted leads fetched successfully",
+      success: true,
+      code: 200,
+      data: deletedLeads,
+    });
+  } catch (error) {
+    console.error("Error in getAllDeletedLead:", error);
+    return res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Internal server error.",
+    });
+  }
+};
+
+export const restoreLead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ message: "Lead ID is required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({
+        message: "invalid id.",
+        code: 400,
+        success: false,
+      });
+
+    const lead = await Lead.findOne({ _id: id, deleted: { $ne: false } });
+    if (!lead) {
+      return res.status(404).json({ message: "Lead not found or not deleted" });
+    }
+    lead.deleted = false;
+    lead.deletedAt = null;
+    await lead.save();
+    return res
+      .status(200)
+      .json({ message: "Lead restored successfully", success: true });
+  } catch (error) {
+    console.error("Error in restoreLead:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

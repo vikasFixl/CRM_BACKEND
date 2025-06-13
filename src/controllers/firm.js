@@ -5,7 +5,7 @@ import Firm from "../models/FirmModel.js";
 
 export const createFirm = async (req, res) => {
   try {
-    const orgId=req.orgUser.orgId;
+    const orgId = req.orgUser.orgId;
     // ✅ Validate with Zod
     const parsed = firmValidationSchema.safeParse(req.body);
 
@@ -22,14 +22,24 @@ export const createFirm = async (req, res) => {
     const form = parsed.data;
 
     // 🧠 Check for existing firm with same email
-    const existingFirm = await Firm.findOne({ email: form.email });
-    if (existingFirm) {
-      return res.status(400).json({
-        code: 400,
-        success: false,
-        message: `Firm already registered with ${form.email}.`,
-      });
-    }
+   const existingFirm = await Firm.findOne({
+  orgId,
+  isDeleted: { $ne: true },
+  $or: [
+    { email: form.email },
+    { FirmName: form.name },
+   
+  ]
+});
+
+if (existingFirm) {
+  return res.status(400).json({
+    message: `Firm already registered with same email, name, or registered firm name.`,
+    code: 400,
+    success: false,
+  });
+}
+
 
     // ✅ Destructure the validated form
     const {
@@ -46,12 +56,11 @@ export const createFirm = async (req, res) => {
       uin,
       tinNo,
       cinNo,
-  
     } = form;
 
     //  Create and save new firm
     const newFirm = new Firm({
-      name,
+      FirmName: name,
       email,
       phone,
       invoicePrefix,
@@ -60,7 +69,7 @@ export const createFirm = async (req, res) => {
       website,
       gst_no,
       logo,
-      registeredFirmName,
+  
       uin,
       tinNo,
       cinNo,
@@ -70,10 +79,10 @@ export const createFirm = async (req, res) => {
     await newFirm.save();
 
     return res.status(201).json({
+      message: "Firm created successfully!",
       data: newFirm,
       code: 201,
       success: true,
-      message: "Firm created successfully!",
     });
   } catch (err) {
     console.error(err);
@@ -85,55 +94,49 @@ export const createFirm = async (req, res) => {
   }
 };
 
-
-
 export const getFirmbyId = async (req, res) => {
   try {
-    const {  id } = req.params;
-    const orgId=req.orgUser.orgId;
+    const { id } = req.params;
+    const orgId = req.orgUser.orgId;
 
     // ✅ Validate parameters
     if (!orgId) {
       return res.status(400).json({
+        message: "Organization ID (orgId) is required in the URL.",
         success: false,
         code: 400,
-        message: 'Organization ID (orgId) is required in the URL.',
       });
     }
 
     if (!id) {
       return res.status(400).json({
+        message: "Firm ID (id) is required in the URL.",
         success: false,
         code: 400,
-        message: 'Firm ID (id) is required in the URL.',
       });
     }
 
     // ✅ Fetch all firms for the given org
-    const firmList = await Firm.findOne({ orgId: orgId, _id: id });
+    const firm = await Firm.findOne({ orgId: orgId, _id: id , isDeleted: { $ne: true }});
 
-    // ✅ Filter for the specific firm by _id
-    const matchedFirm = firmList.find((firm) => firm._id.toString() === id);
-
-    if (!matchedFirm) {
-      return res.status(404).json({
+    if (!firm) {
+      return res.status(400).json({
+        message: "Firm not found.",
         success: false,
-        code: 404,
-        message: 'Firm not found for the provided ID.',
+        code: 400,
       });
     }
 
     return res.status(200).json({
-      data: matchedFirm,
+      message: "Firm fetched successfully!",
+      data: firm,
       success: true,
       code: 200,
-      message: 'Firm fetched successfully!',
     });
-
   } catch (err) {
-    console.error('Error in getFirm:', err);
+    console.error("Error in getFirm:", err);
     return res.status(500).json({
-      message: 'Internal server error.',
+      message: "Internal server error.",
       code: 500,
       success: false,
     });
@@ -142,26 +145,28 @@ export const getFirmbyId = async (req, res) => {
 
 export const getFirmList = async (req, res) => {
   try {
- const orgId=req.orgUser.orgId;
+    const orgId = req.orgUser.orgId;
 
     if (!orgId) {
       return res.status(400).json({
+        message: "Organization ID (orgId) is required in the URL.",
         success: false,
         code: 400,
-        message: "Organization ID (orgId) is required in the URL.",
       });
     }
 
-    const firms = await Firm.find({ orgId }).select("name").sort({ createdAt: -1 });
+    const firms = await Firm.find({ orgId, isDeleted: { $ne: true } })
+      .select("FirmName")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
+      message: "Firm list fetched successfully!",
       data: firms,
       success: true,
       code: 200,
-      message: "Firm list fetched successfully!",
     });
   } catch (err) {
-    console.error('Error in getFirmList:', err);
+    console.error("Error in getFirmList:", err);
     return res.status(500).json({
       message: "Internal server error.",
       code: 500,
@@ -175,24 +180,30 @@ export const updateFirm = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(_id))
     return res.status(404).send("No firm with that id.");
 
-  const parsed = firmValidationSchemae.safeParse(req.body);
+  const parsed = firmValidationSchema.safeParse(req.body);
   if (!parsed.success) {
-    const errors = parsed.error.errors.map(e => e.message);
-    return res.status(400).json({ success: false, code: 400, message: "Validation failed", errors });
+    const errors = parsed.error.errors.map((e) => e.message);
+    return res.status(400).json({
+      success: false,
+      code: 400,
+      message: "Validation failed",
+      errors,
+    });
   }
 
   try {
-    const updatedFirm = await Firm.findByIdAndUpdate(
-      _id,
-      { ...parsed.data, _id },
-      { new: true }
-    );
+  const updatedFirm = await Firm.findOneAndUpdate(
+  { _id, isDeleted: { $ne: true } }, // ✅ filter
+  { ...parsed.data },                // ✅ update data
+  { new: true }                      // ✅ return the updated document
+);
+
 
     res.status(200).json({
-      data: updatedFirm,
+      message: "Firm updated successfully!",
+    
       success: true,
       code: 200,
-      message: "Firm updated!",
     });
   } catch (err) {
     console.error(err);
@@ -215,7 +226,10 @@ export const deleteFirm = async (req, res) => {
     });
 
   try {
-    const deletedFirm = await Firm.findByIdAndRemove(id);
+    const deletedFirm = await Firm.findByIdAndUpdate(id, {
+      isDeleted: true,
+      deletedAt: new Date(),
+    });
 
     if (!deletedFirm) {
       return res.status(404).json({
@@ -241,7 +255,7 @@ export const deleteFirm = async (req, res) => {
 };
 
 export const getAllFirm = async (req, res) => {
-const orgId=req.orgUser.orgId;
+  const orgId = req.orgUser.orgId;
 
   if (!mongoose.Types.ObjectId.isValid(orgId)) {
     return res.status(400).json({
@@ -252,13 +266,17 @@ const orgId=req.orgUser.orgId;
   }
 
   try {
-    const firmAll = await Firm.find({ orgId }).sort({ _id: -1 });
+    const firmAll = await Firm.find({ orgId, isDeleted: { $ne: true } })
+      .sort({ _id: -1 })
+      .select(
+        "FirmName _id email contectPerson.name contectPerson.email"
+      );
 
     res.status(200).json({
+      message: "All firms retrieved successfully.",
       data: firmAll,
       success: true,
       code: 200,
-      message: "All firms retrieved successfully.",
     });
   } catch (err) {
     console.error(err);
@@ -269,7 +287,91 @@ const orgId=req.orgUser.orgId;
     });
   }
 };
+// need restore_firm permission
+export const RestoreFirm = async (req, res) => {
+   const { id } = req.params;
+  const orgId = req.orgUser?.orgId;
+  if(!id){
+    return res.status(400).json({
+      message: "Invalid firm ID.",
+      success: false,
+      code: 400,
+    });
+  }
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      code: 400,
+      message: "Invalid firm ID.",
+    });
+  }
+
+  try {
+     // Find the firm that matches orgId and is soft-deleted
+    const firm = await Firm.findOne({
+      _id: id,
+      orgId,
+      isDeleted: true,
+    });
+       if (!firm) {
+      return res.status(404).json({
+        message: "Soft-deleted firm not found for this organization.",
+        success: false,
+        code: 404,
+      });
+    }
+      // Restore the firm
+    firm.isDeleted = false;
+    firm.deletedAt = null;
+    await firm.save();
+
+    return res.status(200).json({
+      message: "Firm restored successfully.",
+      success: true,
+      code: 200,
+      
+    });
+  } catch (error) {
+     console.error("Error in restoreFirm:", err);
+    return res.status(500).json({
+      message: "Internal server error.",
+      success: false,
+      code: 500,
+    });
+  }
+}
+
+// get-all-delted-firm permission
+export const getAllDeletedFirm = async (req, res) => {
+  try {
+    const orgId = req.orgUser?.orgId;
+
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        code: 400,
+        message: "Organization ID is missing.",
+      });
+    }
+
+    const deletedFirms = await Firm.find({ orgId, isDeleted: true }).sort({ updatedAt: -1 });
+
+    return res.status(200).json({
+      message: "Soft-deleted firms fetched successfully.",
+      success: true,
+      code: 200,
+      data: deletedFirms,
+    });
+  } catch (error) {
+    console.error("Error in getAllDeletedFirm:", error);
+    return res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Internal server error.",
+    });
+  }
+};
 export const logo = async (req, res) => {
   const _id = req.params.id;
 
@@ -319,12 +421,3 @@ export const logo = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
-
-
-
