@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const firmValidationSchema = z.object({
-  FirmName: z.string({ required_error: "Firm name is required." }),
+  FirmName: z.string(),
   email: z
     .string({ required_error: "Firm email is required." })
     .email("Invalid email format."),

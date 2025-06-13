@@ -343,16 +343,16 @@ export const getUserOrganizations = async (req, res) => {
     }));
 
     res.status(200).json({
+      message: "Organizations fetched successfully",
       success: true,
       code: 200,
       organizations,
-      message: "Organizations fetched successfully",
     });
   } catch (error) {
     res.status(500).json({
+      message: "Failed to fetch organizations",
       success: false,
       code: 500,
-      message: "Failed to fetch organizations",
       error: error.message,
     });
   }

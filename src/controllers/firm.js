@@ -8,42 +8,36 @@ export const createFirm = async (req, res) => {
     const orgId = req.orgUser.orgId;
     // ✅ Validate with Zod
     const parsed = firmValidationSchema.safeParse(req.body);
-
     if (!parsed.success) {
-      const errorMessages = parsed.error.errors.map((err) => err.message);
       return res.status(400).json({
-        success: false,
-        code: 400,
-        message: "Validation failed.",
-        errors: errorMessages,
+        message: "Validation error",
+        errors: parsed.error.errors.map((e) => e.message),
       });
     }
 
+   
+
     const form = parsed.data;
+    console.log(form);
 
     // 🧠 Check for existing firm with same email
-   const existingFirm = await Firm.findOne({
-  orgId,
-  isDeleted: { $ne: true },
-  $or: [
-    { email: form.email },
-    { FirmName: form.name },
-   
-  ]
-});
+    const existingFirm = await Firm.findOne({
+      orgId,
+      isDeleted: { $ne: true },
+      $or: [{ email: form.email }, { FirmName: form.FirmName }],
+    });
 
-if (existingFirm) {
-  return res.status(400).json({
-    message: `Firm already registered with same email, name, or registered firm name.`,
-    code: 400,
-    success: false,
-  });
-}
-
+    if (existingFirm) {
+      return res.status(400).json({
+        message: `Firm already registered with same email or Firm name.`,
+        code: 400,
+        success: false,
+      });
+    }
 
     // ✅ Destructure the validated form
     const {
-      name,
+      FirmName,
       email,
       phone,
       invoicePrefix,
@@ -60,7 +54,7 @@ if (existingFirm) {
 
     //  Create and save new firm
     const newFirm = new Firm({
-      FirmName: name,
+      FirmName,
       email,
       phone,
       invoicePrefix,
@@ -69,7 +63,7 @@ if (existingFirm) {
       website,
       gst_no,
       logo,
-  
+
       uin,
       tinNo,
       cinNo,
@@ -117,7 +111,11 @@ export const getFirmbyId = async (req, res) => {
     }
 
     // ✅ Fetch all firms for the given org
-    const firm = await Firm.findOne({ orgId: orgId, _id: id , isDeleted: { $ne: true }});
+    const firm = await Firm.findOne({
+      orgId: orgId,
+      _id: id,
+      isDeleted: { $ne: true },
+    });
 
     if (!firm) {
       return res.status(400).json({
@@ -182,26 +180,23 @@ export const updateFirm = async (req, res) => {
 
   const parsed = firmValidationSchema.safeParse(req.body);
   if (!parsed.success) {
-    const errors = parsed.error.errors.map((e) => e.message);
     return res.status(400).json({
-      success: false,
-      code: 400,
-      message: "Validation failed",
-      errors,
+      message: "Validation error",
+      errors: parsed.error.errors.map((e) => e.message),
     });
   }
 
   try {
-  const updatedFirm = await Firm.findOneAndUpdate(
-  { _id, isDeleted: { $ne: true } }, // ✅ filter
-  { ...parsed.data },                // ✅ update data
-  { new: true }                      // ✅ return the updated document
-);
+    const updatedFirm = await Firm.findOneAndUpdate(
+      { _id, isDeleted: { $ne: true } }, // ✅ filter
+      { ...parsed.data }, // ✅ update data
+      { new: true } // ✅ return the updated document
+    );
 
-
+    updatedFirm.save();
     res.status(200).json({
       message: "Firm updated successfully!",
-    
+
       success: true,
       code: 200,
     });
@@ -268,9 +263,7 @@ export const getAllFirm = async (req, res) => {
   try {
     const firmAll = await Firm.find({ orgId, isDeleted: { $ne: true } })
       .sort({ _id: -1 })
-      .select(
-        "FirmName _id email contectPerson.name contectPerson.email"
-      );
+      .select("FirmName _id email contectPerson.name contectPerson.email");
 
     res.status(200).json({
       message: "All firms retrieved successfully.",
@@ -289,9 +282,9 @@ export const getAllFirm = async (req, res) => {
 };
 // need restore_firm permission
 export const RestoreFirm = async (req, res) => {
-   const { id } = req.params;
+  const { id } = req.params;
   const orgId = req.orgUser?.orgId;
-  if(!id){
+  if (!id) {
     return res.status(400).json({
       message: "Invalid firm ID.",
       success: false,
@@ -308,20 +301,20 @@ export const RestoreFirm = async (req, res) => {
   }
 
   try {
-     // Find the firm that matches orgId and is soft-deleted
+    // Find the firm that matches orgId and is soft-deleted
     const firm = await Firm.findOne({
       _id: id,
       orgId,
       isDeleted: true,
     });
-       if (!firm) {
+    if (!firm) {
       return res.status(404).json({
         message: "Soft-deleted firm not found for this organization.",
         success: false,
         code: 404,
       });
     }
-      // Restore the firm
+    // Restore the firm
     firm.isDeleted = false;
     firm.deletedAt = null;
     await firm.save();
@@ -330,17 +323,16 @@ export const RestoreFirm = async (req, res) => {
       message: "Firm restored successfully.",
       success: true,
       code: 200,
-      
     });
   } catch (error) {
-     console.error("Error in restoreFirm:", err);
+    console.error("Error in restoreFirm:", err);
     return res.status(500).json({
       message: "Internal server error.",
       success: false,
       code: 500,
     });
   }
-}
+};
 
 // get-all-delted-firm permission
 export const getAllDeletedFirm = async (req, res) => {
@@ -355,7 +347,9 @@ export const getAllDeletedFirm = async (req, res) => {
       });
     }
 
-    const deletedFirms = await Firm.find({ orgId, isDeleted: true }).sort({ updatedAt: -1 });
+    const deletedFirms = await Firm.find({ orgId, isDeleted: true }).sort({
+      updatedAt: -1,
+    });
 
     return res.status(200).json({
       message: "Soft-deleted firms fetched successfully.",

@@ -6,12 +6,18 @@ import {
 } from "../validations/lead/leadValidation.js";
 import mongoose from "mongoose";
 // Create a new lead
-export const createLead = async (req, res) => {
+export const createLead = async (req, res, next) => {
   const userId = req.user.userId;
   const orgId = req.orgUser.orgId;
 
   try {
     const parsed = leadSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: parsed.error.errors.map((e) => e.message),
+      });
+    }
     const {
       title,
       description,
@@ -88,14 +94,12 @@ export const createLead = async (req, res) => {
     res.status(201).json({
       message: "Lead created successfully",
     });
-  } catch (error) {
-    console.error("Error creating lead:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to create lead", error: error.message });
+  } catch (err) {
+    console.error("Error creating lead:", err);
+    next(err);
   }
 };
-export const getAllLeads = async (req, res) => {
+export const getAllLeads = async (req, res, next) => {
   const orgId = req.orgUser.orgId;
   if (!orgId) {
     return res.status(400).json({ message: "Org id is required" });
@@ -166,7 +170,7 @@ export const getLeadById = async (req, res) => {
       .json({ message: "Failed to fetch lead", error: error.message });
   }
 };
-export const updateLead = async (req, res) => {
+export const updateLead = async (req, res, next) => {
   const { id } = req.params;
   if (!id) {
     return res.status(400).json({ message: "Lead id is required" });
@@ -178,6 +182,12 @@ export const updateLead = async (req, res) => {
       success: false,
     });
   const parsed = updateLeadSchema.safeParse(req.body);
+   if (!parsed.success) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: parsed.error.errors.map((e) => e.message),
+      });
+    }
   const updateData = parsed.data;
   const findlead = await Lead.findOne({ _id: id, deleted: false });
 
@@ -195,11 +205,9 @@ export const updateLead = async (req, res) => {
     }
 
     res.status(200).json({ message: "Lead updated successfully", updatedLead });
-  } catch (error) {
-    console.error("Error updating lead:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to update lead", error: error.message });
+  } catch (err) {
+    console.error("Error updating lead:", err);
+    return res.status(500).json({ message: "Failed to update lead" });
   }
 };
 
@@ -216,8 +224,14 @@ export const updateLeadStage = async (req, res) => {
       success: false,
     });
   const parsed = updateLeadStageSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Validation failed",
+      errors: parsed.error.errors.map((e) => e.message),
+    });
+  }
 
-  const { stage } = parsed.data;
+  const stage = parsed.data;
 
   try {
     const lead = await Lead.findOne({ _id: id, deleted: false });
@@ -247,11 +261,10 @@ export const updateLeadStage = async (req, res) => {
     await lead.save();
 
     res.status(200).json({ message: "Lead stage updated successfully" });
-  } catch (error) {
-    console.error("Error updating lead stage:", error);
-    res
+  } catch (err) {
+    return res
       .status(500)
-      .json({ message: "Failed to update lead stage", error: error.message });
+      .json({ message: "Failed to update lead stage", error: err });
   }
 };
 export const getLeadStageHistory = async (req, res) => {

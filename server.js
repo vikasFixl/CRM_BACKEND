@@ -56,6 +56,7 @@ import RoleRoutes from "./src/routes/rolepermissionroute.js";
 import firmRoutes from "./src/routes/firmRoute.js";
 import LeadRouter from "./src/routes/leadRoute.js";
 import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
+import { errorHandler } from "./src/middleweare/errorhandler.js";
 
 // PayPal config
 paypal.configure({
@@ -150,14 +151,17 @@ app.use("/api/hrm", appRouter);
 app.use("/api/activities", activitRoutes);
 */
 
+
+app.use(errorHandler)
 // Start the server
 const startserver= async () => {
   try {
-    await connectDB();
-    app.listen(PORT, () => {
+  
+    app.listen(PORT, async() => {
       console.log(`✅ Server started on port ${PORT}`);
+      await connectDB();
     })
-    await connectDB();
+      await connectDB();
   } catch (error) {
     console.error("Error connecting to the database:", error);
   }
