@@ -15,8 +15,6 @@ export const createFirm = async (req, res) => {
       });
     }
 
-   
-
     const form = parsed.data;
     console.log(form);
 
@@ -46,7 +44,7 @@ export const createFirm = async (req, res) => {
       website,
       gst_no,
       logo,
-      registeredFirmName,
+
       uin,
       tinNo,
       cinNo,
@@ -145,14 +143,6 @@ export const getFirmList = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
 
-    if (!orgId) {
-      return res.status(400).json({
-        message: "Organization ID (orgId) is required in the URL.",
-        success: false,
-        code: 400,
-      });
-    }
-
     const firms = await Firm.find({ orgId, isDeleted: { $ne: true } })
       .select("FirmName")
       .sort({ createdAt: -1 });
@@ -215,7 +205,7 @@ export const deleteFirm = async (req, res) => {
 
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).json({
-      message: "No firm with that id.",
+      message: "invalid id.",
       code: 404,
       success: false,
     });
@@ -252,14 +242,6 @@ export const deleteFirm = async (req, res) => {
 export const getAllFirm = async (req, res) => {
   const orgId = req.orgUser.orgId;
 
-  if (!mongoose.Types.ObjectId.isValid(orgId)) {
-    return res.status(400).json({
-      message: "Invalid organization ID.",
-      code: 400,
-      success: false,
-    });
-  }
-
   try {
     const firmAll = await Firm.find({ orgId, isDeleted: { $ne: true } })
       .sort({ _id: -1 })
@@ -284,19 +266,19 @@ export const getAllFirm = async (req, res) => {
 export const RestoreFirm = async (req, res) => {
   const { id } = req.params;
   const orgId = req.orgUser?.orgId;
-  if (!id) {
-    return res.status(400).json({
-      message: "Invalid firm ID.",
-      success: false,
-      code: 400,
-    });
-  }
-
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
       success: false,
       code: 400,
       message: "Invalid firm ID.",
+    });
+  }
+
+  if (!id) {
+    return res.status(400).json({
+      message: "firm id is missing.",
+      success: false,
+      code: 400,
     });
   }
 
@@ -333,19 +315,10 @@ export const RestoreFirm = async (req, res) => {
     });
   }
 };
-
 // get-all-delted-firm permission
 export const getAllDeletedFirm = async (req, res) => {
   try {
     const orgId = req.orgUser?.orgId;
-
-    if (!orgId) {
-      return res.status(400).json({
-        success: false,
-        code: 400,
-        message: "Organization ID is missing.",
-      });
-    }
 
     const deletedFirms = await Firm.find({ orgId, isDeleted: true }).sort({
       updatedAt: -1,

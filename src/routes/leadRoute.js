@@ -15,6 +15,8 @@ import {
   authenticateOrgToken,
 } from "../middleweare/orgmiddleware.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
+
+// need to implement lead permission and rate limmiter
 const LeadRouter = express.Router();
 
 // Create lead | Get all leads
