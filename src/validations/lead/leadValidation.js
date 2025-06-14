@@ -48,9 +48,9 @@ export const leadSchema = z.object({
   currency: z.string().default("INR"),
 
   // Stage & Status
-   stage: z.enum(["New", "Contacted", "Qualified", "Demo", "ProposalSent", "Negotiation", "Won", "Lost", "Converted"]),
+   stage: z.enum(["New", "Contacted", "Qualified", "ProposalSent",  "Negotiation","Lead Closed"]),
   stageHistory: z.array(stageHistorySchema).optional(),
-  status: z.enum(["New", "Contacted", "Qualified", "Lost", "Converted"]).optional(),
+  status: z.enum(["New",  "Won", "Lost", "Hold"]).optional(),
 
   // Assignment
   leadManagerId: z.string().optional(), // ObjectId as string
@@ -132,7 +132,7 @@ export const updateLeadSchema = z.object({
   currency: z.string().optional(),
 
   status: z
-    .enum(["New", "Contacted", "Qualified", "Lost", "Converted"])
+    .enum(["New",  "Won", "Lost", "Hold"])
     .optional(),
 
   pipeline: z

@@ -66,7 +66,7 @@ const leadSchema = new mongoose.Schema(
     stageHistory: [stageHistorySchema],
     status: {
       type: String,
-      enum: ["New", "Contacted", "Qualified", "Lost", "Converted"],
+      enum: ["New",  "Won", "Lost", "Hold"],
       default: "New",
       index: true,
     },
