@@ -87,7 +87,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // cors configuration
 app.use(
   cors({
-    origin:"https://cubicle-crm.vercel.app",
+    origin: "https://cubicle-crm.vercel.app",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   })

@@ -231,7 +231,8 @@ export const updateLeadStage = async (req, res) => {
     });
   }
 
-  const stage = parsed.data;
+  const stage = parsed.data.stage;
+ 
 
   try {
     const lead = await Lead.findOne({ _id: id, deleted: false });
