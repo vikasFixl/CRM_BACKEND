@@ -5,6 +5,7 @@ import {
   getAllDeletedLead,
   getAllLeads,
   getLeadById,
+  getLeadsByStatusAndFirm,
   getLeadStageHistory,
   restoreLead,
   updateLead,
@@ -32,24 +33,39 @@ LeadRouter.route("/getAllLeads").get(
   getAllLeads
 );
 // get lead stage-history
-LeadRouter.route("/:id/stage-history").get(isAuthenticated,authenticateOrgToken(),getLeadStageHistory);
+LeadRouter.route("/:id/stage-history").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getLeadStageHistory
+);
 
 // Upload leads via Excel
 // LeadRouter.route("/leads/upload-excel")
 //   .post(uploadLeadsByExcel);
 
 // Get single lead | Update lead
+LeadRouter.route("/filter/status").get(isAuthenticated,getLeadsByStatusAndFirm)
 LeadRouter.route("/:id").get(getLeadById);
 LeadRouter.route("/update/:id").patch(updateLead);
-
 // Update stage of a lead
 LeadRouter.route("/:id/stage").patch(updateLeadStage);
 
 // Bulk delete leads
-LeadRouter.route("/bulk-delete")
-  .delete(isAuthenticated,authenticateOrgToken(),bulkDeleteLeads);
+LeadRouter.route("/bulk-delete").delete(
+  isAuthenticated,
+  authenticateOrgToken(),
+  bulkDeleteLeads
+);
 
-  LeadRouter.route("/deleted/all").get(isAuthenticated,authenticateOrgToken(),getAllDeletedLead);
-  LeadRouter.route("/restore/:id").patch(isAuthenticated,authenticateOrgToken(),restoreLead);
+LeadRouter.route("/deleted/all").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getAllDeletedLead
+);
+LeadRouter.route("/restore/:id").patch(
+  isAuthenticated,
+  authenticateOrgToken(),
+  restoreLead
+);
 
 export default LeadRouter;

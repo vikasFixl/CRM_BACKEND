@@ -182,12 +182,12 @@ export const updateLead = async (req, res, next) => {
       success: false,
     });
   const parsed = updateLeadSchema.safeParse(req.body);
-   if (!parsed.success) {
-      return res.status(400).json({
-        message: "Validation error",
-        errors: parsed.error.errors.map((e) => e.message),
-      });
-    }
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Validation error",
+      errors: parsed.error.errors.map((e) => e.message),
+    });
+  }
   const updateData = parsed.data;
   const findlead = await Lead.findOne({ _id: id, deleted: false });
 
@@ -232,7 +232,6 @@ export const updateLeadStage = async (req, res) => {
   }
 
   const stage = parsed.data.stage;
- 
 
   try {
     const lead = await Lead.findOne({ _id: id, deleted: false });
@@ -388,5 +387,42 @@ export const restoreLead = async (req, res) => {
   } catch (error) {
     console.error("Error in restoreLead:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getLeadsByStatusAndFirm = async (req, res) => {
+  try {
+    const { firmId, status } = req.body;
+    console.log(req.body);
+
+    const leads = await Lead.find({
+      firmId,
+      delete: { $ne: false },
+      status,
+    }).sort({ _id: -1 });
+
+    if (!leads || leads.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: `No leads found with status "${status}".`,
+        data: [],
+        status: 200,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `List of all leads with status "${status}".`,
+      data: leads,
+      status: 200,
+    });
+  } catch (error) {
+    console.error("Error in getLeadsByStatusAndFirm:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching leads.",
+      error: error.message,
+      status: 500,
+    });
   }
 };
