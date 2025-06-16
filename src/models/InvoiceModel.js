@@ -1,16 +1,15 @@
-const { number } = require("joi");
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const InvoiceSchema = new mongoose.Schema({
   items: [
     {
-      itemName: { type: String },
-      unitPrice: { type: String },
-      quantity: { type: String },
-      amount: { type: Number },
+      itemName: { type: String, required: true },
+      unitPrice: { type: Number, required: true },
+      quantity: { type: Number, required: true },
+      amount: { type: Number }, // can be calculated: unitPrice * quantity - discount
       hsn: { type: String },
       sac: { type: String },
-      taxRate: { type: String },
+      taxRate: { type: Number, required: true },
       desc: { type: String },
       discount: { type: Number },
     },
@@ -19,40 +18,41 @@ const InvoiceSchema = new mongoose.Schema({
   notes: { type: String },
   remark: { type: String },
   client: {
-    firstName: { type: String },
-    lastName: { type: String },
-    email: { type: String },
-    phone: { type: Number },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: Number, required: true },
     taxId: { type: String },
     clientFirmName: { type: String },
     address: {
-      address1: { type: String },
+      address1: { type: String, required: true },
       address2: { type: String },
-      city: { type: String },
-      state: { type: String },
-      country: { type: String },
-      pinCode: { type: Number },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      country: { type: String, required: true },
+      pinCode: { type: Number, required: true },
     },
-    client_id: { type: mongoose.Schema.Types.ObjectId, ref: "clientModel" },
+    client_id: { type: mongoose.Schema.Types.ObjectId, ref: "ClientModel" },
   },
   tax: { type: Array },
   taxAmt: { type: Array },
-  subTotal: { type: Number },
-  total: { type: Number },
-  invoiceDate: { type: Date },
-  dueDate: { type: Date },
+  subTotal: { type: Number, required: true },
+  total: { type: Number, required: true },
+  invoiceDate: { type: Date, required: true },
+  dueDate: { type: Date, required: true },
   status: {
     type: String,
     enum: ["Pending", "Paid", "Overdue", "Partial Paid", "Draft", "Canceled"],
+    default: "Draft",
   },
   amountPaid: { type: Number, default: 0 },
   dueAmount: { type: Number },
   delete: { type: Boolean, default: false },
   roundOff: { type: Number },
   cancel: { type: Boolean },
-  invoiceNumber: { type: String, required: true },
+  invoiceNumber: { type: String, required: true, index: true },
   firm: {
-    name: { type: String },
+    name: { type: String, required: true },
     phone: { type: Number },
     taxId: { type: String },
     address: {
@@ -64,12 +64,12 @@ const InvoiceSchema = new mongoose.Schema({
       pinCode: { type: Number },
     },
     firmID: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" },
-    email: { type: String },
+    email: { type: String, required: true },
     logo: { type: String },
   },
   payment: [
     {
-      amountPaidpayment: { type: Number },
+      amountPaid: { type: Number },
       datePaid: { type: Date },
       paymentMethod: { type: String },
       transId: { type: String },
@@ -78,24 +78,10 @@ const InvoiceSchema = new mongoose.Schema({
     },
   ],
   recurringInvoiceObj: {
-    // frequency: {
-    //   type: String,
-    //   required: true
-    // },
-    // due:{
-    //   type: String,
-    //   required: true
-    // },
-    start_date: {
-      type: Date,
-      // required: true
-    },
-    end_date: {
-      type: Date,
-      // required: true
-    },
+    start_date: { type: Date },
+    end_date: { type: Date },
   },
-  termsNcondition: [],
+  termsNcondition: [{ type: String }],
   currency: { type: String },
   curConvert: { type: String },
   incluTax: { type: Boolean },
@@ -103,7 +89,8 @@ const InvoiceSchema = new mongoose.Schema({
   allowTip: { type: Boolean },
   recurringInvoice: { type: Boolean },
   draft: { type: Boolean },
-  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" }
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
 });
 
-module.exports = mongoose.model("InvoiceModel", InvoiceSchema);
+const InvoiceModel = mongoose.model("InvoiceModel", InvoiceSchema);
+export default InvoiceModel;

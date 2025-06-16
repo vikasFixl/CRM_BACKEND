@@ -55,6 +55,7 @@ import BillingRoutes from "./src/routes/HRM/BillingRoute.js";
 import RoleRoutes from "./src/routes/rolepermissionroute.js";
 import firmRoutes from "./src/routes/firmRoute.js";
 import LeadRouter from "./src/routes/leadRoute.js";
+import InvoiceRouter from "./src/routes/invoiceRoute.js";
 import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
 import { errorHandler } from "./src/middleweare/errorhandler.js";
 
@@ -128,9 +129,9 @@ app.use("/api/billingplan", BillingRoutes);
 app.use("/api/role", RoleRoutes);
 app.use("/api/firm", firmRoutes);
 app.use("/api/lead", LeadRouter);
+app.use("/api/invoice", InvoiceRouter);
 /**
  * 
-app.use("/api/invoice", invoiceRoutes);
 app.use("/api/purchase", purchesRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/taxRates", taxRoutes);
