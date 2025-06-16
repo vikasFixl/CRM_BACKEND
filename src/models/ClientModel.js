@@ -37,13 +37,14 @@ const ClientSchema = new mongoose.Schema(
     taxId: String,
     tinNo: String,
     cinNo: String,
-    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
-    firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" ,required: true},
+    firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" ,required: true},
   },
   {
     timestamps: true,
   }
 );
 
-const ClientModel = mongoose.model("Client", ClientSchema);
+ClientSchema.index({ orgId: 1, email: 1, firmId: 1 });
+const ClientModel = mongoose.model("ClientModel", ClientSchema);
 export default ClientModel;

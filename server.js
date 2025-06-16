@@ -58,6 +58,7 @@ import LeadRouter from "./src/routes/leadRoute.js";
 import InvoiceRouter from "./src/routes/invoiceRoute.js";
 import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
 import { errorHandler } from "./src/middleweare/errorhandler.js";
+import ClientRouter from "./src/routes/clientRoute.js";
 
 // PayPal config
 paypal.configure({
@@ -130,10 +131,10 @@ app.use("/api/role", RoleRoutes);
 app.use("/api/firm", firmRoutes);
 app.use("/api/lead", LeadRouter);
 app.use("/api/invoice", InvoiceRouter);
+app.use("/api/client", ClientRouter);
 /**
  * 
 app.use("/api/purchase", purchesRoutes);
-app.use("/api/client", clientRoutes);
 app.use("/api/taxRates", taxRoutes);
 app.use("/api/product", productRoutes);
 app.use("/api/lead", leadRoutes);

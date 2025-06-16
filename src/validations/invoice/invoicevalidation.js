@@ -26,7 +26,7 @@ const firmSchema = z.object({
   phone: z.number().optional(),
   taxId: z.string().optional(),
   address: addressSchema.partial(), // making firm address optional
-  firmID: z.string().optional(),
+  firmId: z.string(),
   email: z.string({ required_error: "firm email is required" }),
   logo: z.string().optional(),
 });
