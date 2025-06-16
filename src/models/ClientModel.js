@@ -1,40 +1,43 @@
 import mongoose from "mongoose";
 
-const ContactPersonSchema = new mongoose.Schema(
-  {
-    name: { type: String },
-    email: { type: String },
-    address1: { type: String },
-    address2: { type: String },
-    city: { type: String },
-    state: { type: String },
-    pinCode: { type: Number },
-    country: { type: String },
-    phone: { type: Number },
-    mobile: { type: Number },
-    altPhone: { type: Number },
-    altMobile: { type: Number },
-  },
-  { _id: false }
-);
+const addressSchema = new mongoose.Schema({
+  address1: String,
+  address2: String,
+  city: String,
+  state: String,
+  pinCode: Number,
+  country: String,
+});
+
+const contactPersonSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  address1: String,
+  address2: String,
+  city: String,
+  state: String,
+  pinCode: Number,
+  country: String,
+  phone: Number,
+  mobile: Number,
+  altPhone: Number,
+  altMobile: Number,
+});
 
 const ClientSchema = new mongoose.Schema(
   {
-    clientFirmName: { type: String },
-    firstName: { type: String },
-    lastName: { type: String },
-    website: { type: String },
+    clientFirmName: String,
+    firstName: String,
+    lastName: String,
+    website: String,
     email: { type: String, required: true },
     phone: { type: Number, required: true },
-    add: {
-      type: Object,
-      required: true,
-    },
-    contectPerson: ContactPersonSchema,
-    taxId: { type: String },
-    tinNo: { type: String },
-    cinNo: { type: String },
-    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "ORG" },
+    address: addressSchema,
+    contactPerson: contactPersonSchema,
+    taxId: String,
+    tinNo: String,
+    cinNo: String,
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
     firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" },
   },
   {
@@ -42,5 +45,5 @@ const ClientSchema = new mongoose.Schema(
   }
 );
 
-const ClientModel = mongoose.model("ClientModel", ClientSchema);
+const ClientModel = mongoose.model("Client", ClientSchema);
 export default ClientModel;
