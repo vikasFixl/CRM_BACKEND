@@ -344,6 +344,9 @@ export const bulkDeleteLeads = async (req, res) => {
   try {
     const { leadIds } = req.body;
     const orgId = req.orgUser.orgId;
+  const userId= req.user.userId
+  const loggedinuserEmail = req.user.email;
+  const empid = req.orgUser.employeeId;
 
     if (!Array.isArray(leadIds) || leadIds.length === 0) {
       return res
@@ -425,6 +428,10 @@ export const getAllDeletedLead = async (req, res) => {
 export const restoreLead = async (req, res) => {
   try {
     const { id } = req.params;
+      const orgId = req.orgUser.orgId;
+  const userId= req.user.userId
+  const loggedinuserEmail = req.user.email;
+  const empid = req.orgUser.employeeId;
     if (!id) {
       return res.status(400).json({ message: "Lead ID is required" });
     }
@@ -452,7 +459,7 @@ export const restoreLead = async (req, res) => {
       entityId: lead._id,
     });
     await activity.save();
-    leads.forEach((lead) => {
+    lead.forEach((lead) => {
       if (lead._id.toString() === id) {
         lead.deleted = false;
         lead.deletedAt = null;
