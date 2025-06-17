@@ -1,11 +1,20 @@
-const express = require("express");
-const activityController = require("../controllers/activityController");
-const router = express.Router();
+// routes/activityRoutes.js (ES module)
+import express from "express";
+import {
+  getActivitiesByModule,
+  deleteActivityById,
+} from "../controllers/activityController.js";
+import { isAuthenticated } from "../middleweare/middleware.js";
+import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
+const ActivityRouter = express.Router();
 
-router.get("/:module", activityController.getRecenteActivities);
-router.get("/:module/:entityId", activityController.getEntityRecenteActivities);
-router.get("/userActivity/getUserActivity/:id", activityController.getUserActivity);
 
-router.post("/add", activityController.createActivities);
+//http://localhost:5000/api/activity/module/lead?page=2&limit=5
 
-module.exports = router;
+// Get activities by module
+ActivityRouter.route("/module/:module").get(isAuthenticated, authenticateOrgToken(),getActivitiesByModule);
+
+// Delete a single activity by its ID
+ActivityRouter.route("/:id").delete(isAuthenticated, authenticateOrgToken(),deleteActivityById);
+
+export default ActivityRouter;

@@ -40,10 +40,10 @@ LeadRouter.route("/:id/stage-history").get(isAuthenticated,authenticateOrgToken(
 
 // Get single lead | Update lead
 LeadRouter.route("/:id").get(getLeadById);
-LeadRouter.route("/update/:id").patch(updateLead);
+LeadRouter.route("/update/:id").patch(isAuthenticated,authenticateOrgToken(),updateLead);
 
 // Update stage of a lead
-LeadRouter.route("/:id/stage").patch(updateLeadStage);
+LeadRouter.route("/:id/stage").patch(isAuthenticated,authenticateOrgToken(),updateLeadStage);
 
 // Bulk delete leads
 LeadRouter.route("/bulk-delete")

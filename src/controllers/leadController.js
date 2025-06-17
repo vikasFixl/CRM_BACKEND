@@ -5,10 +5,13 @@ import {
   updateLeadStageSchema,
 } from "../validations/lead/leadValidation.js";
 import mongoose from "mongoose";
+import ActivityModel from "../models/activityModel.js";
 // Create a new lead
 export const createLead = async (req, res, next) => {
   const userId = req.user.userId;
   const orgId = req.orgUser.orgId;
+  const empid = req.orgUser.employeeId;
+  const loggedinuserEmail = req.user.email;
 
   try {
     const parsed = leadSchema.safeParse(req.body);
@@ -90,6 +93,17 @@ export const createLead = async (req, res, next) => {
       notes,
     });
     await lead.save();
+    // Create activity for lead creation
+    const activity = await ActivityModel.create({
+      leadId: lead._id,
+      orgId: orgId,
+      activityDesc: `Lead created by ${loggedinuserEmail} with empid ${empid}`,
+    activity:"create",
+      module: "lead",
+      entityId: lead._id,
+      userId,
+    });
+    await activity.save();
 
     res.status(201).json({
       message: "Lead created successfully",
@@ -182,12 +196,12 @@ export const updateLead = async (req, res, next) => {
       success: false,
     });
   const parsed = updateLeadSchema.safeParse(req.body);
-   if (!parsed.success) {
-      return res.status(400).json({
-        message: "Validation error",
-        errors: parsed.error.errors.map((e) => e.message),
-      });
-    }
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Validation error",
+      errors: parsed.error.errors.map((e) => e.message),
+    });
+  }
   const updateData = parsed.data;
   const findlead = await Lead.findOne({ _id: id, deleted: false });
 
@@ -204,6 +218,16 @@ export const updateLead = async (req, res, next) => {
       return res.status(404).json({ message: "Lead not found" });
     }
 
+    // add activity
+    const activity = await ActivityModel.create({
+      activityDesc: `Lead updated by ${loggedinuserEmail} with id ${empid}`,
+      userId,
+      orgId,
+      activity: "update",
+      module: "lead",
+      entityId: id,
+    });
+    await activity.save();
     res.status(200).json({ message: "Lead updated successfully", updatedLead });
   } catch (err) {
     console.error("Error updating lead:", err);
@@ -212,6 +236,10 @@ export const updateLead = async (req, res, next) => {
 };
 
 export const updateLeadStage = async (req, res) => {
+  const orgId = req.orgUser.orgId;
+  const userId= req.user.userId
+  const loggedinuserEmail = req.user.email;
+  const empid = req.orgUser.employeeId;
   const { id } = req.params;
   if (!id) {
     return res.status(400).json({ message: "Lead id is required" });
@@ -232,7 +260,6 @@ export const updateLeadStage = async (req, res) => {
   }
 
   const stage = parsed.data.stage;
- 
 
   try {
     const lead = await Lead.findOne({ _id: id, deleted: false });
@@ -260,9 +287,22 @@ export const updateLeadStage = async (req, res) => {
     });
 
     await lead.save();
+    console.log("Lead stage updated successfully");
+    // add activity
+    const activity = await ActivityModel.create({
+      activityDesc: `Lead stage updated by ${loggedinuserEmail} with id ${empid}`,
+      userId,
+      orgId,
+      activity: "update",
+      module: "lead",
+      entityId: lead._id,
+    });
+    await activity.save();
+    console.log("Activity added successfully");
 
     res.status(200).json({ message: "Lead stage updated successfully" });
   } catch (err) {
+    console.log("Error updating lead stage:", err);
     return res
       .status(500)
       .json({ message: "Failed to update lead stage", error: err });
@@ -318,7 +358,25 @@ export const bulkDeleteLeads = async (req, res) => {
       { $set: { deleted: true } },
       { $set: { deletedAt: new Date() } }
     );
-
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "Leads not found" });
+    }
+    leads.forEach((lead) => {
+      if (leadIds.includes(lead._id.toString())) {
+        lead.deleted = true;
+        lead.deletedAt = new Date();
+      }
+    })
+ //   add activity
+    const activity = await ActivityModel.create({
+      activityDesc: `Leads deleted by ${loggedinuserEmail} with id ${empid}`,
+      userId,
+      orgId,
+      activity: "delete",
+      module: "lead",
+      // entityId: leadIds,
+    });
+    await activity.save();
     res.status(200).json({
       message: "Leads deleted successfully",
       modifiedCount: result.modifiedCount,
@@ -382,6 +440,22 @@ export const restoreLead = async (req, res) => {
     lead.deleted = false;
     lead.deletedAt = null;
     await lead.save();
+    // add activity
+    const activity = await ActivityModel.create({
+      activityDesc: `Lead restored by ${loggedinuserEmail} with id ${empid}`,
+      userId,
+      orgId,
+      activity: "restore",
+      module: "lead",
+      entityId: lead._id,
+    });
+    await activity.save();
+    leads.forEach((lead) => {
+      if (lead._id.toString() === id) {
+        lead.deleted = false;
+        lead.deletedAt = null;
+      }
+    })
     return res
       .status(200)
       .json({ message: "Lead restored successfully", success: true });

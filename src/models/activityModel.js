@@ -1,16 +1,42 @@
-const mongoose = require("mongoose");
+// models/ActivityModel.js
+import mongoose from "mongoose";
+
+// Predefined allowed modules and actions
+const allowedModules = ["organization", "firm", "lead", "invoice", "client"];
+const allowedActivities = ["create", "update", "delete", "view", "assign", "share"];
 
 const ActivitySchema = new mongoose.Schema(
   {
-    module: { type: [String], require: true },
-    entityId: { type: [String], require: false },
-    activity: { type: String, require: false },
-    activityDesc: { type: String, require: false },
-    createdDate: { type: String, require: true },
-    createdTime: { type: String, require: true },
-    userId: { type: String, require: false }
+   
+    orgId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+    },
+    module: {
+      type: String,
+      enum: allowedModules,
+      required: true,
+    },
+    entityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: false,
+    },
+    activity: {
+      type: String,
+      enum: allowedActivities,
+      required: true,
+    },
+    activityDesc: {
+      type: String,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
+  { timestamps: true }
 );
-const ActivityModel = mongoose.model("ActivityModel", ActivitySchema);
-
-module.exports = ActivityModel;
+ActivitySchema.index({ orgId: 1, module: 1, entityId: 1, activity: 1 }, { unique: false });
+const ActivityModel = mongoose.model("Activity", ActivitySchema);
+export default ActivityModel;
