@@ -1,181 +1,310 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const InvoiceModel = require("../models/InvoiceModel.js");
-const cron = require("node-cron");
-const moment = require("moment");
-const RecurringInvoiceModel = require("../models/RecurringInvoiceModel.js");
-const winston = require("winston");
-const schedule = require("node-schedule");
+import mongoose from "mongoose";
 
-const logger = winston.createLogger({
-  transports: [new winston.transports.File({ filename: "invoices.json" })],
-});
+// import winston from "winston";
 
-function generateNewInvoiceNumber() {
+// Adjust import paths if needed depending on file location
+import InvoiceModel from "../models/InvoiceModel.js";
+// import RecurringInvoiceModel from "../models/RecurringInvoiceModel.js";
+
+// Logger setup
+// const logger = winston.createLogger({
+//   transports: [
+//     new winston.transports.File({ filename: "invoices.json" }),
+//   ],
+// });
+// export { logger };
+import { invoiceSchema } from "../validations/invoice/invoicevalidation.js";
+
+function generateNewInvoiceNumber(prefix = "INV") {
   const now = new Date();
-  const timestamp = now.toISOString().replace(/\D/g, "").slice(0, 14);
+  const timestamp = now.toISOString().replace(/\D/g, "").slice(0, 14); // YYYYMMDDHHMMSS
 
-  // Generate a random component (e.g., a random number or alphanumeric characters)
-  // You can customize the length and characters used for the random component
-  const randomComponent = Math.random().toString(36).substring(2, 8); // Generates a random 6-character alphanumeric string
+  const randomComponent = Math.random()
+    .toString(36)
+    .substring(2, 8)
+    .toUpperCase(); // 6-char alphanumeric
 
-  // Combine the elements to create the unique invoice number
-  const invoiceNumber = `${prefix}${timestamp}${randomComponent}`;
-
+  const invoiceNumber = `${prefix}-${timestamp}-${randomComponent}`;
   return invoiceNumber;
 }
 
-exports.getInvoicesByUser = async (req, res) => {
-  const { searchQuery } = req.query;
-
+export const createInvoice = async (req, res) => {
   try {
-    const invoices = await InvoiceModel.find({ creator: searchQuery });
-    res.status(200).json({ data: invoices });
-  } catch (error) {
-    res.status(404).json({ message: error.message });
-  }
-};
-
-exports.getTotalCount = async (req, res) => {
-  const { searchQuery } = req.query;
-
-  try {
-    // const invoices = await InvoiceModel.find({ creator: searchQuery });
-    const totalCount = await InvoiceModel.countDocuments({
-      creator: searchQuery,
-    });
-
-    res.status(200).json(totalCount);
-  } catch (error) {
-    res.status(404).json({ message: error.message });
-  }
-};
-
-exports.getAllInvoices = async (req, res) => {
-  const { orgId } = req.params;
-  try {
-    const Invoice = await InvoiceModel.find({
-      orgId: { $in: [orgId] },
-      draft: { $in: [false] },
-      delete: { $in: [false] },
-    }).sort({
-      _id: -1,
-    });
-    res.status(200).json({
-      data: Invoice,
-      success: true,
-      code: 200,
-      message: "all invoices get here!!",
-    });
-  } catch (error) {
-    res.status(409).json(error.message);
-  }
-};
-
-exports.getAllDeletedInvoices = async (req, res) => {
-  const { orgId } = req.params;
-  try {
-    const Invoice = await InvoiceModel.find({
-      orgId: { $in: [orgId] },
-      draft: { $in: [false] },
-      delete: { $in: [true] },
-    }).sort({
-      _id: -1,
-    });
-    res.status(200).json({
-      data: Invoice,
-      success: true,
-      code: 200,
-      message: "all invoices get here!!",
-    });
-  } catch (error) {
-    res.status(409).json(error.message);
-  }
-};
-
-exports.getInvoiceByClient = async (req, res) => {
-  const { orgId, clientId } = req.body;
-  try {
-    const Invoice = await InvoiceModel.find({
-      orgId: { $in: [orgId] },
-      "client.client_id": clientId,
-    }).sort({
-      _id: -1,
-    });
-    res.status(200).json({
-      data: Invoice,
-      success: true,
-      code: 200,
-      message: "all invoices get here!!",
-    });
-  } catch (error) {
-    res.status(409).json(error.message);
-  }
-};
-
-exports.getInvoiceByFirm = async (req, res) => {
-  const { orgId, firmID } = req.body;
-  try {
-    const Invoice = await InvoiceModel.find({
-      orgId: { $in: [orgId] },
-      "firm.firmID": firmID,
-    }).sort({
-      _id: -1,
-    });
-    res.status(200).json({
-      data: Invoice,
-      success: true,
-      code: 200,
-      message: "all invoices get here!!",
-    });
-  } catch (error) {
-    res.status(409).json(error.message);
-  }
-};
-
-exports.listInvoiceNo = async (req, res) => {
-  const { orgId, firmId } = req.body;
-  const no = [];
-  try {
-    const Invoice = await InvoiceModel.find({
-      orgId: { $in: [orgId] },
-      "firm.firmID": firmId,
-    }).sort({
-      _id: -1,
-    });
-    if (Invoice.length == 0) {
-      res.status(200).json({
-        data: 0,
-        success: true,
-        code: 200,
-        message: "0 invoice in this firm.",
-      });
-    } else {
-      Invoice.forEach((element) => {
-        no.push(element.invoiceNumber);
-      });
-      res.status(200).json({
-        data: no,
-        success: true,
-        code: 200,
-        message: "Invoice number list",
+    // ✅ Validate the request
+    const org_id = req.orgUser.orgId;
+    const invoice = invoiceSchema.safeParse(req.body);
+    if (!invoice.success) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: invoice.error.issues.map((e) => ({
+          path: e.path.join("."),
+          message: e.message,
+          expected: e.expected,
+          received: e.received,
+        })),
       });
     }
+
+    const {
+      invoiceNumber,
+      invoiceDate,
+      dueDate,
+      subTotal,
+      total,
+      status,
+      amountPaid,
+      dueAmount,
+      roundOff,
+
+      draft,
+      incluTax,
+      partialPay,
+      allowTip,
+      recurringInvoice,
+      items,
+      tax,
+      taxAmt,
+      notes,
+      remark,
+      gstn,
+      termsNcondition,
+      currency,
+      curConvert,
+      client,
+      firm,
+      payment,
+      recurringInvoiceObj,
+      firmId,
+    } = invoice.data;
+
+    // ✅ Handle draft invoices separately if needed
+    if (draft === true) {
+      const draftInvoice = new InvoiceModel({
+        invoiceNumber,
+        invoiceDate,
+        dueDate,
+        subTotal,
+        total,
+        status,
+        amountPaid,
+        dueAmount,
+        roundOff,
+        draft,
+        incluTax,
+        partialPay,
+        allowTip,
+        recurringInvoice,
+        items,
+        tax,
+        taxAmt,
+
+        notes,
+        remark,
+        gstn,
+        termsNcondition,
+        currency,
+        curConvert,
+        client,
+        firm,
+        payment,
+        recurringInvoiceObj,
+        orgId: org_id,
+        firmId: firmId,
+      });
+      const savedDraft = await draftInvoice.save();
+
+      return res.status(201).json({
+        success: true,
+        code: 201,
+        message: "Draft invoice created successfully!",
+        data: savedDraft,
+      });
+    }
+
+    // ✅ Handle regular invoices
+    const newInvoice = new InvoiceModel({
+      invoiceNumber,
+      invoiceDate,
+      dueDate,
+      subTotal,
+      total,
+      status,
+
+      amountPaid,
+      dueAmount,
+      roundOff,
+      draft,
+      incluTax,
+      partialPay,
+      allowTip,
+      recurringInvoice,
+      items,
+      tax,
+      taxAmt,
+      notes,
+      remark,
+      gstn,
+      termsNcondition,
+      currency,
+      curConvert,
+      client,
+      firm,
+      payment,
+      recurringInvoiceObj,
+      orgId: org_id,
+      firmId: firmId,
+    });
+    const savedInvoice = await newInvoice.save();
+
+    res.status(201).json({
+      success: true,
+      code: 201,
+      message: "Invoice created successfully!",
+      data: savedInvoice,
+    });
   } catch (error) {
-    res.status(401).json({
-      message: error.message,
+    console.error("Invoice Creation Error:", error);
+    res.status(500).json({
       success: false,
+      code: 500,
+      message: "Something went wrong during invoice creation.",
     });
   }
 };
 
-exports.getAllCancelInvoices = async (req, res) => {
-  const { orgId } = req.params;
+// exports.getInvoicesByUser = async (req, res) => {
+//   const { searchQuery } = req.query;
+
+//   try {
+//     const invoices = await InvoiceModel.find({ creator: searchQuery });
+//     res.status(200).json({ data: invoices });
+//   } catch (error) {
+//     res.status(404).json({ message: error.message });
+//   }
+// };
+
+// exports.getTotalCount = async (req, res) => {
+//   const { searchQuery } = req.query;
+
+//   try {
+//     // const invoices = await InvoiceModel.find({ creator: searchQuery });
+//     const totalCount = await InvoiceModel.countDocuments({
+//       creator: searchQuery,
+//     });
+
+//     res.status(200).json(totalCount);
+//   } catch (error) {
+//     res.status(404).json({ message: error.message });
+//   }
+// };
+
+export const getAllInvoices = async (req, res) => {
+  const orgId = req.orgUser.orgId;
+
+  try {
+    const invoices = await InvoiceModel.find({
+      orgId,
+      delete: { $ne: true },
+    })
+      .sort({ _id: -1 }) // Most recent first
+      .lean(); // Return plain JS objects for performance
+
+    res.status(200).json({
+      data: invoices,
+      success: true,
+      code: 200,
+      message: "All invoices retrieved successfully!",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Failed to retrieve invoices.",
+      error: error.message,
+    });
+  }
+};
+
+export const getAllDeletedInvoices = async (req, res) => {
+  try {
+    const orgId = req.orgUser.orgId;
+
+    const invoices = await InvoiceModel.find({
+      orgId,
+      draft: false,
+      delete: true,
+    })
+      .sort({ invoiceDate: -1 }) // More meaningful than _id
+      .lean(); // Faster response as plain JS objects
+
+    res.status(200).json({
+      success: true,
+      code: 200,
+      message: "Deleted invoices fetched successfully!",
+      data: invoices,
+    });
+  } catch (error) {
+    console.error("Error fetching deleted invoices:", error);
+    res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Server error while fetching deleted invoices.",
+    });
+  }
+};
+
+export const getInvoiceByClient = async (req, res) => {
+  try {
+    const orgId = req.orgUser.orgId;
+    const { clientId } = req.body;
+
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        code: 400,
+        message: " Client ID is required.",
+      });
+    }
+
+    const invoices = await InvoiceModel.find({
+      orgId,
+      "client.client_id": clientId,
+      draft: false,
+      delete: false,
+    })
+      .sort({ invoiceDate: -1 }) // better sorting field than _id
+      .lean(); // ✅ lean() improves performance if you don't need mongoose instance methods
+
+    res.status(200).json({
+      success: true,
+      code: 200,
+      message: "Invoices fetched successfully!",
+      data: invoices,
+    });
+  } catch (error) {
+    console.error("Error fetching invoices by client:", error);
+    res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Server error while fetching client invoices.",
+    });
+  }
+};
+
+export const getInvoiceByFirm = async (req, res) => {
+  const orgId = req.orgUser.orgId;
+  const { firmId } = req.body;
+  if (!firmId) {
+    return res.status(400).json({
+      success: false,
+      code: 400,
+      message: " Firm ID is required.",
+    });
+  }
   try {
     const Invoice = await InvoiceModel.find({
       orgId: { $in: [orgId] },
-      cancel: { $in: [true] },
-      delete: { $in: [false] },
+      "firm.firmId": firmId,
     }).sort({
       _id: -1,
     });
@@ -190,397 +319,605 @@ exports.getAllCancelInvoices = async (req, res) => {
   }
 };
 
-exports.createInvoice = async (req, res) => {
-  const {
-    items,
-    subTotal,
-    vat,
-    total,
-    notes,
-    remark,
-    client,
-    amount,
-    dueDate,
-    invoiceDate,
-    amountPaid,
-    dueAmount,
-    status,
-    firm,
-    invoiceNumber,
-    termsNcondition,
-    currency,
-    partialPay,
-    allowTip,
-    draft,
-    roundOff,
-    recurringInvoice,
-    recurringInvoiceObj,
-    tax,
-    desc,
-    orgId,
-    curConvert,
-    incluTax,
-  } = req.body;
+export const listInvoiceNo = async (req, res) => {
+  const orgId = req.orgUser.orgId;
+  const { firmId } = req.body;
 
-  // if (recurringInvoice === true) {
-  // Create a new invoice for recurring invoices and schedule regeneration
-  // const newInvoice = new InvoiceModel(req.body);
-  // const newData = await newInvoice.save();
+  if (!orgId || !firmId) {
+    return res.status(400).json({
+      success: false,
+      code: 400,
+      message: "orgId and firmId are required.",
+    });
+  }
+
   try {
-    if (draft == true) {
-      const newInvoice = new InvoiceModel(req.body);
-      const newData = await newInvoice.save();
-      res.status(201).json({
-        data: newData,
+    const invoices = await InvoiceModel.find({
+      orgId,
+      "firm.firmId": firmId,
+    })
+      .sort({ _id: -1 })
+      .select("invoiceNumber");
+
+    if (invoices.length === 0) {
+      return res.status(200).json({
+        data: [],
         success: true,
-        code: 201,
-        message: "Invoice created successfully!",
-      });
-    } else {
-      const newInvoice = new InvoiceModel({
-        items: items,
-        subTotal: subTotal,
-        vat: vat,
-        total: total,
-        notes: notes,
-        remark: remark,
-        amount: amount,
-        dueAmount: dueAmount,
-        amountPaid: amountPaid,
-        invoiceNumber: invoiceNumber,
-        dueDate: dueDate,
-        invoiceDate: invoiceDate,
-        client: client,
-        status: status,
-        firm: firm,
-        termsNcondition: termsNcondition,
-        currency: currency,
-        partialPay: partialPay,
-        allowTip: allowTip,
-        incluTax: incluTax,
-        draft: draft,
-        recurringInvoice: recurringInvoice,
-        tax: tax,
-        roundOff: roundOff,
-        desc: desc,
-        recurringInvoiceObj: recurringInvoiceObj,
-        orgId: orgId,
-        curConvert: curConvert,
-      });
-      const bd2 = await newInvoice.save();
-      res.status(201).json({
-        data: bd2,
-        success: true,
-        code: 201,
-        message: "Invoice created successfully!",
+        code: 200,
+        message: "No invoices found for this firm.",
       });
     }
-  } catch (error) {
-    console.log(error);
-    res.status(409).json({ message: "something went wrong." });
-  }
-  // } else {
-  //   res.status(409).json({ message: "something went wrong..." });
-  // }
-};
 
-exports.getInvoice = async (req, res) => {
-  const { id } = req.params;
-  const { orgId } = req.params;
-  const newData = [];
-  try {
-    const invoice = await InvoiceModel.find({ orgId: orgId });
-    invoice.forEach((element) => {
-      if (element._id == id) {
-        newData.push(element);
-      }
-    });
-    res.status(200).json({
-      data: newData,
+    const invoiceNumbers = invoices.map((inv) => inv.invoiceNumber);
+
+    return res.status(200).json({
+      data: invoiceNumbers,
       success: true,
       code: 200,
-      message: "single invoice get",
+      message: "Invoice number list fetched successfully.",
     });
   } catch (error) {
-    res.status(409).json({ message: error.message });
+    console.error("Error listing invoice numbers:", error);
+    return res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Internal Server Error.",
+      error: error.message,
+    });
   }
 };
 
-exports.getSingleInvoice = async (req, res) => {
+// get single invice
+export const getSingleInvoice = async (req, res) => {
   const { id } = req.body;
+
+  if (!id && !mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      code: 400,
+      message: "Invalid invoice ID || id not found.",
+    });
+  }
+
   try {
     const invoice = await InvoiceModel.findById(id);
-    res.status(200).json({
+
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        code: 404,
+        message: "Invoice not found.",
+      });
+    }
+
+    return res.status(200).json({
       data: invoice,
       success: true,
       code: 200,
-      message: "Single invoice for share",
+      message: "Single invoice fetched successfully.",
     });
   } catch (error) {
-    res.status(409).json({ message: error.message });
+    console.error("Error fetching invoice:", error);
+    return res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Internal Server Error.",
+      error: error.message,
+    });
   }
 };
-
-exports.updateInvoice = async (req, res) => {
-  const { id } = req.params;
-  const data = req.body;
-
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No invoice with that id");
-
-  await InvoiceModel.findByIdAndUpdate(id, data, { new: true });
-  res.json({ message: "Invoice Updated successfully!!" });
-};
-
-exports.softDeleteInvoice = async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No invoice with that id");
-
-  await InvoiceModel.findByIdAndUpdate(id, { delete: true });
-  // logger.info(`Invoice moved to delete: ${JSON.stringify(invoice)}`);
-  res.json({
-    message: "Invoice moved to delete successfully!!",
-    success: true,
-    code: 200,
-  });
-};
-
-exports.restoreInvoice = async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No invoice with that id");
-
-  await InvoiceModel.findByIdAndUpdate(id, { delete: false });
-  // logger.info(`Invoice restored: ${JSON.stringify(invoice)}`);
-  res.json({
-    message: "Invoice restored successfully!!",
-    success: true,
-    code: 200,
-  });
-};
-
-exports.cancelInvoice = async (req, res) => {
-  const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No invoice with that id");
-  await InvoiceModel.findByIdAndUpdate(id, {
-    cancel: true,
-    status: "Canceled",
-  });
-  // logger.info(`Invoice canceled delete: ${JSON.stringify(invoice)}`);
-  res.json({
-    message: "Invoice canceled successfully!!",
-    success: true,
-    code: 200,
-  });
-};
-
-exports.restoreCancelInvoice = async (req, res) => {
-  const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No invoice with that id");
-
-  await InvoiceModel.findByIdAndUpdate(id, {
-    cancel: false,
-    status: "Pending",
-  });
-  // logger.info(`Cancel invoice restored: ${JSON.stringify(invoice)}`);
-  res.json({
-    message: "Cancel invoice restored successfully!!",
-    success: true,
-    code: 200,
-  });
-};
-
-exports.deleteInvoice = async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No invoice with that id");
-
-  await InvoiceModel.findByIdAndDelete(id);
-  // logger.info(`Invoice deleted: ${JSON.stringify(invoice)}`);
-  res.json({
-    message: "Invoice deleted successfully!!",
-    success: true,
-    code: 200,
-  });
-};
-
-exports.payment = async (req, res) => {
+export const getAllCancelInvoices = async (req, res) => {
   try {
-    const _id = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(_id))
-      return res.status(404).send("No invoice with that id");
-    const details = await InvoiceModel.findById(_id);
-    const newPay = await InvoiceModel.findByIdAndUpdate(
-      _id,
-      {
-        $push: { payment: req.body },
-        $set: {
-          status: req.body.status,
-          amountPaid:
-            parseFloat(details.amountPaid) +
-            parseFloat(req.body.amountPaidpayment),
-          dueAmount:
-            parseFloat(details.total) -
-            parseFloat(details.amountPaid) -
-            parseFloat(req.body.amountPaidpayment),
-        },
-      },
-      {
-        new: true,
-      }
-    );
-    console.log(newPay.amountPaid);
-    if (newPay.dueAmount < 0) {
-      amount = newPay.dueAmount;
-      return res.json({ msg: "OverPaid!", amount });
-    }
-    res.status(201).json({
-      data: newPay,
+    const orgId = req.orgUser.orgId;
+
+    const invoices = await InvoiceModel.find({
+      orgId,
+      cancel: { $ne: false }, // neams cancel equal to true
+      delete: { $ne: true },
+    })
+      .sort({ invoiceDate: -1 })
+      .lean();
+
+    res.status(200).json({
       success: true,
-      code: 201,
-      message: "Payment Record Inserted Succesfully!",
+      code: 200,
+      message: "Cancelled invoices fetched successfully!",
+      data: invoices,
     });
   } catch (error) {
-    console.log(error);
-    res.status(409).json({ message: "something went wrong." });
+    console.error("Error fetching cancelled invoices:", error);
+    res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Server error while fetching cancelled invoices.",
+    });
   }
 };
 
-exports.updateDraftIn = async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No Draft with that id");
-
-  await InvoiceModel.findByIdAndUpdate(id, req.body);
-
-  res.json({ message: " Updated successfully!!" });
-};
-
-exports.drafttoinvoice = async (req, res) => {
-  const { id } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(404).send("No Draft with that id");
-
-  await InvoiceModel.findByIdAndUpdate(id, { draft: false, status: "Pending" });
-
-  res.status(201).json({
-    message: " Updated successfully!!",
-    success: true,
-    status: 201,
-  });
-};
-
-exports.getDrafts = async (req, res) => {
+// cancel invoice
+export const cancelInvoice = async (req, res) => {
   try {
-    const { orgId } = req.params;
-    const newData = await InvoiceModel.find({
-      orgId: { $in: [orgId] },
-      draft: { $in: [true] },
-      delete: { $in: [false] },
-    }).sort({ _id: -1 });
-    res.json({
-      data: newData,
-      status: 201,
-      success: true,
-      message: "Drafts.",
-    });
-  } catch (error) {
-    res
-      .status(401)
-      .json({ message: "Something went wrong", status: 401, success: false });
-  }
-};
-exports.getCancel = async (req, res) => {
-  try {
-    const { orgId } = req.params;
-    const newData = await InvoiceModel.find({
-      orgId: { $in: [orgId] },
-      cancel: { $in: [true] },
-      draft: { $in: [false] },
-      delete: { $in: [false] },
-    }).sort({ _id: -1 });
-    res.json({
-      data: newData,
-      status: 201,
-      success: true,
-      message: "Canceled invoices.",
-    });
-  } catch (error) {
-    res
-      .status(401)
-      .json({ message: "Something went wrong", status: 401, success: false });
-  }
-};
+    const { id } = req.params;
 
-exports.getDraftByid = async (req, res) => {
-  const id = req.params.id;
-  try {
-    const data = await InvoiceModel.findById(id);
-    res.json({
-      data: data,
-      status: 201,
-    });
-  } catch (error) {
-    res.status(401).json({ message: "Something went wrong" });
-  }
-};
-
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-
-exports.paymnetlink1 = async (req, res) => {
-  const { product } = req.body;
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    line_items: [
-      {
-        price_data: {
-          currency: "inr",
-          product_data: {
-            name: product.name,
-          },
-          unit_amount: product.price * 100,
-        },
-        quantity: product.quantity,
-      },
-    ],
-    mode: "payment",
-    success_url: "http://localhost:3000/success",
-    cancel_url: "http://localhost:3000/cancel",
-  });
-  res.json({ id: session.id });
-};
-exports.totalsell = async (req, res) => {
-  try {
-    const data = await InvoiceModel.find();
-
-    if (data.length === 0) {
-      return res.status(404).json({
-        message: "No Data found.",
-        success: true,
+    // ✅ Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        code: 400,
+        message: "Invalid invoice ID",
       });
     }
 
-    const totalAmount = data.reduce((total, purchase) => {
-      return total + purchase.total;
-    }, 0);
+    // ✅ Update the invoice
+    const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
+      id,
+      {
+        cancel: true,
+        status: "Canceled",
+      },
+      { new: true } // returns the updated document
+    );
 
-    console.log("totalamount", totalAmount);
+    if (!updatedInvoice) {
+      return res.status(404).json({
+        success: false,
+        code: 404,
+        message: "Invoice not found",
+      });
+    }
 
-    return res.status(200).json({
-      totalAmount: totalAmount,
-      message: "List of purchases with total amount.",
+    // ✅ Success response
+    res.status(200).json({
       success: true,
+      code: 200,
+      message: "Invoice canceled successfully!",
+      data: updatedInvoice,
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Something Went Wrong" });
+    console.error("Error canceling invoice:", error);
+    res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Server error while canceling invoice",
+    });
   }
 };
+
+//restore firm
+export const restoreInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // ✅ Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        code: 400,
+        message: "Invalid invoice ID",
+      });
+    }
+    const invoice = await InvoiceModel.findOne({
+      _id: id,
+      delete: { $ne: false },
+    });
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        code: 404,
+        message: "Invoice not found",
+      });
+    }
+
+    // ✅ Restore the deleted invoice
+    const restoredInvoice = await InvoiceModel.findByIdAndUpdate(
+      id,
+      { delete: false },
+      { new: true } // return updated document
+    );
+
+    if (!restoredInvoice) {
+      return res.status(404).json({
+        success: false,
+        code: 404,
+        message: "Invoice not found",
+      });
+    }
+
+    // ✅ Success response
+    res.status(200).json({
+      success: true,
+      code: 200,
+      message: "Invoice restored successfully!",
+      data: restoredInvoice,
+    });
+  } catch (error) {
+    console.error("Restore Invoice Error:", error);
+    res.status(500).json({
+      success: false,
+      code: 500,
+      message: "Server error while restoring invoice",
+    });
+  }
+};
+// export const getInvoice = async (req, res) => {
+//   const { id } = req.params;
+//   const { orgId } = req.params;
+//   const newData = [];
+//   try {
+//     const invoice = await InvoiceModel.find({ orgId: orgId });
+//     invoice.forEach((element) => {
+//       if (element._id == id) {
+//         newData.push(element);
+//       }
+//     });
+//     res.status(200).json({
+//       data: newData,
+//       success: true,
+//       code: 200,
+//       message: "single invoice get",
+//     });
+//   } catch (error) {
+//     res.status(409).json({ message: error.message });
+//   }
+// };
+
+//
+//
+
+//
+// exports.updateInvoice = async (req, res) => {
+//   const { id } = req.params;
+//   const data = req.body;
+
+//   if (!mongoose.Types.ObjectId.isValid(id))
+//     return res.status(404).send("No invoice with that id");
+
+//   await InvoiceModel.findByIdAndUpdate(id, data, { new: true });
+//   res.json({ message: "Invoice Updated successfully!!" });
+// };
+
+export const softDeleteInvoice = async (req, res) => {
+  const { id } = req.params;
+
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invalid invoice ID",
+      success: false,
+      code: 400,
+    });
+  }
+
+  try {
+    const deletedInvoice = await InvoiceModel.findByIdAndUpdate(
+      id,
+      { delete: true },
+      { new: true }
+    );
+
+    if (!deletedInvoice) {
+      return res.status(404).json({
+        message: "Invoice not found",
+        success: false,
+        code: 404,
+      });
+    }
+
+    res.status(200).json({
+      message: "Invoice moved to deleted successfully!",
+      success: true,
+      code: 200,
+      data: deletedInvoice,
+    });
+  } catch (error) {
+    console.error("Soft Delete Error:", error);
+    res.status(500).json({
+      message: "Something went wrong while deleting the invoice",
+      success: false,
+      code: 500,
+    });
+  }
+};
+
+export const restoreCancelInvoice = async (req, res) => {
+  const { id } = req.params;
+
+  // ✅ Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invalid invoice ID",
+      success: false,
+      code: 400,
+    });
+  }
+
+  try {
+    const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
+      id,
+      {
+        cancel: false,
+        status: "Pending",
+      },
+      { new: true }
+    );
+
+    if (!updatedInvoice) {
+      return res.status(404).json({
+        message: "Invoice not found",
+        success: false,
+        code: 404,
+      });
+    }
+
+    res.status(200).json({
+      message: "Canceled invoice restored successfully!",
+      success: true,
+      code: 200,
+     
+    });
+  } catch (error) {
+    console.error("Restore Cancel Invoice Error:", error);
+    res.status(500).json({
+      message: "Something went wrong while restoring the invoice",
+      success: false,
+      code: 500,
+    });
+  }
+};
+
+export const deleteInvoice = async (req, res) => {
+  const { id } = req.params;
+
+  // ✅ Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invalid invoice ID",
+      success: false,
+      code: 400,
+    });
+  }
+
+  try {
+    const deletedInvoice = await InvoiceModel.findByIdAndDelete(id);
+
+    // ✅ Check if invoice existed
+    if (!deletedInvoice) {
+      return res.status(404).json({
+        message: "Invoice not found",
+        success: false,
+        code: 404,
+      });
+    }
+
+    res.status(200).json({
+      message: "Invoice permanently deleted successfully!",
+      success: true,
+      code: 200,
+      
+    });
+  } catch (error) {
+    console.error("Invoice Deletion Error:", error);
+    res.status(500).json({
+      message: "An error occurred while deleting the invoice.",
+      success: false,
+      code: 500,
+    });
+  }
+};
+// get all drafts
+export const getDrafts = async (req, res) => {
+  try {
+   const orgId= req.orgUser.orgId
+    const drafts = await InvoiceModel.find({
+      orgId,
+      draft: {$ne: false},
+      delete:{$ne: true},
+    }).sort({ _id: -1 });
+
+    res.status(200).json({
+      data: drafts,
+      code: 200,
+      success: true,
+      message: "Draft invoices fetched successfully.",
+    });
+  } catch (error) {
+    console.error("Error fetching draft invoices:", error);
+    res.status(500).json({
+      message: "Internal server error while fetching drafts.",
+      success: false,
+      code: 500,
+    });
+  }
+};
+// get cancel
+export const getCancel = async (req, res) => {
+  try {
+    const orgId= req.orgUser.orgId
+
+    const canceledInvoices = await InvoiceModel.find({
+      orgId,
+      cancel: true,
+      draft: false,
+      delete: false,
+    }).sort({ _id: -1 });
+
+    res.status(200).json({
+      data: canceledInvoices,
+      code: 200,
+      success: true,
+      message: "Canceled invoices retrieved successfully.",
+    });
+  } catch (error) {
+    console.error("Error fetching canceled invoices:", error);
+    res.status(500).json({
+      message: "Internal server error while fetching canceled invoices.",
+      success: false,
+      code: 500,
+    });
+  }
+};
+
+export const draftToInvoice = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invalid draft ID",
+      success: false,
+      code: 400,
+    });
+  }
+
+  try {
+    const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
+      id,
+      { draft: false, status: "Pending" },
+      { new: true }
+    );
+
+    if (!updatedInvoice) {
+      return res.status(404).json({
+        message: "Draft invoice not found",
+        success: false,
+        code: 404,
+      });
+    }
+
+    res.status(200).json({
+      message: "Draft invoice converted to final invoice successfully!",
+      success: true,
+      code: 200,
+      data: updatedInvoice,
+    });
+  } catch (error) {
+    console.error("Error converting draft to invoice:", error);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+      code: 500,
+    });
+  }
+};
+
+
+// exports.payment = async (req, res) => {
+//   try {
+//     const _id = req.params.id;
+//     if (!mongoose.Types.ObjectId.isValid(_id))
+//       return res.status(404).send("No invoice with that id");
+//     const details = await InvoiceModel.findById(_id);
+//     const newPay = await InvoiceModel.findByIdAndUpdate(
+//       _id,
+//       {
+//         $push: { payment: req.body },
+//         $set: {
+//           status: req.body.status,
+//           amountPaid:
+//             parseFloat(details.amountPaid) +
+//             parseFloat(req.body.amountPaidpayment),
+//           dueAmount:
+//             parseFloat(details.total) -
+//             parseFloat(details.amountPaid) -
+//             parseFloat(req.body.amountPaidpayment),
+//         },
+//       },
+//       {
+//         new: true,
+//       }
+//     );
+//     console.log(newPay.amountPaid);
+//     if (newPay.dueAmount < 0) {
+//       amount = newPay.dueAmount;
+//       return res.json({ msg: "OverPaid!", amount });
+//     }
+//     res.status(201).json({
+//       data: newPay,
+//       success: true,
+//       code: 201,
+//       message: "Payment Record Inserted Succesfully!",
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(409).json({ message: "something went wrong." });
+//   }
+// };
+
+// exports.updateDraftIn = async (req, res) => {
+//   const { id } = req.params;
+
+//   if (!mongoose.Types.ObjectId.isValid(id))
+//     return res.status(404).send("No Draft with that id");
+
+//   await InvoiceModel.findByIdAndUpdate(id, req.body);
+
+//   res.json({ message: " Updated successfully!!" });
+// };
+
+
+
+
+
+// exports.getDraftByid = async (req, res) => {
+//   const id = req.params.id;
+//   try {
+//     const data = await InvoiceModel.findById(id);
+//     res.json({
+//       data: data,
+//       status: 201,
+//     });
+//   } catch (error) {
+//     res.status(401).json({ message: "Something went wrong" });
+//   }
+// };
+
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
+// exports.paymnetlink1 = async (req, res) => {
+//   const { product } = req.body;
+//   const session = await stripe.checkout.sessions.create({
+//     payment_method_types: ["card"],
+//     line_items: [
+//       {
+//         price_data: {
+//           currency: "inr",
+//           product_data: {
+//             name: product.name,
+//           },
+//           unit_amount: product.price * 100,
+//         },
+//         quantity: product.quantity,
+//       },
+//     ],
+//     mode: "payment",
+//     success_url: "http://localhost:3000/success",
+//     cancel_url: "http://localhost:3000/cancel",
+//   });
+//   res.json({ id: session.id });
+// };
+// exports.totalsell = async (req, res) => {
+//   try {
+//     const data = await InvoiceModel.find();
+
+//     if (data.length === 0) {
+//       return res.status(404).json({
+//         message: "No Data found.",
+//         success: true,
+//       });
+//     }
+
+//     const totalAmount = data.reduce((total, purchase) => {
+//       return total + purchase.total;
+//     }, 0);
+
+//     console.log("totalamount", totalAmount);
+
+//     return res.status(200).json({
+//       totalAmount: totalAmount,
+//       message: "List of purchases with total amount.",
+//       success: true,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ error: "Something Went Wrong" });
+//   }
+// };

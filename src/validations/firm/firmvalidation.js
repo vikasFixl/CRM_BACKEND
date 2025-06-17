@@ -3,7 +3,7 @@ import { z } from "zod";
 export const firmValidationSchema = z.object({
   FirmName: z.string(),
   email: z
-    .string({ required_error: "Firm email is required." })
+    .string({ required_error: "Firm email is required." }).trim()
     .email("Invalid email format."),
   phone: z.string({ required_error: "Phone number is required." }),
   invoicePrefix: z.string({ required_error: "Invoice prefix is required." }),

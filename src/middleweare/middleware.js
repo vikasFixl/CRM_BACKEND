@@ -5,14 +5,15 @@ import jwtDecode from "jwt-decode";
 
 export const isAuthenticated = (req, res, next) => {
   // console.log("req.cookies", req.cookies);
-   const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Unauthorized: No Bearer token provided" });
+    return res
+      .status(401)
+      .json({ message: "Unauthorized: No Bearer token provided" });
   }
 
   const token = authHeader.split(" ")[1];
-
 
   try {
     const decoded = jwtDecode(token);
@@ -24,10 +25,9 @@ export const isAuthenticated = (req, res, next) => {
 };
 
 export const isAdminOrSelf = (req, res, next) => {
- 
-  const userId = req.user.userId;           // from decoded token
-  const paramId = req.params.id;        // from route like /delete/:id
-  const role = req.user.role;           // assuming role is 'admin' or 'user'
+  const userId = req.user.userId; // from decoded token
+  const paramId = req.params.id; // from route like /delete/:id
+  const role = req.user.role; // assuming role is 'admin' or 'user'
 
   console.log(userId, paramId, role);
   if (role === "admin" || userId === paramId) {
@@ -36,7 +36,6 @@ export const isAdminOrSelf = (req, res, next) => {
 
   return res.status(403).json({ message: "Access denied" });
 };
-
 
 // export const permited = (allowedRoles) => {
 //   return (req, res, next) => {

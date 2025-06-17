@@ -2,10 +2,15 @@ import mongoose from "mongoose";
 
 import { firmValidationSchema } from "../validations/firm/firmvalidation.js";
 import Firm from "../models/FirmModel.js";
+import ActivityModel from "../models/activityModel.js";
 
 export const createFirm = async (req, res) => {
   try {
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
     const orgId = req.orgUser.orgId;
+    const empid = req.orgUser.employeeId;
+    console.log(userId, orgId, empid, loggedinuserEmail, "createFirm");
     // ✅ Validate with Zod
     const parsed = firmValidationSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -69,6 +74,16 @@ export const createFirm = async (req, res) => {
     });
 
     await newFirm.save();
+    // ✅ Add activity
+    const activity = new ActivityModel({
+      activityDesc: `Firm created by ${loggedinuserEmail} with id ${empid}`,
+      userId,
+      orgId,
+      activity: "create",
+      module: "firm",
+      entityId: newFirm._id,
+    });
+    await activity.save();
 
     return res.status(201).json({
       message: "Firm created successfully!",
@@ -184,6 +199,17 @@ export const updateFirm = async (req, res) => {
     );
 
     updatedFirm.save();
+
+    // ✅ Add activity
+    const activity = new ActivityModel({
+      activityDesc: `Firm updated by ${loggedinuserEmail} with id ${empid}`,
+      userId,
+      orgId,
+      action: "update",
+      module: "firm",
+      entityId: updatedFirm._id,
+    })
+    await activity.save();
     res.status(200).json({
       message: "Firm updated successfully!",
 
@@ -223,7 +249,16 @@ export const deleteFirm = async (req, res) => {
         success: false,
       });
     }
-
+// ✅ Add activity
+    const activity = new ActivityModel({
+      activityDesc: `Firm deleted by ${loggedinuserEmail} with id ${empid}`,
+      userId,
+      orgId,
+      action: "delete",
+      module: "firm",
+      entityId: deletedFirm._id,
+    })
+    await activity.save();
     res.status(200).json({
       message: "Firm deleted successfully!",
       code: 200,
@@ -300,14 +335,23 @@ export const RestoreFirm = async (req, res) => {
     firm.isDeleted = false;
     firm.deletedAt = null;
     await firm.save();
-
+// ✅ Add activity
+    const activity = new ActivityModel({
+      activityDesc: `Firm restored by ${loggedinuserEmail} with id ${empid}`,
+      userId,
+      orgId,
+      action: "restore",
+      module: "firm",
+      entityId: firm._id,
+    })
+    await activity.save();
     return res.status(200).json({
       message: "Firm restored successfully.",
       success: true,
       code: 200,
     });
   } catch (error) {
-    console.error("Error in restoreFirm:", err);
+    console.error("Error in restoreFirm:", error);
     return res.status(500).json({
       message: "Internal server error.",
       success: false,
