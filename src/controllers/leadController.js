@@ -432,30 +432,32 @@ export const restoreLead = async (req, res) => {
     const userId = req.user.userId;
     const loggedinuserEmail = req.user.email;
     const empid = req.orgUser.employeeId;
+
     if (!id) {
       return res.status(400).json({ message: "Lead ID is required" });
     }
-    if (!mongoose.Types.ObjectId.isValid(id))
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
-        message: "invalid id.",
+        message: "Invalid ID.",
         code: 400,
         success: false,
       });
+    }
 
     const leads = await Lead.findOne({ _id: id, deleted: { $ne: false } });
     if (!leads) {
-      return res.status(404).json({ message: "Lead not found or not deleted" });
+      return res
+        .status(404)
+        .json({ message: "Lead not found or not deleted" });
     }
+
     leads.deleted = false;
     leads.deletedAt = null;
-     leads.forEach((lead) => {
-      if (lead._id.toString() === id) {
-        lead.deleted = false;
-        lead.deletedAt = null;
-      }
-    });
+
     await leads.save();
-    // add activity
+
+    // Add activity
     const activity = await ActivityModel.create({
       activityDesc: `Lead restored by ${loggedinuserEmail} with id ${empid}`,
       userId,
@@ -464,16 +466,19 @@ export const restoreLead = async (req, res) => {
       module: "lead",
       entityId: leads._id,
     });
+
     await activity.save();
-   
-    return res
-      .status(200)
-      .json({ message: "Lead restored successfully", success: true });
+
+    return res.status(200).json({
+      message: "Lead restored successfully",
+      success: true,
+    });
   } catch (error) {
     console.error("Error in restoreLead:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 export const getLeadsByStatusAndFirm = async (req, res) => {
   try {

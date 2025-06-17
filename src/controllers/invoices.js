@@ -274,7 +274,7 @@ export const getInvoiceByClient = async (req, res) => {
     })
       .sort({ invoiceDate: -1 }) // better sorting field than _id
       .lean(); // ✅ lean() improves performance if you don't need mongoose instance methods
-
+console.log(invoices);
     res.status(200).json({
       success: true,
       code: 200,

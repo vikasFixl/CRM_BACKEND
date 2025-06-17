@@ -300,7 +300,7 @@ export const getAllFirm = async (req, res) => {
 // need restore_firm permission
 export const RestoreFirm = async (req, res) => {
   const { id } = req.params;
-  const orgId = req.orgUser?.orgId;
+  const orgId = req.orgUser.orgId;
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
       success: false,
