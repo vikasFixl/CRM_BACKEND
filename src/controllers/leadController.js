@@ -442,13 +442,19 @@ export const restoreLead = async (req, res) => {
         success: false,
       });
 
-    const lead = await Lead.findOne({ _id: id, deleted: { $ne: false } });
-    if (!lead) {
+    const leads = await Lead.findOne({ _id: id, deleted: { $ne: false } });
+    if (!leads) {
       return res.status(404).json({ message: "Lead not found or not deleted" });
     }
-    lead.deleted = false;
-    lead.deletedAt = null;
-    await lead.save();
+    leads.deleted = false;
+    leads.deletedAt = null;
+     leads.forEach((lead) => {
+      if (lead._id.toString() === id) {
+        lead.deleted = false;
+        lead.deletedAt = null;
+      }
+    });
+    await leads.save();
     // add activity
     const activity = await ActivityModel.create({
       activityDesc: `Lead restored by ${loggedinuserEmail} with id ${empid}`,
@@ -456,15 +462,10 @@ export const restoreLead = async (req, res) => {
       orgId,
       activity: "restore",
       module: "lead",
-      entityId: lead._id,
+      entityId: leads._id,
     });
     await activity.save();
-    lead.forEach((lead) => {
-      if (lead._id.toString() === id) {
-        lead.deleted = false;
-        lead.deletedAt = null;
-      }
-    });
+   
     return res
       .status(200)
       .json({ message: "Lead restored successfully", success: true });
