@@ -44,7 +44,7 @@ LeadRouter.route("/:id/stage-history").get(
 //   .post(uploadLeadsByExcel);
 
 // Get single lead | Update lead
-LeadRouter.route("/filter/status").get(isAuthenticated,getLeadsByStatusAndFirm)
+LeadRouter.route("/filter/status").post(isAuthenticated,getLeadsByStatusAndFirm)
 LeadRouter.route("/:id").get(getLeadById);
 LeadRouter.route("/update/:id").patch(isAuthenticated,authenticateOrgToken(),updateLead);
 

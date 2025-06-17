@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 
 // Predefined allowed modules and actions
 const allowedModules = ["organization", "firm", "lead", "invoice", "client"];
-const allowedActivities = ["create", "update", "delete", "view", "assign", "share"];
+const allowedActivities = ["create", "update", "delete", "view", "assign", "share","restore"];
 
 const ActivitySchema = new mongoose.Schema(
   {
