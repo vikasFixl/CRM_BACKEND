@@ -98,7 +98,7 @@ export const createLead = async (req, res, next) => {
       leadId: lead._id,
       orgId: orgId,
       activityDesc: `Lead created by ${loggedinuserEmail} with empid ${empid}`,
-    activity:"create",
+      activity: "create",
       module: "lead",
       entityId: lead._id,
       userId,
@@ -239,7 +239,7 @@ export const updateLead = async (req, res, next) => {
 
 export const updateLeadStage = async (req, res) => {
   const orgId = req.orgUser.orgId;
-  const userId= req.user.userId
+  const userId = req.user.userId;
   const loggedinuserEmail = req.user.email;
   const empid = req.orgUser.employeeId;
   const { id } = req.params;
@@ -344,9 +344,9 @@ export const bulkDeleteLeads = async (req, res) => {
   try {
     const { leadIds } = req.body;
     const orgId = req.orgUser.orgId;
-  const userId= req.user.userId
-  const loggedinuserEmail = req.user.email;
-  const empid = req.orgUser.employeeId;
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
+    const empid = req.orgUser.employeeId;
 
     if (!Array.isArray(leadIds) || leadIds.length === 0) {
       return res
@@ -371,8 +371,8 @@ export const bulkDeleteLeads = async (req, res) => {
         lead.deleted = true;
         lead.deletedAt = new Date();
       }
-    })
- //   add activity
+    });
+    //   add activity
     const activity = await ActivityModel.create({
       activityDesc: `Leads deleted by ${loggedinuserEmail} with id ${empid}`,
       userId,
@@ -428,10 +428,10 @@ export const getAllDeletedLead = async (req, res) => {
 export const restoreLead = async (req, res) => {
   try {
     const { id } = req.params;
-      const orgId = req.orgUser.orgId;
-  const userId= req.user.userId
-  const loggedinuserEmail = req.user.email;
-  const empid = req.orgUser.employeeId;
+    const orgId = req.orgUser.orgId;
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
+    const empid = req.orgUser.employeeId;
     if (!id) {
       return res.status(400).json({ message: "Lead ID is required" });
     }
@@ -464,7 +464,7 @@ export const restoreLead = async (req, res) => {
         lead.deleted = false;
         lead.deletedAt = null;
       }
-    })
+    });
     return res
       .status(200)
       .json({ message: "Lead restored successfully", success: true });
