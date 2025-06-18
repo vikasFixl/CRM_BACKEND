@@ -1,5 +1,5 @@
-const taxModel = require("../models/taxModel");
-const InvoiceModel = require("../models/InvoiceModel");
+import InvoiceModel from "../models/invoiceModel.js";
+import taxModel from "../models/taxModel.js";
 
 exports.addTaxInFirm = async (req, res) => {
   try {

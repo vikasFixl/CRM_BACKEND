@@ -1,23 +1,43 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
+
+const taxRateSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true }, // e.g., "GST", "Service Tax"
+    rate: { type: Number, required: true }, // e.g., 5, 18
+    description: { type: String }, // Optional: tax description
+    isEnabled: { type: Boolean, default: true }, // Soft-delete support
+  },
+  { _id: false }
+);
 
 const taxSchema = new mongoose.Schema(
   {
     firmId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Firm",
-      required: false,
+      default: null,
+      required: true,
     },
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "ORG",
+      ref: "Organization",
       required: true,
     },
-    taxRates: [{}],
-    globalTax: { type: Boolean, required: true },
+    isGlobal: { type: Boolean, default: false }, // true = global tax
+    taxRates: {
+      type: [taxRateSchema],
+      validate: [(v) => v.length > 0, "At least one tax rate is required"],
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-module.exports = mongoose.model("TAXRATES", taxSchema);
+const TaxRates = mongoose.model("TaxRates", taxSchema);
+export default TaxRates;
