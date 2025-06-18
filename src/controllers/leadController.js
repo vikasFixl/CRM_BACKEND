@@ -516,3 +516,19 @@ export const getLeadsByStatusAndFirm = async (req, res) => {
     });
   }
 };
+
+export const updateLeadStatus = async (req, res) => {
+  try {
+    const { leadId, status } = req.body;
+    const lead = await Lead.findById(leadId);
+    if (!lead) {
+      return res.status(404).json({ message: "Lead not found" });
+    }
+    lead.status = status;
+    await lead.save();
+    res.status(200).json({ message: "Lead status updated successfully" });
+  } catch (error) {
+    console.error("Error in updateLeadStatus:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
