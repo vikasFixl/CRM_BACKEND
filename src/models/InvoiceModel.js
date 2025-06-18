@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+const { Schema, model, models } = mongoose; 
 export const itemSchema = new mongoose.Schema(
   {
     itemName: { type: String, required: true },
@@ -124,5 +125,6 @@ const InvoiceSchema = new mongoose.Schema({
 
 InvoiceSchema.index({ invoiceDate: 1, orgId: 1,draft: 1,delete: 1,cancel: 1 }, { unique: false });
 
-const InvoiceModel = mongoose.model("InvoiceModel", InvoiceSchema);
+// ✅ Avoid OverwriteModelError
+const InvoiceModel = models.InvoiceModel || model("InvoiceModel", InvoiceSchema);
 export default InvoiceModel;

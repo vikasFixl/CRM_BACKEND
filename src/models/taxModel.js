@@ -16,7 +16,7 @@ const taxSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Firm",
       default: null,
-      required: true,
+      
     },
     orgId: {
       type: mongoose.Schema.Types.ObjectId,

@@ -1,19 +1,31 @@
-const express = require("express");
-const router = express.Router();
-const taxController = require("../controllers/taxRates");
-const { authorize } = require("../middleweare/middleware");
+import express from "express";
+import {
+  postGlobalTax,
+  addTaxInFirm,
+  clientByTax,
+  invoiceByTax,
+  gettaxrates,
+  getGlobalTaxs,
+  getAllTaxes,
+  updatetaxrates,
+  deletetaxRate,
+  disabletaxRate,
+} from "../controllers/taxRates.js";
+import { isAuthenticated } from "../middleweare/middleware.js";
+import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
+const TaxRouter = express.Router();
 
-router.post("/postGlobalTax", authorize('Create', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.postGlobalTax);
-router.post("/addTaxInFirm", authorize('Create', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.addTaxInFirm);
-router.post("/clientByTax", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']),  taxController.clientByTax);
-router.post("/invoiceByTax", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.invoiceByTax);
+TaxRouter.route("/postGlobalTax").post(isAuthenticated, authenticateOrgToken(), postGlobalTax);
+TaxRouter.route("/addTaxInFirm").post(isAuthenticated, authenticateOrgToken(), addTaxInFirm);
+TaxRouter.route("/clientByTax").post(clientByTax);
+TaxRouter.route("/invoiceByTax").post(invoiceByTax);
 
-router.get("/gettaxRates/:firmId", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.gettaxrates);
-router.get("/getGlobalTaxs/:orgId", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.getGlobalTaxs);
-router.get("/getAllTaxes/:orgId", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), taxController.getAllTaxes);
+TaxRouter.route("/gettaxRates/:firmId").get(isAuthenticated, authenticateOrgToken(), gettaxrates);
+TaxRouter.route("/getGlobalTaxs").get(isAuthenticated, authenticateOrgToken(), getGlobalTaxs);
+TaxRouter.route("/getAllTaxes").get(isAuthenticated, authenticateOrgToken(), getAllTaxes);
 
-router.patch("/updateRates/:id", taxController.updatetaxrates);
+TaxRouter.route("/updateRates/:id").patch(updatetaxrates);
+TaxRouter.route("/disableTax/:id").patch(isAuthenticated, authenticateOrgToken(), disabletaxRate);
+TaxRouter.route("/delete/:id/:oid").delete(deletetaxRate);
 
-router.delete("/delete/:id/:oid", taxController.deletetaxRate);
-
-module.exports = router;
+export default TaxRouter;
