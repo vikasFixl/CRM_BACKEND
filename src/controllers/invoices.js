@@ -590,7 +590,7 @@ export const restoreInvoice = async (req, res) => {
 //   res.json({ message: "Invoice Updated successfully!!" });
 // };
 
-export const softDeleteInvoice = async (req, res) => {
+export const moveToTrashInvoice= async (req, res) => {
   const { id } = req.params;
 
   // Validate ObjectId
@@ -678,7 +678,7 @@ export const restoreCancelInvoice = async (req, res) => {
   }
 };
 
-export const deleteInvoice = async (req, res) => {
+export const  permanentDeleteInvoice = async (req, res) => {
   const { id } = req.params;
 
   // ✅ Validate ObjectId
@@ -769,7 +769,7 @@ export const getCancel = async (req, res) => {
   }
 };
 
-export const draftToInvoice = async (req, res) => {
+export const finalizeDraftInvoice = async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {

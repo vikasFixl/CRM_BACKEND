@@ -1,47 +1,129 @@
-import express from "express"
+import express from "express";
 const InvoiceRouter = express.Router();
-import { cancelInvoice, createInvoice, deleteInvoice, draftToInvoice, getAllCancelInvoices, getAllDeletedInvoices, getAllInvoices, getDrafts, getInvoiceByClient, getInvoiceByFirm, getSingleInvoice, listInvoiceNo, restoreCancelInvoice, restoreInvoice, softDeleteInvoice, updateInvoiceStatus } from "../controllers/invoices.js";
+import {
+  cancelInvoice,
+  createInvoice,
+  finalizeDraftInvoice,
+  getAllCancelInvoices,
+  getAllDeletedInvoices,
+  getAllInvoices,
+  getDrafts,
+  getInvoiceByClient,
+  getInvoiceByFirm,
+  getSingleInvoice,
+  listInvoiceNo,
+  moveToTrashInvoice,
+  permanentDeleteInvoice,
+  restoreCancelInvoice,
+  restoreInvoice,
+ 
+  updateInvoiceStatus,
+} from "../controllers/invoices.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
 // const { authorize } = require("../middleweare/middleware");
 
 /// get routes
 
-InvoiceRouter.route("/drafts").get(isAuthenticated, authenticateOrgToken(),getDrafts);
+InvoiceRouter.route("/drafts").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getDrafts
+);
 // InvoiceInvoiceRouter.get("/cancel/:orgId", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), invoiceController.getCancel);
-InvoiceRouter.route("/all").get(isAuthenticated, authenticateOrgToken(), getAllInvoices);
+InvoiceRouter.route("/all").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getAllInvoices
+);
 // InvoiceInvoiceRouter.get("/all/:orgId", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), invoiceController.getAllInvoices);
 // InvoiceInvoiceRouter.get("/singleInvoice/:orgId/:id", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), invoiceController.getInvoice);
-InvoiceRouter.route("/getAllCancelInvoices").get(isAuthenticated, authenticateOrgToken(),getAllCancelInvoices);
-InvoiceRouter.route("/getAllDeletedInvoices").get(isAuthenticated, authenticateOrgToken(),getAllDeletedInvoices);
+InvoiceRouter.route("/getAllCancelInvoices").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getAllCancelInvoices
+);
+InvoiceRouter.route("/getAllDeletedInvoices").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getAllDeletedInvoices
+);
 
 /// post routes
 
 // InvoiceInvoiceRouter.post("/checkout-stripe", invoiceController.paymnetlink1);
-InvoiceRouter.route("/create").post(isAuthenticated, authenticateOrgToken(), createInvoice);
+InvoiceRouter.route("/create").post(
+  isAuthenticated,
+  authenticateOrgToken(),
+  createInvoice
+);
 // InvoiceInvoiceRouter.post("/createrecurringinvoice", invoiceController.createInvoice);
-InvoiceRouter.route("/getSingleInvoice").post(isAuthenticated, authenticateOrgToken(),getSingleInvoice);
-InvoiceRouter.route("/getInvoiceByClient").post(isAuthenticated, authenticateOrgToken(),getInvoiceByClient);
-InvoiceRouter.route("/getInvoiceByFirm").post(isAuthenticated, authenticateOrgToken(),getInvoiceByFirm);
-InvoiceRouter.route("/listInvoiceNo").post(isAuthenticated, authenticateOrgToken(),listInvoiceNo);
+InvoiceRouter.route("/getSingleInvoice").post(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getSingleInvoice
+);
+InvoiceRouter.route("/getInvoiceByClient").post(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getInvoiceByClient
+);
+InvoiceRouter.route("/getInvoiceByFirm").post(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getInvoiceByFirm
+);
+InvoiceRouter.route("/listInvoiceNo").post(
+  isAuthenticated,
+  authenticateOrgToken(),
+  listInvoiceNo
+);
 // InvoiceInvoiceRouter.post("/listInvoiceNumber",  invoiceController.listInvoiceNo);
 
 /// patch routes
 
 // InvoiceRouter.patch("/updateInvoice/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.updateInvoice);
 // InvoiceRouter.patch("/updateInvoiceforrecurringinvoice/:id", invoiceController.updateInvoice);
-InvoiceRouter.route("/drafttoinvoice/:id").patch(isAuthenticated, authenticateOrgToken(),draftToInvoice);
+InvoiceRouter.route("/drafttoinvoice/:id").patch(
+  isAuthenticated,
+  authenticateOrgToken(),
+  finalizeDraftInvoice
+);
 // InvoiceRouter.patch("/updateDraft/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.updateDraftIn);
 // InvoiceRouter.patch("/payment/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.payment);
-InvoiceRouter.route("/softDeleteInvoice/:id").patch(isAuthenticated, authenticateOrgToken(),    softDeleteInvoice);
-InvoiceRouter.route("/updateInvoiceStatus/:id").patch(isAuthenticated, authenticateOrgToken(),   updateInvoiceStatus);
-InvoiceRouter.route("/cancelInvoice/:id").patch(isAuthenticated, authenticateOrgToken(),cancelInvoice);
-InvoiceRouter.route("/restoreInvoice/:id").patch(isAuthenticated, authenticateOrgToken(),restoreInvoice);
-InvoiceRouter.route("/restoreCancelInvoice/:id").patch(isAuthenticated, authenticateOrgToken(),restoreCancelInvoice);
+InvoiceRouter.route("/softDeleteInvoice/:id").patch(
+  isAuthenticated,
+  authenticateOrgToken(),
+  moveToTrashInvoice
+);
+InvoiceRouter.route("/updateInvoiceStatus/:id").patch(
+  isAuthenticated,
+  authenticateOrgToken(),
+  updateInvoiceStatus
+);
+InvoiceRouter.route("/cancelInvoice/:id").patch(
+  isAuthenticated,
+  authenticateOrgToken(),
+  cancelInvoice
+);
+InvoiceRouter.route("/restoreInvoice/:id").patch(
+  isAuthenticated,
+  authenticateOrgToken(),
+  restoreInvoice
+);
+InvoiceRouter.route("/restoreCancelInvoice/:id").patch(
+  isAuthenticated,
+  authenticateOrgToken(),
+  restoreCancelInvoice
+);
 
 /// delete routes
 
-InvoiceRouter.route("/deleteInvoice/:id").delete(isAuthenticated,authenticateOrgToken(),deleteInvoice);
+InvoiceRouter.route("/deleteInvoice/:id").delete(
+  isAuthenticated,
+  authenticateOrgToken(),
+  permanentDeleteInvoice
+);
 
 /// not in use
 
