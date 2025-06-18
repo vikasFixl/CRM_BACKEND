@@ -91,20 +91,21 @@ export const getClientById = async (req, res) => {
 };
 
 export const getClients = async (req, res) => {
-  const { page } = req.query;
+  const { page } = req.query || 1;
   const orgId = req.orgUser.orgId;
   try {
     const LIMIT = 10;
-    const startIndex = (Number(page) - 1) * LIMIT; // get the starting index of every page
+    const startIndex = (Number(page) - 1) * LIMIT ; // get the starting index of every page
     const total = await ClientModel.countDocuments({ orgId: orgId });
     const clients = await ClientModel.find({ orgId: orgId })
       .sort({ _id: -1 })
       .limit(LIMIT)
       .skip(startIndex);
     res.json({
-      data: clients,
+      total,
       currentPage: Number(page),
       numberOfPages: Math.ceil(total / LIMIT),
+      data: clients,
     });
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -144,10 +145,20 @@ export const deleteClient = async (req, res) => {
 
 export const getClientsByUser = async (req, res) => {
   const { searchQuery } = req.query;
+
   try {
-    const clients = await ClientModel.find({ userId: searchQuery });
-    res.json({ data: clients });
+    if (!searchQuery) {
+      return res.status(400).json({ message: "Missing userId in searchQuery." });
+    }
+
+    const clients = await ClientModel.find({ userId: searchQuery, deleted: { $ne: true } }) // optional: soft-delete support
+      .select("firstName lastName email phone clientFirmName") // only return needed fields
+      .sort({ createdAt: -1 }); // latest first
+
+    res.status(200).json({ data: clients });
   } catch (error) {
-    res.status(404).json({ message: error.message });
+    console.error("Error in getClientsByUser:", error);
+    res.status(500).json({ message: "Failed to fetch clients." });
   }
 };
+

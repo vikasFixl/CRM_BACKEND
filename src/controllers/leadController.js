@@ -447,9 +447,7 @@ export const restoreLead = async (req, res) => {
 
     const leads = await Lead.findOne({ _id: id, deleted: { $ne: false } });
     if (!leads) {
-      return res
-        .status(404)
-        .json({ message: "Lead not found or not deleted" });
+      return res.status(404).json({ message: "Lead not found or not deleted" });
     }
 
     leads.deleted = false;
@@ -478,7 +476,6 @@ export const restoreLead = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 export const getLeadsByStatusAndFirm = async (req, res) => {
   try {
@@ -533,9 +530,9 @@ export const updateLeadStatus = async (req, res) => {
     if (!lead) {
       return res.status(404).json({ message: "Lead not found" });
     }
-if(lead.status === status){
-  return res.status(400).json({ message: "Lead already has this status" });
-}
+    if (lead.status === status) {
+      return res.status(400).json({ message: "Lead already has this status" });
+    }
     // Update status
     lead.status = status;
 
@@ -544,7 +541,7 @@ if(lead.status === status){
 
     res.status(200).json({
       message: "Lead status updated successfully",
-     code: 200,
+      code: 200,
     });
   } catch (error) {
     console.error("Error in updateLeadStatus:", error);
