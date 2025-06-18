@@ -17,7 +17,7 @@ import { invoiceSchema } from "../validations/invoice/invoicevalidation.js";
 
 function generateNewInvoiceNumber(prefix = "INV") {
   const now = new Date();
-  const timestamp = now.toISOString().replace(/\D/g, "").slice(0, 14); // YYYYMMDDHHMMSS
+  const timestamp = now.toISOString().replace(/\D/g, "").slice(0, 10); // YYYYMMDDHHMMSS
 
   const randomComponent = Math.random()
     .toString(36)
@@ -46,7 +46,7 @@ export const createInvoice = async (req, res) => {
     }
 
     const {
-      invoiceNumber,
+      
       invoiceDate,
       dueDate,
       subTotal,
@@ -79,7 +79,7 @@ export const createInvoice = async (req, res) => {
     // ✅ Handle draft invoices separately if needed
     if (draft === true) {
       const draftInvoice = new InvoiceModel({
-        invoiceNumber,
+        invoiceNumber: generateNewInvoiceNumber(),
         invoiceDate,
         dueDate,
         subTotal,
@@ -122,7 +122,7 @@ export const createInvoice = async (req, res) => {
 
     // ✅ Handle regular invoices
     const newInvoice = new InvoiceModel({
-      invoiceNumber,
+      invoiceNumber: generateNewInvoiceNumber(),
       invoiceDate,
       dueDate,
       subTotal,

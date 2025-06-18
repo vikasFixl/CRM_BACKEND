@@ -81,7 +81,7 @@ export const invoiceSchema = z.object({
   delete: z.boolean().optional(),
   roundOff: z.number().optional(),
   cancel: z.boolean().optional(),
-  invoiceNumber: z.string({ required_error: "invoiceNumber is required" }).min(1, "invoiceNumber is required"),
+ 
   firm: firmSchema,
   payment: z.array(paymentSchema).optional(),
   recurringInvoiceObj: recurringInvoiceObjSchema.optional(),
