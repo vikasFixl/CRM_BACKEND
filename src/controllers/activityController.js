@@ -2,6 +2,7 @@ import ActivityModel from "../models/activityModel.js";
 export const getActivitiesByModule = async (req, res) => {
   const { module } = req.params;
   const orgId = req.orgUser.orgId;
+  console.log(req.user)
 
   // Parse query parameters for pagination
   const page = parseInt(req.query.page) || 1;       // default: page 1
@@ -16,10 +17,10 @@ export const getActivitiesByModule = async (req, res) => {
   }
 
   try {
-    const query = { orgId, module };
+    const query = { orgId, module ,userId:req.user.userId};
 
     const total = await ActivityModel.countDocuments(query);
-    const activities = await ActivityModel.find(query).select("_id module  activity activityDesc createdAt")
+    const activities = await ActivityModel.find(query).select("_id module  activity activityDesc createdAt userId orgId")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);

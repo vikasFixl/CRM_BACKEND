@@ -519,14 +519,33 @@ export const getLeadsByStatusAndFirm = async (req, res) => {
 
 export const updateLeadStatus = async (req, res) => {
   try {
-    const { leadId, status } = req.body;
-    const lead = await Lead.findById(leadId);
+    const stageEnum = ["New", "Won", "Lost", "Hold"];
+    const leadId = req.params.id;
+    const { status } = req.body;
+
+    if (!stageEnum.includes(status)) {
+      return res.status(400).json({ message: "Invalid status." });
+    }
+
+    // Get single lead document
+    const lead = await Lead.findOne({ _id: leadId, deleted: false });
+
     if (!lead) {
       return res.status(404).json({ message: "Lead not found" });
     }
+if(lead.status === status){
+  return res.status(400).json({ message: "Lead already has this status" });
+}
+    // Update status
     lead.status = status;
+
+    // Save changes
     await lead.save();
-    res.status(200).json({ message: "Lead status updated successfully" });
+
+    res.status(200).json({
+      message: "Lead status updated successfully",
+     code: 200,
+    });
   } catch (error) {
     console.error("Error in updateLeadStatus:", error);
     res.status(500).json({ message: "Internal server error" });

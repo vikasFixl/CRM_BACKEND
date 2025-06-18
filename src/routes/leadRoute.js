@@ -10,6 +10,7 @@ import {
   restoreLead,
   updateLead,
   updateLeadStage,
+  updateLeadStatus,
 } from "../controllers/leadController.js";
 import {
   checkPermission,
@@ -50,6 +51,7 @@ LeadRouter.route("/update/:id").patch(isAuthenticated,authenticateOrgToken(),upd
 
 // Update stage of a lead
 LeadRouter.route("/:id/stage").patch(isAuthenticated,authenticateOrgToken(),updateLeadStage);
+LeadRouter.route("/update/status/:id").patch(isAuthenticated,authenticateOrgToken(),updateLeadStatus);
 
 // Bulk delete leads
 LeadRouter.route("/bulk-delete").delete(
