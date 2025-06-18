@@ -230,7 +230,7 @@ export const getAllDeletedInvoices = async (req, res) => {
 
     const invoices = await InvoiceModel.find({
       orgId,
-      draft: false,
+     
       delete: true,
     })
       .sort({ invoiceDate: -1 }) // More meaningful than _id
