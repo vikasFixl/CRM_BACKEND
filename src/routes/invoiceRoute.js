@@ -1,6 +1,6 @@
 import express from "express"
 const InvoiceRouter = express.Router();
-import { cancelInvoice, createInvoice, deleteInvoice, draftToInvoice, getAllCancelInvoices, getAllDeletedInvoices, getAllInvoices, getDrafts, getInvoiceByClient, getInvoiceByFirm, getSingleInvoice, listInvoiceNo, restoreCancelInvoice, restoreInvoice, softDeleteInvoice } from "../controllers/invoices.js";
+import { cancelInvoice, createInvoice, deleteInvoice, draftToInvoice, getAllCancelInvoices, getAllDeletedInvoices, getAllInvoices, getDrafts, getInvoiceByClient, getInvoiceByFirm, getSingleInvoice, listInvoiceNo, restoreCancelInvoice, restoreInvoice, softDeleteInvoice, updateInvoiceStatus } from "../controllers/invoices.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
 // const { authorize } = require("../middleweare/middleware");
@@ -34,6 +34,7 @@ InvoiceRouter.route("/drafttoinvoice/:id").patch(isAuthenticated, authenticateOr
 // InvoiceRouter.patch("/updateDraft/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.updateDraftIn);
 // InvoiceRouter.patch("/payment/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.payment);
 InvoiceRouter.route("/softDeleteInvoice/:id").patch(isAuthenticated, authenticateOrgToken(),    softDeleteInvoice);
+InvoiceRouter.route("/updateInvoiceStatus/:id").patch(isAuthenticated, authenticateOrgToken(),   updateInvoiceStatus);
 InvoiceRouter.route("/cancelInvoice/:id").patch(isAuthenticated, authenticateOrgToken(),cancelInvoice);
 InvoiceRouter.route("/restoreInvoice/:id").patch(isAuthenticated, authenticateOrgToken(),restoreInvoice);
 InvoiceRouter.route("/restoreCancelInvoice/:id").patch(isAuthenticated, authenticateOrgToken(),restoreCancelInvoice);

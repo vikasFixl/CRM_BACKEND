@@ -55,7 +55,6 @@ export const createInvoice = async (req, res) => {
       amountPaid,
       dueAmount,
       roundOff,
-
       draft,
       incluTax,
       partialPay,
@@ -266,15 +265,25 @@ export const getInvoiceByClient = async (req, res) => {
       });
     }
 
-    const invoices = await InvoiceModel.find({
+
+
+    if (!mongoose.Types.ObjectId.isValid(clientId)) {
+      return res.status(400).json({
+        success: false,
+        code: 400,
+        message: "Invalid Client ID format.",
+      });
+    }
+     const invoices = await InvoiceModel.find({
       orgId,
-      "client.client_id": clientId,
-      draft: false,
+      "client.client_id": new mongoose.Types.ObjectId(clientId),
       delete: false,
     })
-      .sort({ invoiceDate: -1 }) // better sorting field than _id
-      .lean(); // ✅ lean() improves performance if you don't need mongoose instance methods
-console.log(invoices);
+      .sort({ invoiceDate: -1 })
+      .lean();
+    console.log(invoices);
+
+    
     res.status(200).json({
       success: true,
       code: 200,
@@ -305,6 +314,7 @@ export const getInvoiceByFirm = async (req, res) => {
     const Invoice = await InvoiceModel.find({
       orgId: { $in: [orgId] },
       "firm.firmId": firmId,
+      delete: false,
     }).sort({
       _id: -1,
     });
@@ -335,6 +345,7 @@ export const listInvoiceNo = async (req, res) => {
     const invoices = await InvoiceModel.find({
       orgId,
       "firm.firmId": firmId,
+      delete: false,
     })
       .sort({ _id: -1 })
       .select("invoiceNumber");
@@ -380,7 +391,10 @@ export const getSingleInvoice = async (req, res) => {
   }
 
   try {
-    const invoice = await InvoiceModel.findById(id);
+    const invoice = await InvoiceModel.findOne({
+      _id: id,
+      delete: false,
+    });
 
     if (!invoice) {
       return res.status(404).json({
@@ -653,7 +667,6 @@ export const restoreCancelInvoice = async (req, res) => {
       message: "Canceled invoice restored successfully!",
       success: true,
       code: 200,
-     
     });
   } catch (error) {
     console.error("Restore Cancel Invoice Error:", error);
@@ -693,7 +706,6 @@ export const deleteInvoice = async (req, res) => {
       message: "Invoice permanently deleted successfully!",
       success: true,
       code: 200,
-      
     });
   } catch (error) {
     console.error("Invoice Deletion Error:", error);
@@ -707,11 +719,11 @@ export const deleteInvoice = async (req, res) => {
 // get all drafts
 export const getDrafts = async (req, res) => {
   try {
-   const orgId= req.orgUser.orgId
+    const orgId = req.orgUser.orgId;
     const drafts = await InvoiceModel.find({
       orgId,
-      draft: {$ne: false},
-      delete:{$ne: true},
+      draft: { $ne: false },
+      delete: { $ne: true },
     }).sort({ _id: -1 });
 
     res.status(200).json({
@@ -732,7 +744,7 @@ export const getDrafts = async (req, res) => {
 // get cancel
 export const getCancel = async (req, res) => {
   try {
-    const orgId= req.orgUser.orgId
+    const orgId = req.orgUser.orgId;
 
     const canceledInvoices = await InvoiceModel.find({
       orgId,
@@ -798,7 +810,88 @@ export const draftToInvoice = async (req, res) => {
     });
   }
 };
+export const getDraftById = async (req, res) => {
+  const { id } = req.params;
 
+  try {
+    const invoice = await InvoiceModel.findOne({
+      _id: id,
+      draft: true,
+      delete: false,
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ message: "Invoice not found" });
+    }
+
+    res.status(200).json({
+      data: invoice,
+      status: 200,
+    });
+  } catch (error) {
+    console.error("Error fetching invoice by ID:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const updateInvoiceStatus = async (req, res) => {
+  const statusenu = [
+    "Pending",
+    "Paid",
+    "Overdue",
+    "Partial Paid",
+    "Draft",
+    "Canceled",
+  ];
+  const { id } = req.params;
+  const orgId = req.orgUser.orgId;
+  const { status } = req.body;
+
+  if (!status || !statusenu.includes(status)) {
+    return res.status(400).json({
+      message: "Invalid invoice status",
+      success: false,
+      code: 400,
+    });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: "Invalid invoice ID",
+      success: false,
+      code: 400,
+    });
+  }
+
+  try {
+    const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
+      id,
+      { status, orgId },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedInvoice) {
+      return res.status(404).json({
+        message: "Invoice not found",
+        success: false,
+        code: 404,
+      });
+    }
+
+    res.status(200).json({
+      message: "Invoice status updated successfully!",
+      success: true,
+      code: 200,
+      data: updatedInvoice,
+    });
+  } catch (error) {
+    console.error("Error updating invoice status:", error);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+      code: 500,
+    });
+  }
+};
 
 // exports.payment = async (req, res) => {
 //   try {
@@ -851,23 +944,6 @@ export const draftToInvoice = async (req, res) => {
 //   await InvoiceModel.findByIdAndUpdate(id, req.body);
 
 //   res.json({ message: " Updated successfully!!" });
-// };
-
-
-
-
-
-// exports.getDraftByid = async (req, res) => {
-//   const id = req.params.id;
-//   try {
-//     const data = await InvoiceModel.findById(id);
-//     res.json({
-//       data: data,
-//       status: 201,
-//     });
-//   } catch (error) {
-//     res.status(401).json({ message: "Something went wrong" });
-//   }
 // };
 
 // const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
