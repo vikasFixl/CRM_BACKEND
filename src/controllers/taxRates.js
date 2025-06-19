@@ -1,7 +1,7 @@
-import InvoiceModel from "../models/invoiceModel.js";
+import mongoose from "mongoose";
+import InvoiceModel from "../models/InvoiceModel.js";
 import taxModel from "../models/taxModel.js";
 import { globalTaxSchema, taxSchema } from "../validations/tax/tax.js";
-import mongoose from "mongoose";
 
 export const addTaxInFirm = async (req, res) => {
   try {
