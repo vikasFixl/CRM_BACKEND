@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import ClientModel from "../models/ClientModel.js";
-import { clientSchema, updateClientSchema } from "../validations/client/clientValidation.js";
+import {
+  clientSchema,
+  updateClientSchema,
+} from "../validations/client/clientValidation.js";
 import ActivityModel from "../models/activityModel.js";
 
 export const createClient = async (req, res) => {
@@ -131,8 +134,8 @@ export const getClients = async (req, res) => {
 export const updateClient = async (req, res) => {
   try {
     const { id: _id } = req.params;
-    const parsed=updateClientSchema.safeParse(req.body);
-    if(!parsed.success){
+    const parsed = updateClientSchema.safeParse(req.body);
+    if (!parsed.success) {
       return res.status(400).json({
         message: "Validation error",
         errors: parsed.error.errors.map((e) => e.message),
@@ -156,12 +159,11 @@ export const updateClient = async (req, res) => {
     }
 
     // ✅ Update client
-  const updatedClient = await ClientModel.findOneAndUpdate(
-  { _id, orgId },            // ✅ Match client ID + org ownership
-  { ...clientData },         // ✅ Apply updates
-  { new: true }              // ✅ Return the updated doc
-);
-
+    const updatedClient = await ClientModel.findOneAndUpdate(
+      { _id, orgId }, // ✅ Match client ID + org ownership
+      { ...clientData }, // ✅ Apply updates
+      { new: true } // ✅ Return the updated doc
+    );
 
     if (!updatedClient) {
       return res.status(404).json({

@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 
 // Adjust import paths if needed depending on file location
 import InvoiceModel from "../models/InvoiceModel.js";
-import ActivityModel from "../models/ActivityModel.js";
+import ActivityModel from "../models/activityModel.js";
 // import RecurringInvoiceModel from "../models/RecurringInvoiceModel.js";
 
 // Logger setup
