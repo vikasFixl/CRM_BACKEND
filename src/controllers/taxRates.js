@@ -27,7 +27,7 @@ export const addTaxInFirm = async (req, res) => {
       });
     }
     const tax = parsed.data;
-
+// check if tax already exists
     const existing = await taxModel.findOne({ firmId: tax.firmId });
 
     if (!existing) {
@@ -140,6 +140,7 @@ export const gettaxrates = async (req, res) => {
         success: false,
       });
     }
+    // gets all tax rates by firm
     const data = await taxModel.find({ firmId }).sort({ id: -1 });
     res.status(200).json({
       message: "All tax rates fetched successfully!",
@@ -153,6 +154,7 @@ export const gettaxrates = async (req, res) => {
   }
 };
 
+// returns all the global taxes 
 export const getGlobalTaxs = async (req, res) => {
   try {
     const orgId = req.orgUser?.orgId;
@@ -185,7 +187,7 @@ export const getGlobalTaxs = async (req, res) => {
     });
   }
 };
-
+ // get all taxes both global and firm
 export const getAllTaxes = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
@@ -216,34 +218,66 @@ export const getAllTaxes = async (req, res) => {
     res.status(409).json({ message: error.message });
   }
 };
-
-export const updatetaxrates = async (req, res) => {
+// updaet the tax rate
+export const updateTaxRateById = async (req, res) => {
   try {
-    const id = req.params.id;
-    const { oldRate, newRate } = req.body;
-    const data = await taxModel.findById(id);
-
-    const i = data.taxRates.findIndex((entry) =>
-      Object.keys(oldRate).every((key) => entry[key] === oldRate[key])
-    );
-
-    if (i !== -1) {
-      data.taxRates[i] = newRate;
-      await data.save();
+    const  taxRateId  = req.params.id; // ✅ taxRates[].id here taxRateId is taxrates._id for individual tax
+    const { newRate } = req.body;
+    console.log(newRate, taxRateId);
+    if(!taxRateId || !mongoose.Types.ObjectId.isValid(taxRateId)){
+      return res.status(400).json({
+        message: "Tax rate ID not found or invalid id",
+        success: false,
+        code: 400
+      });
+    }
+    if(!newRate){
+      return res.status(400).json({
+        message: "New rate not found",
+        success: false,
+        code: 400
+      });
     }
 
-    res.status(200).json({
-      message: "Tax rate updated!",
-      code: 200,
-      success: true,
+
+    // Find the tax document that contains this taxRateId
+    const data = await taxModel.findOne({ "taxRates._id": taxRateId });
+    console.log(data);
+
+    if (!data) {
+      return res.status(404).json({
+        message: "Tax rate not found.",
+        success: false,
+        code: 404
+      });
+    }
+// update the rate 
+    data.taxRates.map((element) => {
+      if (element._id == taxRateId) {
+        element.rate = newRate;
+      }
+    })
+
+      await data.save();
+
+      return res.status(200).json({
+        message: "Tax rate updated successfully.",
+        success: true,
+        code: 200
+      });
+  
+  } catch (err) {
+    res.status(500).json({
+      message: err.message || "Failed to update tax rate.",
+      success: false,
+      code: 500
     });
-  } catch (error) {
-    res.status(409).send("Some error has occurred while updating.");
   }
 };
+// disable the tax rate
 export const disabletaxRate = async (req, res) => {
   try {
-    const taxid = req.params.id;
+    const taxid = req.params.id; // same the id is taxrates._id not hte global tax id
     if(!taxid || !mongoose.Types.ObjectId.isValid(taxid)){
       return res.status(400).json({
         message: "Tax ID not found or invalid id",
@@ -251,7 +285,7 @@ export const disabletaxRate = async (req, res) => {
       });
     }
     console.log(taxid);
-    const tax= await taxModel.findOne({ _id: taxid });
+   const tax = await taxModel.findOne({ "taxRates._id": taxid });
   
     if(!tax){
       return res.status(400).json({
@@ -295,98 +329,138 @@ export const deletetaxRate = async (req, res) => {
   }
 };
 
+// gets client by tax 
+// 📘 Controller to get total tax collected per client for a specific taxRateId
 export const clientByTax = async (req, res) => {
   try {
-    const { orgId, tax } = req.body;
-    const data = await InvoiceModel.find({
-      orgId,
-      tax,
-    }).select("client taxAmt -_id");
+    const orgId = req.orgUser.orgId;
+    const { taxRateId } = req.body;
 
-    const taxAmtSumDict = {};
-
-    data.forEach((obj) => {
-      const clientId = obj.client.client_id;
-      const taxAmt = obj.taxAmt.length > 0 ? obj.taxAmt[0] : {};
-      const taxAmtString = JSON.stringify(taxAmt);
-
-      taxAmtSumDict[clientId] = taxAmtSumDict[clientId] || {};
-      taxAmtSumDict[clientId][taxAmtString] =
-        (taxAmtSumDict[clientId][taxAmtString] || 0) +
-        Object.values(taxAmt).reduce((acc, val) => acc + parseInt(val), 0);
-    });
-
-    const result = [];
-
-    for (const clientId in taxAmtSumDict) {
-      for (const taxAmtString in taxAmtSumDict[clientId]) {
-        const taxAmt = JSON.parse(taxAmtString);
-        const sum = taxAmtSumDict[clientId][taxAmtString];
-
-        const foundObj = data.find(
-          (obj) => obj.client.client_id.toString() === clientId
-        );
-        const firstName = foundObj?.client?.firstName;
-        const lastName = foundObj?.client?.lastName;
-        const clientFirmName = foundObj?.client?.clientFirmName;
-
-        result.push({
-          client_id: clientId,
-          taxAmt,
-          sum,
-          firstName,
-          lastName,
-          clientFirmName,
-        });
-      }
+    // ✅ Validate required fields
+    if (!orgId || !taxRateId) {
+      return res.status(400).json({
+        message: "orgId and taxRateId are required.",
+        success: false,
+        code: 400
+      });
     }
 
+    // 🔍 Fetch invoices that have the specified taxRateId applied
+    const data = await InvoiceModel.find({
+      orgId,
+      "tax.taxRateId": taxRateId // 📌 tax.taxRateId refers to each entry in form.tax[]
+    }).select("client taxAmt invoiceNumber");
+
+    // 🧮 Store tax total per client
+    const taxAmtSumDict = {};
+
+    data.forEach((invoice) => {
+      const clientId = invoice.client.client_id;
+
+      // 🎯 Find the specific tax entry in taxAmt matching the given taxRateId
+      const matchedTax = invoice.taxAmt.find(
+        (entry) => entry.taxRateId === taxRateId
+      );
+
+      if (!matchedTax) return;
+
+      const amount = parseFloat(matchedTax.amount || 0);
+
+      // 🗃 Initialize if this client is not yet recorded
+      if (!taxAmtSumDict[clientId]) {
+        taxAmtSumDict[clientId] = {
+          total: 0,
+          tax: matchedTax,
+          client: invoice.client
+        };
+      }
+
+      // ➕ Accumulate tax amount per client
+      taxAmtSumDict[clientId].total += amount;
+    });
+
+    // 🛠 Format result
+    const result = Object.entries(taxAmtSumDict).map(([client_id, value]) => ({
+      client_id,
+      taxAmt: value.tax,
+      sum: value.total,
+      firstName: value.client.firstName,
+      lastName: value.client.lastName,
+      clientFirmName: value.client.clientFirmName
+    }));
+
+    // ✅ Respond with client-wise tax data
     res.status(200).json({
       data: result,
       message: "List of clients according to tax.",
       success: true,
-      code: 200,
+      code: 200
     });
+
   } catch (err) {
+    // ❌ Handle errors
     res.status(400).json({
       message: err.message || "Error fetching client by tax.",
       success: false,
-      code: 400,
+      code: 400
     });
   }
 };
 
+
+// 📘 Get all invoices that have a specific taxRateId applied and return their tax info
 export const invoiceByTax = async (req, res) => {
   try {
-    const { orgId, tax, taxAmt } = req.body;
+    const orgId = req.orgUser.orgId;
+    const { taxRateId } = req.body;
+
+    // ✅ Validate required inputs
+    if (!orgId || !taxRateId) {
+      return res.status(400).json({
+        message: "orgId and taxRateId are required.",
+        success: false,
+      });
+    }
+
+    // 🔍 Fetch all invoices for the given organization
+    // Filter those that have the specified taxRateId inside their tax array (form.tax)
     const data = await InvoiceModel.find({
       orgId,
-      tax,
-    }).select("invoiceNumber taxAmt");
+      "tax.taxRateId": taxRateId
+    }).select("invoiceNumber taxAmt"); // Only get what's needed
 
     const result = [];
 
-    data.forEach((element) => {
-      element.taxAmt.forEach((element1) => {
-        if (Object.keys(element1).toString() === taxAmt) {
+    // 🧠 Go through each invoice
+    data.forEach((invoice) => {
+      // 🧾 Each invoice has a taxAmt array that stores all calculated tax breakdowns
+      // 🔁 Loop over taxAmt array to find the entry matching the requested taxRateId
+      invoice.taxAmt.forEach((taxItem) => {
+        if (taxItem.taxRateId === taxRateId) {
+          // ✅ If match found, push invoice info with tax data into result
           result.push({
-            invoiceId: element._id,
-            invoiceNo: element.invoiceNumber,
-            tax: element1,
+            invoiceId: invoice._id,
+            invoiceNo: invoice.invoiceNumber,
+            tax: taxItem,
           });
         }
       });
     });
 
+    // ✅ Respond with filtered invoice data
     res.status(200).json({
       data: result,
       success: true,
       code: 200,
     });
+
   } catch (err) {
+    // ❌ Catch and report any error
     res.status(400).json({
-      message: err.message || "Error fetching invoice by tax.",
+      message: err.message || "Error fetching invoices by tax.",
       success: false,
     });
   }
 };
+
+

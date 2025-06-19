@@ -7,7 +7,7 @@ const taxRateSchema = new mongoose.Schema(
     description: { type: String }, // Optional: tax description
     isEnabled: { type: Boolean, default: true }, // Soft-delete support
   },
-  { _id: false }
+
 );
 
 const taxSchema = new mongoose.Schema(
