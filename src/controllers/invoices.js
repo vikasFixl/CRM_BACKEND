@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 
 // Adjust import paths if needed depending on file location
 import InvoiceModel from "../models/InvoiceModel.js";
+import ActivityModel from "../models/ActivityModel.js";
 // import RecurringInvoiceModel from "../models/RecurringInvoiceModel.js";
 
 // Logger setup
@@ -31,6 +32,10 @@ function generateNewInvoiceNumber(prefix = "INV") {
 export const createInvoice = async (req, res) => {
   try {
     // ✅ Validate the request
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
+
+    const empid = req.orgUser.employeeId;
     const org_id = req.orgUser.orgId;
     const invoice = invoiceSchema.safeParse(req.body);
     if (!invoice.success) {
@@ -46,7 +51,6 @@ export const createInvoice = async (req, res) => {
     }
 
     const {
-      
       invoiceDate,
       dueDate,
       subTotal,
@@ -111,7 +115,15 @@ export const createInvoice = async (req, res) => {
         firmId: firmId,
       });
       const savedDraft = await draftInvoice.save();
-
+      const activity = new ActivityModel({
+        activityDesc: ` draft invoice created by ${loggedinuserEmail} with id ${empid}`,
+        userId,
+        orgId: org_id,
+        activity: "create",
+        module: "invoice",
+        entityId: savedDraft._id,
+      });
+      await activity.save();
       return res.status(201).json({
         success: true,
         code: 201,
@@ -154,7 +166,16 @@ export const createInvoice = async (req, res) => {
       firmId: firmId,
     });
     const savedInvoice = await newInvoice.save();
+    const activity = new ActivityModel({
+      activityDesc: `invoice created by ${loggedinuserEmail} with id ${empid}`,
+      userId,
+      orgId: org_id,
+      activity: "create",
+      module: "invoice",
+      entityId: savedInvoice._id,
+    });
 
+    await activity.save();
     res.status(201).json({
       success: true,
       code: 201,
@@ -230,7 +251,7 @@ export const getAllDeletedInvoices = async (req, res) => {
 
     const invoices = await InvoiceModel.find({
       orgId,
-     
+
       delete: true,
     })
       .sort({ invoiceDate: -1 }) // More meaningful than _id
@@ -265,8 +286,6 @@ export const getInvoiceByClient = async (req, res) => {
       });
     }
 
-
-
     if (!mongoose.Types.ObjectId.isValid(clientId)) {
       return res.status(400).json({
         success: false,
@@ -274,7 +293,7 @@ export const getInvoiceByClient = async (req, res) => {
         message: "Invalid Client ID format.",
       });
     }
-     const invoices = await InvoiceModel.find({
+    const invoices = await InvoiceModel.find({
       orgId,
       "client.client_id": new mongoose.Types.ObjectId(clientId),
       delete: false,
@@ -283,7 +302,6 @@ export const getInvoiceByClient = async (req, res) => {
       .lean();
     console.log(invoices);
 
-    
     res.status(200).json({
       success: true,
       code: 200,
@@ -452,6 +470,11 @@ export const getAllCancelInvoices = async (req, res) => {
 export const cancelInvoice = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
+
+    const empid = req.orgUser.employeeId;
+    const org_id = req.orgUser.orgId;
 
     // ✅ Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -479,7 +502,16 @@ export const cancelInvoice = async (req, res) => {
         message: "Invoice not found",
       });
     }
-
+    const activity = new ActivityModel({
+      activityDesc: `Invoice Canceled By ${loggedinuserEmail} with id ${empid}`,
+      module: "invoice",
+      activity: "cancel",
+      orgId: org_id,
+      entityId: updatedInvoice._id,
+      empId: empid,
+      userId: userId,
+    });
+    await activity.save();
     // ✅ Success response
     res.status(200).json({
       success: true,
@@ -501,6 +533,11 @@ export const cancelInvoice = async (req, res) => {
 export const restoreInvoice = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
+
+    const empid = req.orgUser.employeeId;
+    const orgId = req.orgUser.orgId;
 
     // ✅ Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -536,7 +573,16 @@ export const restoreInvoice = async (req, res) => {
         message: "Invoice not found",
       });
     }
-
+    const activity = new ActivityModel({
+      activityDesc: `Invoice Restored By ${loggedinuserEmail} with id ${empid}`,
+      module: "invoice",
+      activity: "restore",
+      orgId: orgId,
+      entityId: restoredInvoice._id,
+      empId: empid,
+      userId: userId,
+    });
+    await activity.save();
     // ✅ Success response
     res.status(200).json({
       success: true,
@@ -590,8 +636,13 @@ export const restoreInvoice = async (req, res) => {
 //   res.json({ message: "Invoice Updated successfully!!" });
 // };
 
-export const moveToTrashInvoice= async (req, res) => {
+export const moveToTrashInvoice = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.userId;
+  const loggedinuserEmail = req.user.email;
+
+  const empid = req.orgUser.employeeId;
+  const org_id = req.orgUser.orgId;
 
   // Validate ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -616,9 +667,18 @@ export const moveToTrashInvoice= async (req, res) => {
         code: 404,
       });
     }
-
+    const activity = new ActivityModel({
+      activityDesc: `Invoice moved to trash By ${loggedinuserEmail} with id ${empid}`,
+      module: "invoice",
+      activity: "delete",
+      orgId: org_id,
+      entityId: deletedInvoice._id,
+      empId: empid,
+      userId: userId,
+    });
+    await activity.save();
     res.status(200).json({
-      message: "Invoice moved to deleted successfully!",
+      message: "Invoice moved to trash successfully!",
       success: true,
       code: 200,
       data: deletedInvoice,
@@ -635,7 +695,11 @@ export const moveToTrashInvoice= async (req, res) => {
 
 export const restoreCancelInvoice = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.userId;
+  const loggedinuserEmail = req.user.email;
 
+  const empid = req.orgUser.employeeId;
+  const orgId = req.orgUser.orgId;
   // ✅ Validate ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -662,7 +726,16 @@ export const restoreCancelInvoice = async (req, res) => {
         code: 404,
       });
     }
-
+    const activity = new ActivityModel({
+      activityDesc: `canceled Invoice restored By ${loggedinuserEmail} with id ${empid}`,
+      module: "invoice",
+      activity: "restore",
+      orgId: orgId,
+      entityId: updatedInvoice._id,
+      empId: empid,
+      userId: userId,
+    });
+    await activity.save();
     res.status(200).json({
       message: "Canceled invoice restored successfully!",
       success: true,
@@ -678,8 +751,13 @@ export const restoreCancelInvoice = async (req, res) => {
   }
 };
 
-export const  permanentDeleteInvoice = async (req, res) => {
+export const permanentDeleteInvoice = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.userId;
+  const loggedinuserEmail = req.user.email;
+
+  const empid = req.orgUser.employeeId;
+  const orgId = req.orgUser.orgId;
 
   // ✅ Validate ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -702,6 +780,16 @@ export const  permanentDeleteInvoice = async (req, res) => {
       });
     }
 
+    const activity = new ActivityModel({
+      activityDesc: `Invoice permanently deleted By ${loggedinuserEmail} with id ${empid}`,
+      module: "invoice",
+      activity: "delete",
+      orgId: orgId,
+      entityId: deletedInvoice._id,
+      empId: empid,
+      userId: userId,
+    });
+    await activity.save();
     res.status(200).json({
       message: "Invoice permanently deleted successfully!",
       success: true,
@@ -771,6 +859,11 @@ export const getCancel = async (req, res) => {
 
 export const finalizeDraftInvoice = async (req, res) => {
   const { id } = req.params;
+   const userId = req.user.userId;
+  const loggedinuserEmail = req.user.email;
+
+  const empid = req.orgUser.employeeId;
+  const orgId = req.orgUser.orgId;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -794,7 +887,15 @@ export const finalizeDraftInvoice = async (req, res) => {
         code: 404,
       });
     }
-
+const activity = new ActivityModel({
+  activityDesc: `Draft invoice converted to final invoice by ${loggedinuserEmail} with id ${empid}`,
+  module: "invoice",
+  activity: "update",
+  orgId: orgId,
+  entityId: updatedInvoice._id,
+  empId: empid,
+  userId: userId,
+})
     res.status(200).json({
       message: "Draft invoice converted to final invoice successfully!",
       success: true,
@@ -821,7 +922,7 @@ export const getDraftById = async (req, res) => {
     });
 
     if (!invoice) {
-      return res.status(404).json({ message: "Invoice not found" });
+      return res.status(404).json({ message: "no draft Invoice not found" , status: 404,success: false});
     }
 
     res.status(200).json({
@@ -845,7 +946,11 @@ export const updateInvoiceStatus = async (req, res) => {
   const { id } = req.params;
   const orgId = req.orgUser.orgId;
   const { status } = req.body;
+  const userId = req.user.userId;
+  const loggedinuserEmail = req.user.email;
 
+  const empid = req.orgUser.employeeId;
+  // const org_id = req.orgUser.orgId;
   if (!status || !statusenu.includes(status)) {
     return res.status(400).json({
       message: "Invalid invoice status",
@@ -876,7 +981,17 @@ export const updateInvoiceStatus = async (req, res) => {
         code: 404,
       });
     }
+    const activity = new ActivityModel({
+      orgId: orgId,
+      module: "invoice",
+      entityId: id,
+      activity: "update",
+      activityDesc: `Invoice status updated to ${status}`,
 
+      userId: userId,
+      userEmail: loggedinuserEmail,
+    });
+    await activity.save();
     res.status(200).json({
       message: "Invoice status updated successfully!",
       success: true,
@@ -935,16 +1050,7 @@ export const updateInvoiceStatus = async (req, res) => {
 //   }
 // };
 
-// exports.updateDraftIn = async (req, res) => {
-//   const { id } = req.params;
-
-//   if (!mongoose.Types.ObjectId.isValid(id))
-//     return res.status(404).send("No Draft with that id");
-
-//   await InvoiceModel.findByIdAndUpdate(id, req.body);
-
-//   res.json({ message: " Updated successfully!!" });
-// };
+//
 
 // const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 

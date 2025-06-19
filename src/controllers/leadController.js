@@ -95,7 +95,6 @@ export const createLead = async (req, res, next) => {
     await lead.save();
     // Create activity for lead creation
     const activity = await ActivityModel.create({
-      leadId: lead._id,
       orgId: orgId,
       activityDesc: `Lead created by ${loggedinuserEmail} with empid ${empid}`,
       activity: "create",
@@ -506,8 +505,8 @@ export const getLeadsByStatusAndFirm = async (req, res) => {
   } catch (error) {
     console.error("Error in getLeadsByStatusAndFirm:", error);
     res.status(500).json({
-      success: false,
       message: "Internal server error while fetching leads.",
+      success: false,
       error: error.message,
       status: 500,
     });
@@ -516,6 +515,10 @@ export const getLeadsByStatusAndFirm = async (req, res) => {
 
 export const updateLeadStatus = async (req, res) => {
   try {
+    const orgId = req.orgUser.orgId;
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
+    const empid = req.orgUser.employeeId;
     const stageEnum = ["New", "Won", "Lost", "Hold"];
     const leadId = req.params.id;
     const { status } = req.body;
@@ -538,10 +541,19 @@ export const updateLeadStatus = async (req, res) => {
 
     // Save changes
     await lead.save();
-
+    const activity = await ActivityModel.create({
+      orgId: orgId,
+      activityDesc: `Lead status updated to ${status} by ${loggedinuserEmail} with empid ${empid}`,
+      activity: "update",
+      module: "lead",
+      entityId: lead._id,
+      userId,
+    });
+    await activity.save();
     res.status(200).json({
       message: "Lead status updated successfully",
       code: 200,
+      success: true,
     });
   } catch (error) {
     console.error("Error in updateLeadStatus:", error);

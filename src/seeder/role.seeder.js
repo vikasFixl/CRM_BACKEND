@@ -12,33 +12,31 @@ const seedRoles = async () => {
   session.startTransaction();
 
   try {
-    console.log("Deleting all roles...");
-    await RolePermission.deleteMany({}, { session });
-    console.log("✅ All roles deleted.");
-
     for (const roleName of Object.values(ROLES)) {
-      const exists = await RolePermission.findOne({ role: roleName }).session(
-        session
-      );
-      if (exists) {
-        console.log(`⚠️ Role '${roleName}' already exists. Skipping...`);
-        continue;
-      }
-
-      // Use the permissions array from rolepermission config
       const permissions = rolepermission[roleName] || [];
 
-      // Construct new RolePermission doc
-      const newRole = new RolePermission({
+      const update = {
+        
         role: roleName,
         permissions: permissions.map(({ module, actions }) => ({
           module,
           actions,
         })),
-      });
+      };
 
-      await newRole.save({ session });
-      console.log(`✅ Role '${roleName}' created.`);
+      // 🛡️ Use upsert to update if exists, or insert if not
+      await RolePermission.findOneAndUpdate(
+        { role: roleName },
+        update,
+        {
+          session,
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true,
+        }
+      );
+
+      console.log(`✅ Role '${roleName}' seeded/updated.`);
     }
 
     await session.commitTransaction();
@@ -50,5 +48,6 @@ const seedRoles = async () => {
     console.error("❌ Error seeding roles:", error.message);
   }
 };
+
 
 seedRoles();

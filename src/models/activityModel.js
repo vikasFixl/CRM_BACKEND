@@ -2,8 +2,8 @@
 import mongoose from "mongoose";
 
 // Predefined allowed modules and actions
-const allowedModules = ["organization", "firm", "lead", "invoice", "client"];
-const allowedActivities = ["create", "update", "delete", "view", "assign", "share","restore"];
+const allowedModules = ["organization", "firm", "lead", "invoice", "client","tax","user"];
+const allowedActivities = ["create", "update", "delete", "view", "assign", "share","restore","cancel"];
 
 const ActivitySchema = new mongoose.Schema(
   {
@@ -38,5 +38,6 @@ const ActivitySchema = new mongoose.Schema(
   { timestamps: true }
 );
 ActivitySchema.index({ orgId: 1, module: 1, entityId: 1, activity: 1 }, { unique: false });
-const ActivityModel = mongoose.model("Activity", ActivitySchema);
+// ✅ Avoid OverwriteModelError
+ const ActivityModel = mongoose.models.Activity || mongoose.model("Activity", ActivitySchema);
 export default ActivityModel;

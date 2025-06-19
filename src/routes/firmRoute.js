@@ -84,6 +84,7 @@ Router.route("/update/:id").patch(
 Router.route("/restore/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("firm", "RESTORE_FIRM"),
   firmController.RestoreFirm
 );
 // get all delted firms
@@ -91,6 +92,7 @@ Router.route("/restore/:id").patch(
 Router.route("/deleted").get(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("firm", "VIEW_TRASH"),
   firmController.getAllDeletedFirm
 );
 

@@ -39,6 +39,7 @@ const ClientSchema = new mongoose.Schema(
     cinNo: String,
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" ,required: true},
     firmId: { type: mongoose.Schema.Types.ObjectId, ref: "Firm" ,required: true},
+    deleted: { type: Boolean, default: false },
   },
   {
     timestamps: true,

@@ -7,6 +7,7 @@ import {
   getAllCancelInvoices,
   getAllDeletedInvoices,
   getAllInvoices,
+  getDraftById,
   getDrafts,
   getInvoiceByClient,
   getInvoiceByFirm,
@@ -20,7 +21,7 @@ import {
   updateInvoiceStatus,
 } from "../controllers/invoices.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
-import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
+import { authenticateOrgToken, checkPermission } from "../middleweare/orgmiddleware.js";
 // const { authorize } = require("../middleweare/middleware");
 
 /// get routes
@@ -28,12 +29,20 @@ import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
 InvoiceRouter.route("/drafts").get(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "VIEW_INVOICE"),
   getDrafts
+);
+InvoiceRouter.route("/drafts/:id").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  checkPermission("invoice", "VIEW_INVOICE"),
+  getDraftById
 );
 // InvoiceInvoiceRouter.get("/cancel/:orgId", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), invoiceController.getCancel);
 InvoiceRouter.route("/all").get(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "VIEW_INVOICE"),
   getAllInvoices
 );
 // InvoiceInvoiceRouter.get("/all/:orgId", authorize('Read', 'invoice', ['Admin', 'subAdmin', 'Custom']), invoiceController.getAllInvoices);
@@ -41,11 +50,13 @@ InvoiceRouter.route("/all").get(
 InvoiceRouter.route("/getAllCancelInvoices").get(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "VIEW_INVOICE"),
   getAllCancelInvoices
 );
 InvoiceRouter.route("/getAllDeletedInvoices").get(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "VIEW_TRASH"),
   getAllDeletedInvoices
 );
 
@@ -55,27 +66,32 @@ InvoiceRouter.route("/getAllDeletedInvoices").get(
 InvoiceRouter.route("/create").post(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "CREATE_INVOICE"),
   createInvoice
 );
 // InvoiceInvoiceRouter.post("/createrecurringinvoice", invoiceController.createInvoice);
 InvoiceRouter.route("/getSingleInvoice").post(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "VIEW_INVOICE"),
   getSingleInvoice
 );
 InvoiceRouter.route("/getInvoiceByClient").post(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "VIEW_INVOICE"),
   getInvoiceByClient
 );
 InvoiceRouter.route("/getInvoiceByFirm").post(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "VIEW_INVOICE"),
   getInvoiceByFirm
 );
 InvoiceRouter.route("/listInvoiceNo").post(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "VIEW_INVOICE"),
   listInvoiceNo
 );
 // InvoiceInvoiceRouter.post("/listInvoiceNumber",  invoiceController.listInvoiceNo);
@@ -87,6 +103,7 @@ InvoiceRouter.route("/listInvoiceNo").post(
 InvoiceRouter.route("/drafttoinvoice/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "EDIT_INVOICE"),
   finalizeDraftInvoice
 );
 // InvoiceRouter.patch("/updateDraft/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.updateDraftIn);
@@ -94,26 +111,31 @@ InvoiceRouter.route("/drafttoinvoice/:id").patch(
 InvoiceRouter.route("/softDeleteInvoice/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "DELETE_INVOICE"),
   moveToTrashInvoice
 );
 InvoiceRouter.route("/updateInvoiceStatus/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "EDIT_INVOICE"),
   updateInvoiceStatus
 );
 InvoiceRouter.route("/cancelInvoice/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "EDIT_INVOICE"),
   cancelInvoice
 );
 InvoiceRouter.route("/restoreInvoice/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "RESTORE_INVOICE"),
   restoreInvoice
 );
 InvoiceRouter.route("/restoreCancelInvoice/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "RESTORE_INVOICE"),
   restoreCancelInvoice
 );
 
@@ -122,6 +144,7 @@ InvoiceRouter.route("/restoreCancelInvoice/:id").patch(
 InvoiceRouter.route("/deleteInvoice/:id").delete(
   isAuthenticated,
   authenticateOrgToken(),
+  checkPermission("invoice", "DELETE_INVOICE"),
   permanentDeleteInvoice
 );
 

@@ -27,7 +27,7 @@ export const addTaxInFirm = async (req, res) => {
       });
     }
     const tax = parsed.data;
-// check if tax already exists
+    // check if tax already exists
     const existing = await taxModel.findOne({ firmId: tax.firmId });
 
     if (!existing) {
@@ -76,7 +76,7 @@ export const postGlobalTax = async (req, res) => {
         errors: parsed.error.errors.map((e) => e.message),
       });
     }
-const tax=parsed.data
+    const tax = parsed.data;
     // Check if a global tax already exists for this org
     const existing = await taxModel.findOne({
       orgId: tax.orgId,
@@ -134,7 +134,7 @@ const tax=parsed.data
 export const gettaxrates = async (req, res) => {
   try {
     const firmId = req.params.firmId;
-    if(!firmId || !mongoose.Types.ObjectId.isValid(firmId)){
+    if (!firmId || !mongoose.Types.ObjectId.isValid(firmId)) {
       return res.status(400).json({
         message: "Firm ID not found or invalid id",
         success: false,
@@ -154,7 +154,7 @@ export const gettaxrates = async (req, res) => {
   }
 };
 
-// returns all the global taxes 
+// returns all the global taxes
 export const getGlobalTaxs = async (req, res) => {
   try {
     const orgId = req.orgUser?.orgId;
@@ -166,10 +166,12 @@ export const getGlobalTaxs = async (req, res) => {
       });
     }
 
-    const data = await taxModel.find({
-      orgId,
-      isGlobal: true, // Ensure you're using 'isGlobal' if your schema uses it
-    }).select("-__v -updatedAt"); // Exclude unnecessary fields if needed
+    const data = await taxModel
+      .find({
+        orgId,
+        isGlobal: true, // Ensure you're using 'isGlobal' if your schema uses it
+      })
+      .select("-__v -updatedAt"); // Exclude unnecessary fields if needed
 
     res.status(200).json({
       message: "Global taxes fetched successfully!",
@@ -187,7 +189,7 @@ export const getGlobalTaxs = async (req, res) => {
     });
   }
 };
- // get all taxes both global and firm
+// get all taxes both global and firm
 export const getAllTaxes = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
@@ -221,24 +223,23 @@ export const getAllTaxes = async (req, res) => {
 // updaet the tax rate
 export const updateTaxRateById = async (req, res) => {
   try {
-    const  taxRateId  = req.params.id; // ✅ taxRates[].id here taxRateId is taxrates._id for individual tax
+    const taxRateId = req.params.id; // ✅ taxRates[].id here taxRateId is taxrates._id for individual tax
     const { newRate } = req.body;
     console.log(newRate, taxRateId);
-    if(!taxRateId || !mongoose.Types.ObjectId.isValid(taxRateId)){
+    if (!taxRateId || !mongoose.Types.ObjectId.isValid(taxRateId)) {
       return res.status(400).json({
         message: "Tax rate ID not found or invalid id",
         success: false,
-        code: 400
+        code: 400,
       });
     }
-    if(!newRate){
+    if (!newRate) {
       return res.status(400).json({
         message: "New rate not found",
         success: false,
-        code: 400
+        code: 400,
       });
     }
-
 
     // Find the tax document that contains this taxRateId
     const data = await taxModel.findOne({ "taxRates._id": taxRateId });
@@ -248,29 +249,28 @@ export const updateTaxRateById = async (req, res) => {
       return res.status(404).json({
         message: "Tax rate not found.",
         success: false,
-        code: 404
+        code: 404,
       });
     }
-// update the rate 
+    // update the rate
     data.taxRates.map((element) => {
       if (element._id == taxRateId) {
         element.rate = newRate;
       }
-    })
+    });
 
-      await data.save();
+    await data.save();
 
-      return res.status(200).json({
-        message: "Tax rate updated successfully.",
-        success: true,
-        code: 200
-      });
-  
+    return res.status(200).json({
+      message: "Tax rate updated successfully.",
+      success: true,
+      code: 200,
+    });
   } catch (err) {
     res.status(500).json({
       message: err.message || "Failed to update tax rate.",
       success: false,
-      code: 500
+      code: 500,
     });
   }
 };
@@ -278,22 +278,22 @@ export const updateTaxRateById = async (req, res) => {
 export const disabletaxRate = async (req, res) => {
   try {
     const taxid = req.params.id; // same the id is taxrates._id not hte global tax id
-    if(!taxid || !mongoose.Types.ObjectId.isValid(taxid)){
+    if (!taxid || !mongoose.Types.ObjectId.isValid(taxid)) {
       return res.status(400).json({
         message: "Tax ID not found or invalid id",
         success: false,
       });
     }
     console.log(taxid);
-   const tax = await taxModel.findOne({ "taxRates._id": taxid });
-  
-    if(!tax){
+    const tax = await taxModel.findOne({ "taxRates._id": taxid });
+
+    if (!tax) {
       return res.status(400).json({
         message: "Tax not found",
         success: false,
       });
     }
-console.log(tax);
+    console.log(tax);
     tax.taxRates[0].isEnabled = false;
     await tax.save();
     res.status(200).json({
@@ -302,12 +302,8 @@ console.log(tax);
       success: true,
       data: tax,
     });
-    
-  } catch (error) {
-    
-  }
-
-}
+  } catch (error) {}
+};
 export const deletetaxRate = async (req, res) => {
   try {
     const _id = req.params.id;
@@ -329,7 +325,7 @@ export const deletetaxRate = async (req, res) => {
   }
 };
 
-// gets client by tax 
+// gets client by tax
 // 📘 Controller to get total tax collected per client for a specific taxRateId
 export const clientByTax = async (req, res) => {
   try {
@@ -341,14 +337,14 @@ export const clientByTax = async (req, res) => {
       return res.status(400).json({
         message: "orgId and taxRateId are required.",
         success: false,
-        code: 400
+        code: 400,
       });
     }
 
     // 🔍 Fetch invoices that have the specified taxRateId applied
     const data = await InvoiceModel.find({
       orgId,
-      "tax.taxRateId": taxRateId // 📌 tax.taxRateId refers to each entry in form.tax[]
+      "tax.taxRateId": taxRateId, // 📌 tax.taxRateId refers to each entry in form.tax[]
     }).select("client taxAmt invoiceNumber");
 
     // 🧮 Store tax total per client
@@ -371,7 +367,7 @@ export const clientByTax = async (req, res) => {
         taxAmtSumDict[clientId] = {
           total: 0,
           tax: matchedTax,
-          client: invoice.client
+          client: invoice.client,
         };
       }
 
@@ -386,7 +382,7 @@ export const clientByTax = async (req, res) => {
       sum: value.total,
       firstName: value.client.firstName,
       lastName: value.client.lastName,
-      clientFirmName: value.client.clientFirmName
+      clientFirmName: value.client.clientFirmName,
     }));
 
     // ✅ Respond with client-wise tax data
@@ -394,19 +390,17 @@ export const clientByTax = async (req, res) => {
       data: result,
       message: "List of clients according to tax.",
       success: true,
-      code: 200
+      code: 200,
     });
-
   } catch (err) {
     // ❌ Handle errors
     res.status(400).json({
       message: err.message || "Error fetching client by tax.",
       success: false,
-      code: 400
+      code: 400,
     });
   }
 };
-
 
 // 📘 Get all invoices that have a specific taxRateId applied and return their tax info
 export const invoiceByTax = async (req, res) => {
@@ -426,7 +420,7 @@ export const invoiceByTax = async (req, res) => {
     // Filter those that have the specified taxRateId inside their tax array (form.tax)
     const data = await InvoiceModel.find({
       orgId,
-      "tax.taxRateId": taxRateId
+      "tax.taxRateId": taxRateId,
     }).select("invoiceNumber taxAmt"); // Only get what's needed
 
     const result = [];
@@ -453,7 +447,6 @@ export const invoiceByTax = async (req, res) => {
       success: true,
       code: 200,
     });
-
   } catch (err) {
     // ❌ Catch and report any error
     res.status(400).json({
@@ -462,5 +455,3 @@ export const invoiceByTax = async (req, res) => {
     });
   }
 };
-
-

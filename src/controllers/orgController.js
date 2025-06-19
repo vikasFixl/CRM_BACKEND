@@ -521,8 +521,10 @@ export const UpdateOrganizationUser = async (req, res) => {
       return res.status(404).json({ error: "you are not part of this organization" });
     }
 
+    console.log("member", member);
      let updates = {};
     const isRoleChanged = member.role?.role !== Role;
+    console.log("isRoleChanged", isRoleChanged);
    
 
 
