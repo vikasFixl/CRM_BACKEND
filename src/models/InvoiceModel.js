@@ -121,7 +121,8 @@ const InvoiceSchema = new mongoose.Schema({
     start_date: { type: Date },
     end_date: { type: Date },
   },
-});
+},
+  { timestamps: true });
 
 InvoiceSchema.index({ invoiceDate: 1, orgId: 1,draft: 1,delete: 1,cancel: 1 }, { unique: false });
 

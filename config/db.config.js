@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+
+dotenv.config();
+
 export const url =
-  "mongodb+srv://cubicle_crm:crm123@cluster0.gkuhyji.mongodb.net/CRMpROD";
+ process.env.Mongo_URI
 
 mongoose.Promise = global.Promise;
 const options = {

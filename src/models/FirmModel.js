@@ -11,6 +11,17 @@ const firmSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    FirmLogo: {
+      url: {
+        type: String,
+        default:
+          "https://res.cloudinary.com/dnctmzmmx/image/upload/v1750401124/user/rvblg8czxgpg9qtap3rv.webp",
+      },
+      public_id: {
+        type: String,
+        default: null, // optional
+      },
+    },
     invoicePrefix: {
       type: String,
       required: true,
@@ -19,8 +30,8 @@ const firmSchema = new mongoose.Schema(
       address1: { type: String },
       address2: { type: String },
       city: { type: String },
-      state: { type: String, required: true },
-      country: { type: String, required: true },
+      state: { type: String },
+      country: { type: String },
       pinCode: { type: Number },
     },
     contectPerson: {
@@ -62,5 +73,6 @@ const firmSchema = new mongoose.Schema(
 );
 firmSchema.index({ orgId: 1, email: 1 }, { unique: true });
 firmSchema.index({ orgId: 1, name: 1 }, { unique: true });
+mongoose.models.Firm && delete mongoose.models.Firm;
 const Firm = mongoose.model("Firm", firmSchema);
 export default Firm;

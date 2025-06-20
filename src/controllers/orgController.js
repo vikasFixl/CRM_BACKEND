@@ -13,8 +13,8 @@ import { InviteEmailTemplate } from "../utils/helperfuntions/emailtemplate.js";
 import jwt from "jsonwebtoken";
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { ROLES } from "../enums/role.enums.js";
-
-
+import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
+import { paginateQuery } from "../utils/pagination.js";
 
 // import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
 // import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
@@ -92,6 +92,21 @@ export const createOrganization = async (req, res) => {
       updatedBy: userId,
       isActive: true,
     });
+    if (req.files && req.files.image) {
+      const { image } = req.files;
+
+      const cloudinaryResponse = await uploadImageToCloudinary({
+        file: image,
+        folder: "organization/avatar", // or any dynamic folder
+        // only if replacing
+      });
+
+      // console.log(cloudinaryResponse, "cloudinaryResponse");
+      newOrg.OrgLogo = {
+        url: cloudinaryResponse.url,
+        public_id: cloudinaryResponse.public_id,
+      };
+    }
 
     const savedOrg = await newOrg.save();
 
@@ -319,34 +334,74 @@ export const getUserOrganizations = async (req, res) => {
   try {
     const userId = req.user.userId; // assuming this is set by auth middleware
     // fetch user org form the member model
-    const memberships = await OrgMember.find({ userId, status: "active" })
-      .populate("organizationId") // populate org details
-      .populate("role") // populate role details
-      .lean();
+    const { page = 1, limit = 10 } = req.query;
 
-    console.log("memberships", memberships);
-    const organizations = memberships.map((member) => ({
-      orgId: member.organizationId._id,
-      orgName: member.organizationId.name,
-      orgLogo: member.organizationId.logo,
-      orgActive: member.organizationId.isActive,
-      orgEmail: member.organizationId.contactEmail,
-      orgcontact: member.organizationId.contactName,
-      orgPhone: member.organizationId.contactPhone,
-      joinedAt: member.createdAt,
-      employeeId: member.employeeId,
-      role: member.role.role,
-      permissions:
-        member.permissionsOverride?.length > 0
-          ? member.permissionsOverride
-          : member.role.permissions, // use override if exists
-    }));
+    const filter = {
+      userId,
+      status: "active",
+    };
+
+    const result = await paginateQuery(OrgMember, filter, {
+      page,
+      limit,
+      sort: { createdAt: -1 },
+    });
+
+    // Populate user and role info manually after pagination
+    const populatedData = await Promise.all(
+      result.data.map(async (member) => {
+        const full = await OrgMember.findById(member._id)
+
+          .populate("organizationId")
+          .populate("role")
+          .lean();
+
+        return {
+          orgId: full.organizationId._id,
+          orgName: full.organizationId.name,
+          Logo: full.organizationId.OrgLogo?.url,
+          orgActive: full.organizationId.isActive,
+          orgEmail: full.organizationId.contactEmail,
+          orgContact: full.organizationId.contactName,
+          orgPhone: full.organizationId.contactPhone,
+          joinedAt: full.createdAt,
+          employeeId: full.employeeId,
+          role: full.role?.role,
+          permissions:
+            full.permissionsOverride?.length > 0
+              ? full.permissionsOverride
+              : full.role?.permissions || [],
+        };
+      })
+    );
+
+    // console.log("memberships", memberships);
+    // const organizations = memberships.map((member) => ({
+    //   orgId: member.organizationId._id,
+    //   orgName: member.organizationId.name,
+    //   Logo: member.organizationId.OrgLogo?.url,
+    //   orgActive: member.organizationId.isActive,
+    //   orgEmail: member.organizationId.contactEmail,
+    //   orgcontact: member.organizationId.contactName,
+    //   orgPhone: member.organizationId.contactPhone,
+    //   joinedAt: member.createdAt,
+    //   employeeId: member.employeeId,
+    //   role: member.role.role,
+    //   permissions:
+    //     member.permissionsOverride?.length > 0
+    //       ? member.permissionsOverride
+    //       : member.role.permissions, // use override if exists
+    // }));
 
     res.status(200).json({
       message: "Organizations fetched successfully",
       success: true,
       code: 200,
-      organizations,
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+      limit: result.limit,
+      data: populatedData,
     });
   } catch (error) {
     res.status(500).json({
@@ -360,56 +415,72 @@ export const getUserOrganizations = async (req, res) => {
 
 export const getAllUserInOrg = async (req, res) => {
   try {
-    // orgid from middleware
     const orgId = req.orgUser.orgId;
-    console.log("orgId", orgId);
+    const { page = 1, limit = 10 } = req.query;
 
-    // Get all members in the org excluding OrgAdmins
-    const members = await OrgMember.find({
-      organizationId: orgId,
-      status: "active",
-    })
-      .populate("userId", "firstName lastName email phone")
-      .populate("role") // Optional: you can populate permissions too if needed
-      .lean();
+    // Step 1: Base filter (before populating roles)
+    const paginated = await paginateQuery(
+      OrgMember,
+      { organizationId: orgId, status: "active" },
+      { page, limit, sort: { createdAt: -1 } }
+    );
 
-    console.log("members at users", members);
-    const nonAdminUsers = members.filter(
+    // Step 2: Populate userId and role fields after pagination
+    const populatedMembers = await Promise.all(
+      paginated.data.map((member) =>
+        OrgMember.findById(member._id)
+          .populate("userId", "firstName lastName email phone")
+          .populate("role")
+          .lean()
+      )
+    );
+
+    // Step 3: Filter out OrgAdmin members
+    const nonAdminMembers = populatedMembers.filter(
       (member) => member.role?.role !== "OrgAdmin"
     );
 
-  // Construct enriched user data
-    const enrichedUsers = nonAdminUsers.map((member) => {
+    // Step 4: Construct enriched user data
+    const enrichedUsers = nonAdminMembers.map((member) => {
       const useCustom =
         member.hasCustomPermission ||
         (member.permissionsOverride && member.permissionsOverride.length > 0);
 
-      const permissions = useCustom
-        ? member.permissionsOverride
-        : member.role?.permissions || [];
-
       return {
-        _id: member.userId._id,
-        firstName: member.userId.firstName,
-        lastName: member.userId.lastName,
-        email: member.userId.email,
-        phone: member.userId.phone,
-        role: member.role?.role || "Unknown",
-        permissions,
+        orgId: member.organizationId,
+        orgName: member.organizationId?.name,
+        Logo: member.organizationId?.OrgLogo?.url,
+        orgActive: member.organizationId?.isActive,
+        orgEmail: member.organizationId?.contactEmail,
+        orgcontact: member.organizationId?.contactName,
+        orgPhone: member.organizationId?.contactPhone,
+        joinedAt: member.createdAt,
         employeeId: member.employeeId,
-        joinedAt: member.joinedAt,
-        roleid: member.role?._id,
-        hasCustomPermission: member.hasCustomPermission || false,
+        role: member.role?.role,
+        permissions: useCustom
+          ? member.permissionsOverride
+          : member.role?.permissions || [],
+        user: member.userId, // Contains firstName, lastName, email, phone
       };
     });
 
-    res.status(200).json({
-      message: "Users fetched successfully",
-      users: enrichedUsers,
+    return res.status(200).json({
+      message: "Organization users fetched successfully (excluding OrgAdmins)",
+      success: true,
+      code: 200,
+      data: enrichedUsers,
+      page: Number(page),
+      limit: Number(limit),
+      total: paginated.total,
+      totalPages: paginated.totalPages,
     });
   } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error in getOrgUsersExcludingOrgAdmin:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      code: 500,
+    });
   }
 };
 
@@ -464,7 +535,7 @@ export const getOrganizationBYId = async (req, res) => {
         lastName: m.userId.lastName,
         email: m.userId.email,
         phone: m.userId.phone,
-    
+
         OrgLogo: m.userId.OrgLogo,
         employeeId: m.employeeId,
         role: m.role?.role || "N/A",
@@ -504,38 +575,39 @@ export const getOrganizationBYId = async (req, res) => {
 };
 
 export const UpdateOrganizationUser = async (req, res) => {
-  
-   try {
+  try {
     const { userId } = req.params;
     const orgId = req.orgUser.orgId; // securely extracted from auth middleware
     const { Role, overridePermissions } = req.body;
     console.log(orgId, userId, Role, overridePermissions);
 
     // Find member
-  // Find member using userId + orgId
+    // Find member using userId + orgId
     const member = await OrgMember.findOne({
       userId,
       organizationId: orgId,
     }).populate("role", "role");
     if (!member) {
-      return res.status(404).json({ error: "you are not part of this organization" });
+      return res
+        .status(404)
+        .json({ error: "you are not part of this organization" });
     }
 
     console.log("member", member);
-     let updates = {};
+    let updates = {};
     const isRoleChanged = member.role?.role !== Role;
     console.log("isRoleChanged", isRoleChanged);
-   
 
-
-     // ✅ 1. Handle role change
+    // ✅ 1. Handle role change
     if (isRoleChanged) {
-      const newRole = await RolePermission.findOne({role: Role});
+      const newRole = await RolePermission.findOne({ role: Role });
       console.log("newRole", newRole);
       if (!newRole) return res.status(404).json({ error: "Role not found" });
 
       if (newRole.name === "SuperAdmin") {
-        return res.status(403).json({ error: "Forbidden: Cannot assign SuperAdmin role" });
+        return res
+          .status(403)
+          .json({ error: "Forbidden: Cannot assign SuperAdmin role" });
       }
 
       updates.role = newRole._id;
@@ -543,8 +615,7 @@ export const UpdateOrganizationUser = async (req, res) => {
       updates.hasCustomPermission = false;
     }
 
-
-       // ✅ 2. Apply override permissions ONLY if role is not changed
+    // ✅ 2. Apply override permissions ONLY if role is not changed
     if (
       !isRoleChanged &&
       Array.isArray(overridePermissions) &&
@@ -557,9 +628,15 @@ export const UpdateOrganizationUser = async (req, res) => {
     // ✅ 3. Apply updates and save
     Object.assign(member, updates);
     await member.save();
-   
 
-    return res.status(200).json({ message:`member role updated to ${Role} successfully ${isRoleChanged?"":"with custom permisisons"}`, member });
+    return res
+      .status(200)
+      .json({
+        message: `member role updated to ${Role} successfully ${
+          isRoleChanged ? "" : "with custom permisisons"
+        }`,
+        member,
+      });
   } catch (error) {
     console.error("updateOrgMember error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -567,8 +644,6 @@ export const UpdateOrganizationUser = async (req, res) => {
 };
 
 // Delete a user from an organization
-
-
 
 export const DeleteOrganizationUser = async (req, res) => {
   try {
@@ -580,14 +655,16 @@ export const DeleteOrganizationUser = async (req, res) => {
     }
 
     // Find membership document for user and org
-    const membership = await OrgMember.findOne({ userId: id, organizationId: orgId });
+    const membership = await OrgMember.findOne({
+      userId: id,
+      organizationId: orgId,
+    });
     if (!membership) {
       return res.status(403).json({
         error: "User does not belong to this organization",
       });
     }
 
-    
     // Delete membership
     await OrgMember.deleteOne({ _id: membership._id });
 
@@ -601,7 +678,6 @@ export const DeleteOrganizationUser = async (req, res) => {
     });
   }
 };
-
 
 // export const getAllOrganizations = async (req, res) => {export const CreateInvite = async (req, res) => {
 export const CreateInvite = async (req, res) => {
@@ -654,7 +730,6 @@ export const CreateInvite = async (req, res) => {
 
     const token = crypto.randomBytes(64).toString("hex");
 
-
     const invite = await OrganizationInvite.create({
       email,
       role,
@@ -665,15 +740,20 @@ export const CreateInvite = async (req, res) => {
     });
 
     await invite.save();
-  
+
     // Construct join link
     const INVITE_LINK = `${frontendUrl}/accept-invite?token=${token}`;
     console.log("INVITE_LINK", INVITE_LINK);
- const html= await InviteEmailTemplate(organization.name,role,email,INVITE_LINK);
+    const html = await InviteEmailTemplate(
+      organization.name,
+      role,
+      email,
+      INVITE_LINK
+    );
 
     // Send reset email (mocked)
     console.log("Invite link:", INVITE_LINK); // for testing/dev
-     try {
+    try {
       await sendEmail(email, "Organization Invite", html);
       return res.status(200).json({
         success: true,
@@ -692,7 +772,7 @@ export const CreateInvite = async (req, res) => {
 export const acceptInvite = async (req, res) => {
   try {
     const { token } = req.params;
-   
+
     // console.log("token", token);
 
     // 1. Find invite by token & check it's still valid (not expired & pending)
@@ -729,7 +809,7 @@ export const acceptInvite = async (req, res) => {
       userId: existingUser._id,
       organizationId: organization._id,
     });
-// console.log("alreadyMember", alreadyMember);
+    // console.log("alreadyMember", alreadyMember);
     if (alreadyMember) {
       return res
         .status(400)
@@ -753,7 +833,6 @@ export const acceptInvite = async (req, res) => {
     // console.log("newmember", newmember);
     await newmember.save();
 
-
     // 8. Mark invite as accepted
     invite.status = "accepted";
     invite.expiresAt = null;
@@ -761,7 +840,6 @@ export const acceptInvite = async (req, res) => {
     // console.log("aftertoken", invite);
     await invite.save();
 
-    
     return res
       .status(200)
       .json({ message: "Successfully joined the organization." });

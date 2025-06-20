@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const firmValidationSchema = z.object({
-  FirmName: z.string(),
+  FirmName: z.string({ required_error: "Firm name is required." }),
   email: z
     .string({ required_error: "Firm email is required." }).trim()
     .email("Invalid email format."),
@@ -12,10 +12,10 @@ export const firmValidationSchema = z.object({
     address1: z.string().optional(),
     address2: z.string().optional(),
     city: z.string().optional(),
-    state: z.string({ required_error: "Address state is required." }),
-    country: z.string({ required_error: "Address country is required." }),
+    state: z.string({ required_error: "Address state is required." }).optional(),
+    country: z.string({ required_error: "Address country is required." }).optional(),
     pinCode: z.number().optional(),
-  }),
+  }).optional(),
 
   contectPerson: z.object({
     name: z.string().optional(),
@@ -34,7 +34,7 @@ export const firmValidationSchema = z.object({
 
   website: z.string().optional(),
   gst_no: z.string().optional(),
-  logo: z.string().optional(),
+ 
   
   uin: z.string().optional(),
   tinNo: z.string().optional(),

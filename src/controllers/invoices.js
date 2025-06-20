@@ -15,6 +15,7 @@ import ActivityModel from "../models/activityModel.js";
 // });
 // export { logger };
 import { invoiceSchema } from "../validations/invoice/invoicevalidation.js";
+import { paginateQuery } from "../utils/pagination.js";
 
 function generateNewInvoiceNumber(prefix = "INV") {
   const now = new Date();
@@ -221,19 +222,77 @@ export const createInvoice = async (req, res) => {
 export const getAllInvoices = async (req, res) => {
   const orgId = req.orgUser.orgId;
 
+  const { page = 1, limit = 10, status, startDate, endDate } = req.query;
+  console.log(req.query);
   try {
-    const invoices = await InvoiceModel.find({
+    const query = {
       orgId,
       delete: { $ne: true },
-    })
-      .sort({ _id: -1 }) // Most recent first
-      .lean(); // Return plain JS objects for performance
+    };
 
-    res.status(200).json({
-      data: invoices,
+    // Optional: Filter by status
+    if (status) {
+      query.status = status;
+    }
+
+    if (startDate || endDate) {
+  query.createdAt = {};
+
+  if (startDate) {
+    query.createdAt.$gte = new Date(startDate);
+  }
+
+  if (endDate) {
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // ⬅️ include the full day
+    query.createdAt.$lte = end;
+  }
+}
+    console.log(startDate, endDate);
+
+    // Pagination logic
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [total, invoices] = await Promise.all([
+      InvoiceModel.countDocuments(query),
+      InvoiceModel.find(query)
+        .select("invoiceNumber status firm client")
+        .populate("firm", "name id")
+        
+        .populate("firm")
+
+        .sort({ _id: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+    ]);
+    // Map result to return formatted client name
+    const formatted = invoices.map((inv) => ({
+      _id: inv._id,
+      invoiceNumber: inv.invoiceNumber,
+      firmName: inv.firm?.name || "-",
+      clientName: `${inv.client?.firstName || ""} ${
+        inv.client?.lastName || ""
+      }`.trim(),
+      clientemail: inv.client?.email || "-",
+      clientaddress: inv.client?.address || "-",
+      status: inv.status,
+      firmId: inv.firm.firmId || null,
+      clientId: inv.client.client_id || null,
+      
+      
+
+    }));
+
+    return res.status(200).json({
+      message: "Invoices fetched successfully",
       success: true,
       code: 200,
-      message: "All invoices retrieved successfully!",
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+      data: formatted,
     });
   } catch (error) {
     res.status(500).json({
@@ -248,21 +307,28 @@ export const getAllInvoices = async (req, res) => {
 export const getAllDeletedInvoices = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
+ const { page = 1, limit = 10 } = req.query;
 
-    const invoices = await InvoiceModel.find({
+    const query = {
       orgId,
-
       delete: true,
-    })
-      .sort({ invoiceDate: -1 }) // More meaningful than _id
-      .lean(); // Faster response as plain JS objects
+    };
+
+    const options = {
+      page,
+      limit,
+      sort: { invoiceDate: -1 },
+    };
+
+    const result = await paginateQuery(InvoiceModel, query, options);
 
     res.status(200).json({
       success: true,
       code: 200,
       message: "Deleted invoices fetched successfully!",
-      data: invoices,
+      ...result, // includes total, page, totalPages, limit, data
     });
+   
   } catch (error) {
     console.error("Error fetching deleted invoices:", error);
     res.status(500).json({
@@ -441,20 +507,27 @@ export const getSingleInvoice = async (req, res) => {
 export const getAllCancelInvoices = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
+  const { page = 1, limit = 10 } = req.query;
 
-    const invoices = await InvoiceModel.find({
+    const query = {
       orgId,
-      cancel: { $ne: false }, // neams cancel equal to true
-      delete: { $ne: true },
-    })
-      .sort({ invoiceDate: -1 })
-      .lean();
+      cancel: { $ne: false }, // Only include invoices where cancel === true
+      delete: { $ne: true },  // Exclude deleted invoices
+    };
+
+    const options = {
+      page,
+      limit,
+      sort: { invoiceDate: -1 },
+    };
+
+    const result = await paginateQuery(InvoiceModel, query, options);
 
     res.status(200).json({
       success: true,
       code: 200,
       message: "Cancelled invoices fetched successfully!",
-      data: invoices,
+      ...result, // Includes: total, page, limit, totalPages, data
     });
   } catch (error) {
     console.error("Error fetching cancelled invoices:", error);
@@ -465,6 +538,7 @@ export const getAllCancelInvoices = async (req, res) => {
     });
   }
 };
+   
 
 // cancel invoice
 export const cancelInvoice = async (req, res) => {
@@ -808,17 +882,30 @@ export const permanentDeleteInvoice = async (req, res) => {
 export const getDrafts = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
-    const drafts = await InvoiceModel.find({
+ 
+    const { page = 1, limit = 10 } = req.query;
+
+    const query = {
       orgId,
       draft: { $ne: false },
       delete: { $ne: true },
-    }).sort({ _id: -1 });
+    };
+    const options={
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { createdAt: -1 },
+    }
+
+    const result = await paginateQuery(InvoiceModel, query, options);
+     
+    
+
 
     res.status(200).json({
-      data: drafts,
+      message: "Draft invoices fetched successfully.",
       code: 200,
       success: true,
-      message: "Draft invoices fetched successfully.",
+      data:  result,
     });
   } catch (error) {
     console.error("Error fetching draft invoices:", error);
@@ -859,7 +946,7 @@ export const getCancel = async (req, res) => {
 
 export const finalizeDraftInvoice = async (req, res) => {
   const { id } = req.params;
-   const userId = req.user.userId;
+  const userId = req.user.userId;
   const loggedinuserEmail = req.user.email;
 
   const empid = req.orgUser.employeeId;
@@ -887,15 +974,15 @@ export const finalizeDraftInvoice = async (req, res) => {
         code: 404,
       });
     }
-const activity = new ActivityModel({
-  activityDesc: `Draft invoice converted to final invoice by ${loggedinuserEmail} with id ${empid}`,
-  module: "invoice",
-  activity: "update",
-  orgId: orgId,
-  entityId: updatedInvoice._id,
-  empId: empid,
-  userId: userId,
-})
+    const activity = new ActivityModel({
+      activityDesc: `Draft invoice converted to final invoice by ${loggedinuserEmail} with id ${empid}`,
+      module: "invoice",
+      activity: "update",
+      orgId: orgId,
+      entityId: updatedInvoice._id,
+      empId: empid,
+      userId: userId,
+    });
     res.status(200).json({
       message: "Draft invoice converted to final invoice successfully!",
       success: true,
@@ -922,7 +1009,13 @@ export const getDraftById = async (req, res) => {
     });
 
     if (!invoice) {
-      return res.status(404).json({ message: "no draft Invoice not found" , status: 404,success: false});
+      return res
+        .status(404)
+        .json({
+          message: "no draft Invoice not found",
+          status: 404,
+          success: false,
+        });
     }
 
     res.status(200).json({

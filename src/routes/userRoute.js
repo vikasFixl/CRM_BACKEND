@@ -13,40 +13,29 @@ import {
 
   // getUsersByDept,
   // getUserList,
-  updateProfileimage,
+  
   getUser,
   // getAllusers,
   deleteUser,
   updateUser,
   logout,
+  updateProfileImage,
 } from "../controllers/user.js";
 
 import { isAuthenticated, isAdminOrSelf } from "../middleweare/middleware.js";
 import {authenticateOrgToken} from "../middleweare/orgmiddleware.js"
 import { loginEmailRateLimiter, signupEmailRateLimiter,resetEmailRateLimiter,forgotEmailRateLimiter } from "../middleweare/ratelimitter.js";
 
-// Directory setup for ES module (__dirname alternative)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+
+
 
 const Router = express.Router();
 
 
-const uploadDir = path.join(__dirname, "../../public/user/");
 
-const storage = multer.diskStorage({
-  destination: function (req, file, callback) {
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    callback(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.fieldname + "-" + Math.random() + Date.now() + path.extname(file.originalname));
-  }
-});
 
-const upload = multer({ storage: storage });
+
+
 
 //  POST routes with rate limitter
 // Router.route("/signin").post(loginEmailRateLimiter,login); // login user
@@ -76,6 +65,6 @@ Router.route("/delete/:id").delete(isAuthenticated,isAdminOrSelf,deleteUser); //
 
 // PATCH routes
 Router.route("/updateUser/:id").patch(isAuthenticated,isAdminOrSelf,updateUser); // update user (admin or self)
-Router.route("/updateProfilephoto/:id").patch(isAuthenticated, updateProfileimage); // update user profile photo
+Router.route("/updateProfilephoto/:id").patch(isAuthenticated,updateProfileImage); // update user profile photo
 
 export default Router;

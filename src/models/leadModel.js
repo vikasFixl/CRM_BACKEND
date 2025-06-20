@@ -45,8 +45,14 @@ const leadSchema = new mongoose.Schema(
     client: {
       firstName: String,
       lastName: String,
-      email: String,
-      phone: String,
+      email: {
+        type: String,
+        unique: true,
+      },
+      phone:{
+        type: String,
+        unique: true
+      },
       address: {
         line1: String,
        

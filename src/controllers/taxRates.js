@@ -275,35 +275,58 @@ export const updateTaxRateById = async (req, res) => {
   }
 };
 // disable the tax rate
+
+
 export const disabletaxRate = async (req, res) => {
   try {
-    const taxid = req.params.id; // same the id is taxrates._id not hte global tax id
+    const taxid = req.params.id;
+
     if (!taxid || !mongoose.Types.ObjectId.isValid(taxid)) {
       return res.status(400).json({
-        message: "Tax ID not found or invalid id",
+        message: "Tax ID not found or invalid",
         success: false,
       });
     }
-    console.log(taxid);
-    const tax = await taxModel.findOne({ "taxRates._id": taxid });
 
-    if (!tax) {
-      return res.status(400).json({
-        message: "Tax not found",
+    const orgId = req.orgUser.orgId;
+
+    // Use positional operator to update the specific item in the array
+    const updatedTax = await taxModel.findOneAndUpdate(
+      {
+        "taxRates._id": taxid,
+        orgId: orgId,
+      },
+      {
+        $set: {
+          "taxRates.$.isEnabled": false,
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedTax) {
+      return res.status(404).json({
+        message: "Tax rate not found",
         success: false,
       });
     }
-    console.log(tax);
-    tax.taxRates[0].isEnabled = false;
-    await tax.save();
-    res.status(200).json({
-      message: `${tax.taxRates[0].name} tax rate disabled successfully!`,
-      code: 200,
+
+    return res.status(200).json({
+      message: "Tax rate disabled successfully!",
       success: true,
-      data: tax,
+      code: 200,
+      data: updatedTax,
     });
-  } catch (error) {}
+  } catch (error) {
+    console.error("Error disabling tax rate:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+      code: 500,
+    });
+  }
 };
+
 export const deletetaxRate = async (req, res) => {
   try {
     const _id = req.params.id;
@@ -451,6 +474,51 @@ export const invoiceByTax = async (req, res) => {
     // ❌ Catch and report any error
     res.status(400).json({
       message: err.message || "Error fetching invoices by tax.",
+      success: false,
+    });
+  }
+};
+
+export const enableTaxRate = async (req, res) => {
+  try {
+    const orgId = req.orgUser.orgId;
+    const id = req.params.id;
+
+    // ✅ Validate required inputs
+
+     const updatedTax = await taxModel.findOneAndUpdate(
+      {
+        "taxRates._id": id,
+        orgId: orgId,
+      },
+      {
+        $set: {
+          "taxRates.$.isEnabled": true,
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedTax) {
+      return res.status(404).json({
+        message: "Tax rate not found.",
+        success: false,
+      });
+    }
+
+   
+    await updatedTax.save();
+
+    // ✅ Respond with success message
+    res.status(200).json({
+      message: "Tax rate enabled successfully.",
+      success: true,
+      code: 200,
+    });
+  } catch (err) {
+    // ❌ Catch and report any error
+    res.status(400).json({
+      message: err.message || "Error enabling tax rate.",
       success: false,
     });
   }

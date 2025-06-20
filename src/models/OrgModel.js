@@ -11,7 +11,7 @@ const OrganizationSchema = new Schema(
         default:
           "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBix1vtUBBRZ6pP3ASr0573t9-UPW8D5eiNA&s",
       },
-      public_id: { type: String, trim: true },
+      public_id: { type: String, trim: true, default: null },
     },
 
     contactEmail: {

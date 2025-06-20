@@ -5,6 +5,7 @@ import {
   updateClientSchema,
 } from "../validations/client/clientValidation.js";
 import ActivityModel from "../models/activityModel.js";
+import {paginateQuery} from "../utils/pagination.js";
 
 export const createClient = async (req, res) => {
   try {
@@ -107,24 +108,25 @@ export const getClientById = async (req, res) => {
 };
 
 export const getClients = async (req, res) => {
-  const { page } = req.query || 1;
+   const { page = 1, limit = 10 } = req.query;
   const orgId = req.orgUser.orgId;
   try {
-    const LIMIT = 10;
-    const startIndex = (Number(page) - 1) * LIMIT; // get the starting index of every page
-    const total = await ClientModel.countDocuments({
-      orgId: orgId,
+    const query = {
+      orgId,
       deleted: false,
-    });
-    const clients = await ClientModel.find({ orgId: orgId, deleted: false })
-      .sort({ _id: -1 })
-      .limit(LIMIT)
-      .skip(startIndex);
+    };
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { _id: -1 },
+    };
+     const result = await paginateQuery(ClientModel, query, options);
     res.json({
-      total,
-      currentPage: Number(page),
-      numberOfPages: Math.ceil(total / LIMIT),
-      data: clients,
+      message: "Clients fetched successfully",
+      success: true,
+      code: 200,
+      data: result,
     });
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -274,19 +276,45 @@ export const getClientsByUser = async (req, res) => {
 export const getALLdeletedClient = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
-    const clients = await ClientModel.find({
-      orgId: orgId,
+    const { page = 1, limit = 10 } = req.query;
+
+    if (!orgId) {
+      return res.status(400).json({
+        message: "Organization ID is required",
+        success: false,
+        code: 400,
+      });
+    }
+
+    const query = {
+      orgId,
       deleted: true,
-    }).sort({ createdAt: -1 });
-    console.log(clients);
-    res.status(200).json({
-      message: "deleted clients fetched successfully",
+    };
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { createdAt: -1 },
+    };
+
+    const result = await paginateQuery(ClientModel, query, options);
+
+    return res.status(200).json({
+      message: "Deleted clients fetched successfully",
       code: 200,
       success: true,
-      total: clients.length,
-      data: clients,
+      ...result,
     });
-  } catch (error) {}
+  } catch (error) {
+    console.error("Error in getALLdeletedClient:", error);
+    res.status(500).json({
+      message: "Failed to fetch deleted clients",
+      success: false,
+      code: 500,
+      error: error.message,
+    });
+  }
+
 };
 
 export const RestoreClient = async (req, res) => {

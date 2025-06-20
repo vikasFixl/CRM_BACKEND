@@ -6,6 +6,7 @@ import {
 } from "../validations/lead/leadValidation.js";
 import mongoose from "mongoose";
 import ActivityModel from "../models/activityModel.js";
+import { paginateQuery } from "../utils/pagination.js";
 // Create a new lead
 export const createLead = async (req, res, next) => {
   const userId = req.user.userId;
@@ -67,6 +68,19 @@ export const createLead = async (req, res, next) => {
     if (existingLead) {
       return res.status(409).json({ message: "Lead name already taken" });
     }
+    // Enforce unique active lead per client
+    const duplicateLead = await Lead.findOne({
+      orgId,
+      deleted: false,
+      $or: [{ "client.email": client.email }, { "client.phone": client.phone }],
+      status: { $in: ["New", "Hold", "ProposalSent", "Negotiation"] }, // Active statuses
+    });
+
+    if (duplicateLead) {
+      return res.status(409).json({
+        message: `Client with email ${client.email} or phone ${client.phone} already has an active lead`,
+      });
+    }
     const lead = await Lead.create({
       title,
       description,
@@ -116,21 +130,23 @@ export const createLead = async (req, res, next) => {
 };
 export const getAllLeads = async (req, res, next) => {
   const orgId = req.orgUser.orgId;
+  const { page = 1, limit = 10 } = req.query;
+
   if (!orgId) {
     return res.status(400).json({ message: "Org id is required" });
   }
-  if (!mongoose.Types.ObjectId.isValid(orgId))
-    return res.status(400).json({
-      message: "Invalid org id try logging in.",
-      code: 400,
-      success: false,
-    });
+
   try {
-    const leads = await Lead.find({
+    const query = {
       orgId,
       deleted: { $ne: true },
-    })
-      .select({
+    };
+
+    const options = {
+      page,
+      limit,
+      sort: { createdAt: -1 },
+      select: {
         _id: 1,
         LeadId: 1,
         stage: 1,
@@ -141,17 +157,45 @@ export const getAllLeads = async (req, res, next) => {
         nextAction: 1,
         "client.email": 1,
         title: 1,
-      })
-      .lean();
-    if (!leads) {
-      return res.status(404).json({ message: "No leads found" });
-    }
-    res.status(200).json({ message: "Leads fetched successfully", leads });
+      },
+    };
+
+    const result = await paginateQuery(Lead, query, options);
+    // console.log("result", result);
+
+    let filteredlead = result.data?.map((lead) => {
+      return {
+        _id: lead._id,
+        LeadId: lead.LeadId,
+        firmId: lead.firmId,
+        stage: lead.stage,
+        status: lead.status,
+        priority: lead.priority,
+        leadScore: lead.leadScore,
+        followUpDate: lead.followUpDate,
+        nextAction: lead.nextAction,
+        "client.email": lead.client.email,
+        title: lead.title,
+      };
+    });
+
+    return res.status(200).json({
+      message: "Leads fetched successfully",
+      total: result.data.length,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+      success: true,
+      code: 200,
+      data: filteredlead,
+    });
   } catch (error) {
     console.error("Error fetching leads:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to fetch leads", error: error.message });
+    res.status(500).json({
+      message: "Failed to fetch leads",
+      success: false,
+      error: error.message,
+    });
   }
 };
 
@@ -396,9 +440,21 @@ export const bulkDeleteLeads = async (req, res) => {
 export const getAllDeletedLead = async (req, res) => {
   try {
     const orgId = req.orgUser?.orgId;
-    const deletedLeads = await Lead.find({ orgId, deleted: { $ne: false } })
-      .sort({ updatedAt: -1 })
-      .select({
+    const { page = 1, limit = 10 } = req.query;
+    if (!orgId) {
+      return res.status(400).json({
+        message: "Organization ID is required.",
+        success: false,
+        code: 400,
+      });
+    }
+    const query = { orgId, deleted: true };
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { updatedAt: -1 },
+      select: {
         _id: 1,
         LeadId: 1,
         stage: 1,
@@ -407,12 +463,31 @@ export const getAllDeletedLead = async (req, res) => {
         leadScore: 1,
         title: 1,
         description: 1,
-      });
+      },
+    };
+    const result = await paginateQuery(Lead, query, options);
+
+    let formatedData = result.data.map((lead) => {
+      return {
+        _id: lead._id,
+        LeadId: lead.LeadId,
+        stage: lead.stage,
+        status: lead.status,
+        priority: lead.priority,
+        leadScore: lead.leadScore,
+        title: lead.title,
+        description: lead.description,
+      };
+    });
     return res.status(200).json({
       message: "Soft-deleted leads fetched successfully",
       success: true,
       code: 200,
-      data: deletedLeads,
+      data: formatedData,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
     });
   } catch (error) {
     console.error("Error in getAllDeletedLead:", error);
@@ -478,16 +553,45 @@ export const restoreLead = async (req, res) => {
 
 export const getLeadsByStatusAndFirm = async (req, res) => {
   try {
-    const { firmId, status } = req.body;
-    console.log(req.body);
+    const { status } = req.body;
+    const { page = 1, limit = 10 } = req.query;
 
-    const leads = await Lead.find({
-      firmId,
-      delete: { $ne: false },
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "  status is missing ",
+        status: 400,
+      });
+    }
+    const query = {
+      orgId: req.orgUser.orgId,
+      deleted: { $ne: true },
       status,
-    }).sort({ _id: -1 });
+    };
 
-    if (!leads || leads.length === 0) {
+  
+    const options = {
+      page,
+      limit,
+      sort: { _id: -1 },
+    };
+    // Use your paginateQuery here
+    const leads = await paginateQuery(Lead, query, options);
+    
+const formatedData = leads.data.map((lead) => {
+  return {
+    _id: lead._id,
+    LeadId: lead.LeadId,
+    
+    stage: lead.stage,
+    status: lead.status,
+    priority: lead.priority,
+    leadScore: lead.leadScore,
+    title: lead.title,
+    description: lead.description,
+  };
+})
+    if (!leads || leads.data.length === 0) {
       return res.status(200).json({
         success: true,
         message: `No leads found with status "${status}".`,
@@ -497,9 +601,14 @@ export const getLeadsByStatusAndFirm = async (req, res) => {
     }
 
     res.status(200).json({
-      success: true,
       message: `List of all leads with status "${status}".`,
-      data: leads,
+      success: true,
+      data: formatedData,
+      total: leads.total,
+      page: leads.page,
+      limit: leads.limit,
+      totalPages: leads.totalPages,
+      
       status: 200,
     });
   } catch (error) {

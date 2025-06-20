@@ -11,6 +11,7 @@ import {
   deletetaxRate,
   disabletaxRate,
   updateTaxRateById,
+  enableTaxRate,
 } from "../controllers/taxRates.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
@@ -27,6 +28,7 @@ TaxRouter.route("/getAllTaxes").get(isAuthenticated, authenticateOrgToken(), get
 
 TaxRouter.route("/updateRates/:id").patch(isAuthenticated, authenticateOrgToken(), updateTaxRateById)
 TaxRouter.route("/disableTax/:id").patch(isAuthenticated, authenticateOrgToken(), disabletaxRate);
+TaxRouter.route("/enableTax/:id").patch(isAuthenticated, authenticateOrgToken(), enableTaxRate);
 TaxRouter.route("/delete/:id/:oid").delete(deletetaxRate);
 
 export default TaxRouter;

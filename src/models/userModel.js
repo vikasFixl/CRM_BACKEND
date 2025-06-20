@@ -9,7 +9,7 @@ const UserSchema = new Schema(
     password: { type: String, required: true, minlength: 6 },
     phone: { type: String, trim: true, minlength: 10 },
     avatar: {
-      url: { type: String, trim: true },
+      url: { type: String, trim: true ,default:"https://res.cloudinary.com/dnctmzmmx/image/upload/v1750401124/user/rvblg8czxgpg9qtap3rv.webp"},
       public_id: { type: String, trim: true },
     },
 

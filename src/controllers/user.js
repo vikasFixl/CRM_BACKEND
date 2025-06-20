@@ -18,14 +18,16 @@ import {
 import User from "../models/userModel.js";
 import Org from "../models/OrgModel.js";
 import Employee from "../models/employeeModel.js";
+import cloudinary from "../../config/cloudinary.config.js";
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
+import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 
 dotenv.config();
 
 // global use variables
 const isProd = process.env.NODE_ENV === "production";
 
-const frontendUrl=process.env.FRONTEND_URL
+const frontendUrl = process.env.FRONTEND_URL;
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -43,16 +45,20 @@ export const login = async (req, res) => {
   try {
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
-    }).select("+isSuspended").populate("currentOrganization", "_id name contactEmail");
+    })
+      .select("+isSuspended")
+      .populate("currentOrganization", "_id name contactEmail");
 
     console.log("user", user);
-    
+
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
     }
 
     if (user.isSuspended) {
-      return res.status(400).json({ message: "This account is suspended. Contact admin." });
+      return res
+        .status(400)
+        .json({ message: "This account is suspended. Contact admin." });
     }
 
     if (user.loginAttempts >= 5) {
@@ -107,6 +113,7 @@ export const login = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       Globalrole: user.Globalrole,
+      avatar: user.avatar.url,
       phone: user.phone,
       currentOrganization: user.currentOrganization?._id || null,
       orgName: user.currentOrganization?.name || null,
@@ -132,7 +139,6 @@ export const login = async (req, res) => {
   }
 };
 
-
 export const signup = async (req, res) => {
   try {
     const result = signupSchema.safeParse(req.body);
@@ -152,8 +158,6 @@ export const signup = async (req, res) => {
         .json({ message: "User already exists", success: false });
     }
 
-    // Generate unique Employee ID (eid)
-
     const user = new User({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -162,17 +166,30 @@ export const signup = async (req, res) => {
       phone: data.phone,
       uuid: uuidv4(),
     });
+
+    // Only handle image upload if file exists
+    if (req.files && req.files.image) {
+      const { image } = req.files;
+
+      const cloudinaryResponse = await uploadImageToCloudinary({
+        file: image,
+        folder: "user", // or any dynamic folder
+        // only if replacing
+      });
+
+      // console.log(cloudinaryResponse, "cloudinaryResponse");
+      user.avatar = {
+        url: cloudinaryResponse.url,
+        public_id: cloudinaryResponse.public_id,
+      };
+    }
+
     await user.save();
 
     const accessToken = generateGlobalToken(user);
-
-    // res.cookie("token", accessToken, {
-    //   httpOnly: isProd,
-    //   secure: isProd,
-    // sameSite: 'none', maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-    // Decode it to get `exp` (in seconds)
     const { exp } = jwt.decode(accessToken);
-    res.status(201).json({
+
+    return res.status(201).json({
       message: "You have signed up successfully",
       success: true,
       code: 201,
@@ -181,12 +198,13 @@ export const signup = async (req, res) => {
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
         Globalrole: user.Globalrole,
+        avatar: user.avatar?.url,
         token: accessToken,
-        exp: exp * 1000,
+        exp: exp * 1000, // milliseconds
       },
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Something went wrong",
       error: error?.message || JSON.stringify(error),
     });
@@ -359,6 +377,7 @@ export const getUser = async (req, res) => {
       phone: user.phone,
       role: user.role,
       isActive: user.isActive,
+      avatar: user.avatar.url,
       hasReceivedWelcomeEmail: user.hasReceivedWelcomeEmail,
     };
 
@@ -377,10 +396,6 @@ export const getUser = async (req, res) => {
     });
   }
 };
-
-
-
-
 
 // get all organization users
 // export const getAllusers = async (req, res) => {
@@ -413,8 +428,6 @@ export const getUser = async (req, res) => {
 //   }
 // };
 
-
-
 export const deleteUser = async (req, res) => {
   const _id = req.params.id;
 
@@ -446,130 +459,113 @@ export const deleteUser = async (req, res) => {
 
 export const updateUser = async (req, res) => {
   const { id: _id } = req.params;
-  if (req.user.userId != _id)
-    return res.status(401).json({ message: "Unauthorized" });
 
-  if (!mongoose.Types.ObjectId.isValid(_id)) {
-    return res.status(404).send("No User with that ID.");
+  if (req.user.userId !== _id) {
+    return res.status(401).json({
+      message: "This profile doesn't belong to you",
+    });
   }
 
+  if (!mongoose.Types.ObjectId.isValid(_id)) {
+    return res.status(404).json({ message: "Invalid User ID." });
+  }
   const parseResult = updateUserSchema.safeParse(req.body);
+
   if (!parseResult.success) {
-    return res
-      .status(400)
-      .json({ message: "Invalid input", errors: parseResult.error.errors });
+    return res.status(400).json({
+      message: "Invalid input",
+      errors: parseResult.error.errors.map((err) => err.message),
+    });
   }
 
   try {
-    const updatedUser = await User.findByIdAndUpdate(
-      _id,
-      { ...parseResult.data },
-      { new: true }
-    ).select("-password");
-    res.status(200).json({
+    const user = await User.findById(_id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    console.log(parseResult);
+    const updateData = { ...parseResult.data };
+
+    // Handle image upload if present
+    if (req.files && req.files.image) {
+      const { image } = req.files;
+
+      const cloudinaryResponse = await uploadImageToCloudinary({
+        file: image,
+        folder: "user", // or any dynamic folder
+        oldPublicId: user?.avatar?.public_id, // only if replacing
+      });
+
+      updateData.avatar = {
+        url: cloudinaryResponse.secure_url,
+        public_id: cloudinaryResponse.public_id,
+      };
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(_id, updateData, {
+      new: true,
+    }).select("-password");
+
+    return res.status(200).json({
       success: true,
       code: 200,
-      message: "User updated successfully",
+      message: "User why updated successfully",
       data: updatedUser,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json({
+      message: "Server error",
+      error: error?.message || JSON.stringify(error),
+    });
   }
 };
-
 // need to implement cloudinary cloud upload
-export const updateProfileimage = async (req, res) => {
+export const updateProfileImage = async (req, res) => {
   try {
-    const url = `${req.protocol}://${req.get("host")}`;
     const _id = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(_id))
-      return res.status(404).send("No User with that ID.");
-    if (!req.file)
-      return res.status(400).json({ message: "Please upload a file" });
-    const image = await User.findByIdAndUpdate(
-      _id,
-      { profilePhoto: `${url}/public/user/${req.file.filename}` },
-      { new: true }
-    );
-    res.status(201).json({
-      profilePhoto: image.profilePhoto,
-      code: 201,
+
+    if (!mongoose.Types.ObjectId.isValid(_id)) {
+      return res.status(404).json({ message: "Invalid User ID." });
+    }
+
+    const user = await User.findById(_id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (!req.files || !req.files.image) {
+      return res.status(400).json({ message: "Please upload a profile image." });
+    }
+
+    const imageData = await uploadImageToCloudinary({
+      file: req.files.image,
+      folder: "user/profile", // Use a subfolder if needed
+      oldPublicId: user.avatar?.public_id,
+    });
+
+    user.avatar = {
+      url: imageData.url,
+      public_id: imageData.public_id,
+    };
+    await user.save();
+
+    return res.status(200).json({
       success: true,
-      message: "Profile Photo Updated successfully!",
+      code: 200,
+      message: "Profile photo updated successfully",
+      profilePhoto: user.avatar.url,
     });
   } catch (error) {
-    res.status(400).json({ message: "Something went wrong!" });
+    console.error(error);
+    return res.status(500).json({
+      message: "Something went wrong while updating profile photo.",
+      error: error.message || JSON.stringify(error),
+    });
   }
 };
 
-// note email invitation is handlied in org controller
 
-// export const email = async (req, res) => {
-//   const { userName, from, to, link } = req.body;
-//   if (!userName || !from || !to || !link) {
-//     return res.status(400).json({ message: "All fields are required" });
-//   }
-
-//   try {
-//     const htmlContent = `
-//       <div style="width: 100%; color: #000; background: #fff; padding: 2rem; margin-top: 0; display: flex; justify-content: center; align-items: center">
-//         <div style="width: 40%; margin-left: 25%; border: 1px solid #c8c9ca; padding: 2rem">
-//           <div style="text-align: center">
-//             <h1 style="text-align: center; color: #000; font-weight: 900">CRM</h1>
-//             <p style="font-size: 18px; padding: 1rem; border-bottom: 1px solid #c8c9ca">
-//               ${userName} has invited you to join <span style="font-size: 20px; font-weight: 600">CRM</span>
-//             </p>
-//             <p style="margin: 1rem auto; font-size: 13px">
-//               We're thrilled to invite you to join our
-//               <span style="color: blue">CRM</span>,
-//               designed to supercharge our team collaboration and streamline our workflow.
-//             </p>
-//             <a href="${link}" style="display: inline-block; color: #fff; background: blue; border-radius: 5px; text-decoration: none; font-size: 14px; font-weight: 600; margin: 1rem auto; padding: 6px 12px">
-//               View Invitation
-//             </a>
-//             <p style="margin: 1rem auto; font-size: 13px; padding-bottom: 2rem; border-bottom: 1px solid #c8c9ca">
-//               We believe that by embracing our platform, we can take our
-//               collaboration and efficiency to new heights. This is an exciting step forward for our team, and we're
-//               eager to have you on board.
-//             </p>
-//             <div style="font-size: 12px; text-align: left">
-//               <strong>Note:</strong>
-//               <span>This invitation was intended for
-//                 <span style="color: blue; font-weight: 600">${to}</span>.
-//                 If you were not expecting this invitation, you can ignore this email.
-//               </span>
-//             </div>
-//             <div style="font-size: 12px; text-align: left; margin-top: 1rem">
-//               <strong style="color: gray">Button not working? :</strong>
-//               <span style="color: gray">Copy and paste this link to your browser:</span>
-//               <p><a href="${link}" target="_blank" style="color: blue">${link}</a></p>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     `;
-
-//     const mailOptions = {
-//       from: `${userName} <${from}>`,
-//       to: to,
-//       subject: `${userName} sent an invitation to join CRM ✔`,
-//       text: "You have been invited to join CRM.",
-//       html: htmlContent,
-//     };
-
-//     transporter.sendMail(mailOptions, (err, info) => {
-//       if (err) {
-//         return res
-//           .status(500)
-//           .json({ message: "Error occurred. " + err.message });
-//       } else {
-//         return res.status(201).json({ message: `Invitation sent to: ${to}` });
-//       }
-//     });
-//   } catch (error) {
-//     return res.status(500).json({ error: error.message });
-//   }
-// };
 
 // export const getUserList = async (req, res) => {
 //   try {

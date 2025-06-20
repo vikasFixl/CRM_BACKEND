@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import { firmValidationSchema } from "../validations/firm/firmvalidation.js";
 import Firm from "../models/FirmModel.js";
 import ActivityModel from "../models/activityModel.js";
+import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
+import { paginateQuery } from "../utils/pagination.js";
 
 export const createFirm = async (req, res) => {
   try {
@@ -14,6 +16,7 @@ export const createFirm = async (req, res) => {
     // ✅ Validate with Zod
     const parsed = firmValidationSchema.safeParse(req.body);
     if (!parsed.success) {
+      console.log(parsed.error);
       return res.status(400).json({
         message: "Validation error",
         errors: parsed.error.errors.map((e) => e.message),
@@ -48,8 +51,6 @@ export const createFirm = async (req, res) => {
       contectPerson,
       website,
       gst_no,
-      logo,
-
       uin,
       tinNo,
       cinNo,
@@ -65,13 +66,27 @@ export const createFirm = async (req, res) => {
       contectPerson,
       website,
       gst_no,
-      logo,
-
       uin,
       tinNo,
       cinNo,
       orgId,
     });
+   if (req.files && req.files.image) {
+          const { image } = req.files;
+    
+          const cloudinaryResponse = await uploadImageToCloudinary({
+            file: image,
+            folder: "firm/avatar", // or any dynamic folder
+            // only if replacing
+          });
+    
+          // console.log(cloudinaryResponse, "cloudinaryResponse");
+          newFirm.FirmLogo = {
+            url: cloudinaryResponse.url,
+            public_id: cloudinaryResponse.public_id,
+          };
+        }
+    
 
     await newFirm.save();
     // ✅ Add activity
@@ -157,16 +172,31 @@ export const getFirmbyId = async (req, res) => {
 export const getFirmList = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
+    const { page = 1, limit = 10 } = req.query;
 
-    const firms = await Firm.find({ orgId, isDeleted: { $ne: true } })
-      .select("FirmName")
-      .sort({ createdAt: -1 });
+    const filter = { orgId, isDeleted: { $ne: true } };
+
+    const result = await paginateQuery(
+      Firm,
+      filter,
+      {
+        page,
+        limit,
+        sort: { createdAt: -1 },
+      }
+    );
+
+    // Only return FirmName in each item
+    result.data = result.data.map(firm => ({
+      _id: firm._id,
+      FirmName: firm.FirmName
+    }));
 
     return res.status(200).json({
       message: "Firm list fetched successfully!",
-      data: firms,
       success: true,
       code: 200,
+      ...result,
     });
   } catch (err) {
     console.error("Error in getFirmList:", err);
@@ -179,6 +209,10 @@ export const getFirmList = async (req, res) => {
 };
 export const updateFirm = async (req, res) => {
   const { id: _id } = req.params;
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
+    const orgId = req.orgUser.orgId;
+    const empid = req.orgUser.employeeId;
 
   if (!mongoose.Types.ObjectId.isValid(_id))
     return res.status(404).send("No firm with that id.");
@@ -205,7 +239,7 @@ export const updateFirm = async (req, res) => {
       activityDesc: `Firm updated by ${loggedinuserEmail} with id ${empid}`,
       userId,
       orgId,
-      action: "update",
+      activity: "update",
       module: "firm",
       entityId: updatedFirm._id,
     })
@@ -228,6 +262,10 @@ export const updateFirm = async (req, res) => {
 
 export const deleteFirm = async (req, res) => {
   const { id } = req.params;
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
+    const orgId = req.orgUser.orgId;
+    const empid = req.orgUser.employeeId;
 
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).json({
@@ -254,7 +292,7 @@ export const deleteFirm = async (req, res) => {
       activityDesc: `Firm deleted by ${loggedinuserEmail} with id ${empid}`,
       userId,
       orgId,
-      action: "delete",
+      activity: "delete",
       module: "firm",
       entityId: deletedFirm._id,
     })
@@ -276,15 +314,15 @@ export const deleteFirm = async (req, res) => {
 
 export const getAllFirm = async (req, res) => {
   const orgId = req.orgUser.orgId;
+    const { page = 1, limit = 10 } = req.query;
 
   try {
-    const firmAll = await Firm.find({ orgId, isDeleted: { $ne: true } })
-      .sort({ _id: -1 })
-      .select("FirmName _id email contectPerson.name contectPerson.email");
+    const result = await paginateQuery(Firm, { orgId, isDeleted: { $ne: true } }, { page, limit });
+      
 
     res.status(200).json({
       message: "All firms retrieved successfully.",
-      data: firmAll,
+      data: result,
       success: true,
       code: 200,
     });
@@ -300,7 +338,11 @@ export const getAllFirm = async (req, res) => {
 // need restore_firm permission
 export const RestoreFirm = async (req, res) => {
   const { id } = req.params;
-  const orgId = req.orgUser.orgId;
+  // const orgId = req.orgUser.orgId;
+    const userId = req.user.userId;
+    const loggedinuserEmail = req.user.email;
+    const orgId = req.orgUser.orgId;
+    const empid = req.orgUser.employeeId;
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
       success: false,
@@ -340,7 +382,7 @@ export const RestoreFirm = async (req, res) => {
       activityDesc: `Firm restored by ${loggedinuserEmail} with id ${empid}`,
       userId,
       orgId,
-      action: "restore",
+      activity: "restore",
       module: "firm",
       entityId: firm._id,
     })
@@ -363,16 +405,22 @@ export const RestoreFirm = async (req, res) => {
 export const getAllDeletedFirm = async (req, res) => {
   try {
     const orgId = req.orgUser?.orgId;
+     const { page = 1, limit = 10 } = req.query;
 
-    const deletedFirms = await Firm.find({ orgId, isDeleted: true }).sort({
-      updatedAt: -1,
+    const filter = { orgId, isDeleted: true };
+
+    const result = await paginateQuery(Firm, filter, {
+      page,
+      limit,
+      sort: { updatedAt: -1 },
     });
+
 
     return res.status(200).json({
       message: "Soft-deleted firms fetched successfully.",
       success: true,
       code: 200,
-      data: deletedFirms,
+      data: result,
     });
   } catch (error) {
     console.error("Error in getAllDeletedFirm:", error);
