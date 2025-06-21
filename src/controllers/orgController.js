@@ -468,11 +468,13 @@ export const getAllUserInOrg = async (req, res) => {
       message: "Organization users fetched successfully (excluding OrgAdmins)",
       success: true,
       code: 200,
-      data: enrichedUsers,
-      page: Number(page),
-      limit: Number(limit),
-      total: paginated.total,
-      totalPages: paginated.totalPages,
+       users: enrichedUsers,
+       pagination:{
+         limit: Number(limit),
+         total: paginated.total,
+         page: Number(page),
+         totalPages: paginated.totalPages,
+      }
     });
   } catch (error) {
     console.error("Error in getOrgUsersExcludingOrgAdmin:", error);
