@@ -1,15 +1,12 @@
-const projectMemberSchema = mongoose.Schema(
+import mongoose from "mongoose";
+const MemberSchema = mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    projectId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
-      required: true,
-    },
+   
     workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Workspace",
@@ -24,13 +21,13 @@ const projectMemberSchema = mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    status: {
-      type: String,
-      enum: ["invited", "active", "left", "removed"],
-      default: "active",
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
+
   },
   { timestamps: true }
 );
 
-export const ProjectMember = mongoose.model("ProjectMember", projectMemberSchema);
+export const Member = mongoose.model("MemberSchema", MemberSchema);

@@ -119,6 +119,7 @@ export const login = async (req, res) => {
       orgName: user.currentOrganization?.name || null,
       orgEmail: user.currentOrganization?.contactEmail || null,
       orgId: user.currentOrganization?._id || null,
+      currentWorkspace:user.currentWorkspace
     };
 
     res.status(200).json({

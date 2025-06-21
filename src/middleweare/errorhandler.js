@@ -1,33 +1,31 @@
 import { ZodError } from "zod";
+// import { HTTPSTATUS } from "../config/http.config.js";
 
+const formatedZodError = (err, res) => {
+  const errors = err.issues.map((error) => ({
+    field: error.path.join("."),
+    message: error.message,
+  }));
+  return res
+    .status(400)
+    .json({ message: "validation error", errors: errors });
+};
 export const errorHandler = (err, req, res, next) => {
-  console.log(`❌ Error occurred from path ${req.path}`);
-  console.error(err); // ✅ Properly logs error
+  console.log(`error occured from path ${req.path}`, err);
+  // handles json parse error
+  if (err instanceof SyntaxError)
+    return res
+      .status(400)
+      .json({ message: "Invalid JSON format.please check your request body" });
 
-  // Invalid JSON body
-  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
-    return res.status(400).json({
-      message: "Invalid JSON format. Please check your request body.",
-    });
-  }
-
-  // Zod validation errors
+  // handles zod errror
   if (err instanceof ZodError) {
-    console.log("❌ Zod validation error",errors);
-    const errors = err.issues.map((e) => ({
-     
-      message: e.message
-    }));
-
-    return res.status(400).json({
-      message: "Validation error",
-      errors
-    });
+    return formatedZodError(err, res);
   }
 
-  // Fallback error
-  res.status(500).json({
-    message: err.message || "Something went wrong",
-    stack: process.env.NODE_ENV === "production" ? "🥞" : err.stack,
+  res.status(500);
+  res.json({
+    message: err.message,
+    stack: process.env.NODE_ENV === "production" ? "🥞" : "server error",
   });
 };

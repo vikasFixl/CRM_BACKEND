@@ -34,6 +34,12 @@ const UserSchema = new Schema(
       index: true,
       default: null,
     },
+    currentWorkspace: {
+      type: Schema.Types.ObjectId,
+      ref: "Workspace",
+      index: true,
+      default: null,
+    },
     isSuspended: { type: Boolean, default: false, select: false },
 
     resetPasswordToken: { type: String, default: null },

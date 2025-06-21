@@ -28,6 +28,11 @@ const workspaceSchema = mongoose.Schema(
       required: true,
       default: generateInviteCode,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      select: false,
+    },
   },
   { timestamps: true }
 );
