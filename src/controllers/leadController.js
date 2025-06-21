@@ -233,6 +233,10 @@ export const getLeadById = async (req, res) => {
 };
 export const updateLead = async (req, res, next) => {
   const { id } = req.params;
+   const userId = req.user.userId;
+  const orgId = req.orgUser.orgId;
+  const empid = req.orgUser.employeeId;
+  const loggedinuserEmail = req.user.email;
   if (!id) {
     return res.status(400).json({ message: "Lead id is required" });
   }
