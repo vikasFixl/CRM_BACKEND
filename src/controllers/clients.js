@@ -122,11 +122,18 @@ export const getClients = async (req, res) => {
       sort: { _id: -1 },
     };
      const result = await paginateQuery(ClientModel, query, options);
+    
     res.json({
       message: "Clients fetched successfully",
       success: true,
       code: 200,
-      data: result,
+      client: result.data,
+      pagination:{
+        totalDocs: result.total,
+        limit: result.limit,
+        page: result.page,
+        totalPages: result.totalPages
+      }
     });
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -297,13 +304,19 @@ export const getALLdeletedClient = async (req, res) => {
       sort: { createdAt: -1 },
     };
 
-    const result = await paginateQuery(ClientModel, query, options);
+    const clients= await paginateQuery(ClientModel, query, options);
 
     return res.status(200).json({
       message: "Deleted clients fetched successfully",
       code: 200,
       success: true,
-      ...result,
+      client: clients.data,
+      pagination:{
+        totalDocs: clients.total,
+        limit: clients.limit,
+        page: clients.page,
+        totalPages: clients.totalPages
+      }
     });
   } catch (error) {
     console.error("Error in getALLdeletedClient:", error);

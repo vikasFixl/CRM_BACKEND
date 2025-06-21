@@ -187,16 +187,16 @@ export const getFirmList = async (req, res) => {
     );
 
     // Only return FirmName in each item
-    result.data = result.data.map(firm => ({
+ let firms = result.data.map(firm => ({
       _id: firm._id,
       FirmName: firm.FirmName
     }));
-
+// console.log("finaldata",finaldata)
     return res.status(200).json({
       message: "Firm list fetched successfully!",
       success: true,
       code: 200,
-      ...result,
+      firms,
     });
   } catch (err) {
     console.error("Error in getFirmList:", err);
@@ -319,12 +319,12 @@ export const getAllFirm = async (req, res) => {
   try {
     const result = await paginateQuery(Firm, { orgId, isDeleted: { $ne: true } }, { page, limit });
       
-
+let firms=result.data
     res.status(200).json({
       message: "All firms retrieved successfully.",
-      data: result,
       success: true,
       code: 200,
+      firms,
     });
   } catch (err) {
     console.error(err);
@@ -415,12 +415,12 @@ export const getAllDeletedFirm = async (req, res) => {
       sort: { updatedAt: -1 },
     });
 
-
+const firms=result.data
     return res.status(200).json({
       message: "Soft-deleted firms fetched successfully.",
       success: true,
       code: 200,
-      data: result,
+       firms,
     });
   } catch (error) {
     console.error("Error in getAllDeletedFirm:", error);

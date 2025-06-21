@@ -163,7 +163,7 @@ export const getAllLeads = async (req, res, next) => {
     const result = await paginateQuery(Lead, query, options);
     // console.log("result", result);
 
-    let filteredlead = result.data?.map((lead) => {
+    let lead = result.data?.map((lead) => {
       return {
         _id: lead._id,
         LeadId: lead.LeadId,
@@ -181,13 +181,15 @@ export const getAllLeads = async (req, res, next) => {
 
     return res.status(200).json({
       message: "Leads fetched successfully",
-      total: result.data.length,
+      success: true,
+      code: 200,
+    lead,
+    pagination:{
+       total: result.data.length,
       page: result.page,
       limit: result.limit,
       totalPages: result.totalPages,
-      success: true,
-      code: 200,
-      data: filteredlead,
+    }
     });
   } catch (error) {
     console.error("Error fetching leads:", error);
@@ -467,7 +469,7 @@ export const getAllDeletedLead = async (req, res) => {
     };
     const result = await paginateQuery(Lead, query, options);
 
-    let formatedData = result.data.map((lead) => {
+    let lead = result.data.map((lead) => {
       return {
         _id: lead._id,
         LeadId: lead.LeadId,
@@ -483,11 +485,13 @@ export const getAllDeletedLead = async (req, res) => {
       message: "Soft-deleted leads fetched successfully",
       success: true,
       code: 200,
-      data: formatedData,
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: result.totalPages,
+      lead,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      },
     });
   } catch (error) {
     console.error("Error in getAllDeletedLead:", error);
@@ -569,7 +573,6 @@ export const getLeadsByStatusAndFirm = async (req, res) => {
       status,
     };
 
-  
     const options = {
       page,
       limit,
@@ -577,20 +580,20 @@ export const getLeadsByStatusAndFirm = async (req, res) => {
     };
     // Use your paginateQuery here
     const leads = await paginateQuery(Lead, query, options);
-    
-const formatedData = leads.data.map((lead) => {
-  return {
-    _id: lead._id,
-    LeadId: lead.LeadId,
-    
-    stage: lead.stage,
-    status: lead.status,
-    priority: lead.priority,
-    leadScore: lead.leadScore,
-    title: lead.title,
-    description: lead.description,
-  };
-})
+
+    const lead = leads.data.map((lead) => {
+      return {
+        _id: lead._id,
+        LeadId: lead.LeadId,
+
+        stage: lead.stage,
+        status: lead.status,
+        priority: lead.priority,
+        leadScore: lead.leadScore,
+        title: lead.title,
+        description: lead.description,
+      };
+    });
     if (!leads || leads.data.length === 0) {
       return res.status(200).json({
         success: true,
@@ -602,14 +605,15 @@ const formatedData = leads.data.map((lead) => {
 
     res.status(200).json({
       message: `List of all leads with status "${status}".`,
-      success: true,
-      data: formatedData,
-      total: leads.total,
-      page: leads.page,
-      limit: leads.limit,
-      totalPages: leads.totalPages,
-      
       status: 200,
+      success: true,
+      lead,
+      pagination: {
+        total: leads.total,
+        page: leads.page,
+        limit: leads.limit,
+        totalPages: leads.totalPages,
+      },
     });
   } catch (error) {
     console.error("Error in getLeadsByStatusAndFirm:", error);
