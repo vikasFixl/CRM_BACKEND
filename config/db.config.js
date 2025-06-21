@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 
 dotenv.config();
-
+console.log(process.env.Mongo_URI);
 export const url =
  process.env.Mongo_URI
 

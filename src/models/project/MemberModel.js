@@ -6,7 +6,6 @@ const MemberSchema = mongoose.Schema(
       ref: "User",
       required: true,
     },
-   
     workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Workspace",
@@ -17,6 +16,21 @@ const MemberSchema = mongoose.Schema(
       ref: "Organization",
       required: true,
     },
+    role: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "RolePermission", // Role like ProjectAdmin, ProjectViewer
+      required: true,
+    },
+    permissionsOverride: [
+      {
+        module: { type: String }, // e.g., "project"
+        actions: [{ type: String }], // e.g., ["CREATE_TASK", "DELETE_PROJECT"]
+      },
+    ],
+    hasCustomPermission: {
+      type: Boolean,
+      default: false,
+    },
     joinedAt: {
       type: Date,
       default: Date.now,
@@ -25,9 +39,10 @@ const MemberSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
   },
   { timestamps: true }
 );
+
+MemberSchema.index({ workspaceId: 1, userId: 1, organizationId: 1 });
 
 export const Member = mongoose.model("MemberSchema", MemberSchema);

@@ -30,6 +30,7 @@ export const createWorkspace = async (req, res) => {
       orgId: orgId,
     });
     await workspace.save();
+    // find the owner role and add it to the workspace
     // CREATE MEMBER
     const member = await Member.create({
       userId: userId,
