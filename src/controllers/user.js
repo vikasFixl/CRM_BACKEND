@@ -378,6 +378,8 @@ export const getUser = async (req, res) => {
       role: user.role,
       isActive: user.isActive,
       avatar: user.avatar.url,
+      currentOrganization: user.currentOrganization,
+      currentworkspace: user.currentworkspace || null,
       hasReceivedWelcomeEmail: user.hasReceivedWelcomeEmail,
     };
 
