@@ -1,46 +1,90 @@
 import mongoose from "mongoose";
 
-const projectSchema = mongoose.Schema(
+const ProjectSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
-    emoji: {
+    key: {
       type: String,
       required: true,
-      default: "🚀",
+      trim: true,
+      uppercase: true,
+      match: /^[A-Z0-9]{2,10}$/, // Optional strict project key format
+    },
+    slug: {
+      type: String,
+      unique: true,
+      trim: true,
     },
     description: {
       type: String,
+      trim: true,
+      maxlength: 1000,
+    },
+    type: {
+      type: String,
+      enum: ["kanban", "scrum", "bug-tracking", "general"],
+      default: "general",
     },
     workspace: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Workspace",
       required: true,
-      index: true,
     },
-    orgId: {
+    organization: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true,
     },
-    createdBy: {
+    visibility: {
+      type: String,
+      enum: ["private", "workspace", "public"],
+      default: "private",
+    },
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
+    settings: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    created_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
-    isDeleted:{
-      type: Boolean,
-      default: false
-    }
   },
   { timestamps: true }
 );
 
-// Optionally ensure name uniqueness per workspace
-// projectSchema.index({ workspace: 1, name: 1 }, { unique: true });
+/** Unique key within a workspace */
+ProjectSchema.index({ workspace: 1, key: 1 }, { unique: true });
 
-export const Project = mongoose.model("Project", projectSchema);
+/** Slug generator */
+ProjectSchema.pre("save", async function (next) {
+  if (!this.slug && this.name) {
+    let baseSlug = this.name
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/--+/g, "-")
+      .trim();
+
+    let slug = baseSlug;
+    let count = 1;
+
+    const Project = mongoose.models.Project || mongoose.model("Project");
+    while (await Project.exists({ slug })) {
+      slug = `${baseSlug}-${count++}`;
+    }
+
+    this.slug = slug;
+  }
+  next();
+});
+
+export const Project = mongoose.models.Project || mongoose.model("Project", ProjectSchema);

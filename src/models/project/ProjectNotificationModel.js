@@ -1,63 +1,60 @@
 import mongoose from "mongoose";
 
-const notificationSchema = mongoose.Schema(
+const NotificationSchema = new mongoose.Schema(
   {
-    type: {
-      type: String,
+    recipientId: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User", 
       required: true,
-      enum: [
-        "task_assigned",
-        "task_status_updated",
-        "comment_added",
-        "user_mentioned",
-        "project_role_changed",
-        "project_created",
-      ],
+      index: true,   // Index here as queries will often filter by recipientId
     },
-    title: {
-      type: String,
-      required: true,
-    },
-    message: {
-      type: String,
-      required: true,
-    },
-    read: {
-      type: Boolean,
-      default: false,
-    },
-    targetUser: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    triggeredBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    organizationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Organization",
-      required: true,
-    },
-    projectId: {
-      type: mongoose.Schema.Types.ObjectId,
+    projectId: { 
+      type: mongoose.Schema.Types.ObjectId, 
       ref: "Project",
-      required: true,
+      default: null,  // Explicitly default to null if not provided
     },
-    workspaceId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Workspace",
-      required: true,
-    },
-    taskId: {
-      type: mongoose.Schema.Types.ObjectId,
+    taskId: { 
+      type: mongoose.Schema.Types.ObjectId, 
       ref: "Task",
       default: null,
+    },
+    type: {
+      type: String,
+      enum: [
+        "task_assigned",
+        "comment_added",
+        "status_changed",
+        "mention",
+        "general",
+      ],
+      required: true,
+      index: true, // Index type if filtering by notification type is common
+    },
+    message: { 
+      type: String, 
+      required: true, 
+      trim: true, 
+      maxlength: 1000, // Limit message length for safety
+    },
+    isRead: { 
+      type: Boolean, 
+      default: false, 
+      index: true, // To efficiently query unread notifications
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed, // extra contextual info like actor, timestamps, etc.
+      default: {},
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      select: false,
     },
   },
   { timestamps: true }
 );
 
-export const Notification = mongoose.model("Notification", notificationSchema);
+// Compound index for efficient fetching of unread notifications per user
+NotificationSchema.index({ recipientId: 1, isRead: 1, isDeleted: 1 });
+
+export const Notification = mongoose.model("Notification", NotificationSchema);

@@ -33,8 +33,24 @@ const commentSchema = mongoose.Schema(
       ref: "User",
       required: true,
     },
+
+    // 🔁 For nested replies
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comment",
+      default: null,
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
+
+// Useful indexes
+commentSchema.index({ taskId: 1 });
+commentSchema.index({ parentId: 1 });
 
 export const Comment = mongoose.model("Comment", commentSchema);
