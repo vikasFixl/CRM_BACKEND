@@ -236,18 +236,18 @@ export const getAllInvoices = async (req, res) => {
     }
 
     if (startDate || endDate) {
-  query.createdAt = {};
+      query.createdAt = {};
 
-  if (startDate) {
-    query.createdAt.$gte = new Date(startDate);
-  }
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
 
-  if (endDate) {
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999); // ⬅️ include the full day
-    query.createdAt.$lte = end;
-  }
-}
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // ⬅️ include the full day
+        query.createdAt.$lte = end;
+      }
+    }
     console.log(startDate, endDate);
 
     // Pagination logic
@@ -258,7 +258,7 @@ export const getAllInvoices = async (req, res) => {
       InvoiceModel.find(query)
         .select("invoiceNumber status firm client")
         .populate("firm", "name id")
-        
+
         .populate("firm")
 
         .sort({ _id: -1 })
@@ -279,9 +279,6 @@ export const getAllInvoices = async (req, res) => {
       status: inv.status,
       firmId: inv.firm.firmId || null,
       clientId: inv.client.client_id || null,
-      
-      
-
     }));
 
     return res.status(200).json({
@@ -307,7 +304,7 @@ export const getAllInvoices = async (req, res) => {
 export const getAllDeletedInvoices = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
- const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10 } = req.query;
 
     const query = {
       orgId,
@@ -328,7 +325,6 @@ export const getAllDeletedInvoices = async (req, res) => {
       message: "Deleted invoices fetched successfully!",
       ...result, // includes total, page, totalPages, limit, data
     });
-   
   } catch (error) {
     console.error("Error fetching deleted invoices:", error);
     res.status(500).json({
@@ -507,12 +503,12 @@ export const getSingleInvoice = async (req, res) => {
 export const getAllCancelInvoices = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
-  const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10 } = req.query;
 
     const query = {
       orgId,
       cancel: { $ne: false }, // Only include invoices where cancel === true
-      delete: { $ne: true },  // Exclude deleted invoices
+      delete: { $ne: true }, // Exclude deleted invoices
     };
 
     const options = {
@@ -538,7 +534,6 @@ export const getAllCancelInvoices = async (req, res) => {
     });
   }
 };
-   
 
 // cancel invoice
 export const cancelInvoice = async (req, res) => {
@@ -882,7 +877,7 @@ export const permanentDeleteInvoice = async (req, res) => {
 export const getDrafts = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
- 
+
     const { page = 1, limit = 10 } = req.query;
 
     const query = {
@@ -890,21 +885,21 @@ export const getDrafts = async (req, res) => {
       draft: { $ne: false },
       delete: { $ne: true },
     };
-    const options={
+    const options = {
       page: parseInt(page),
       limit: parseInt(limit),
       sort: { createdAt: -1 },
-    }
+    };
 
     const result = await paginateQuery(InvoiceModel, query, options);
-     
+
     // Map result to return formatted client name
     const formatted = result.data.map((inv) => ({
       _id: inv._id,
       invoiceNumber: inv.invoiceNumber,
       draft: inv.draft,
       cancel: inv.cancel,
-   
+
       firmName: inv.firm?.name || "-",
       clientName: `${inv.client?.firstName || ""} ${
         inv.client?.lastName || ""
@@ -914,17 +909,13 @@ export const getDrafts = async (req, res) => {
       status: inv.status,
       firmId: inv.firm.firmId || null,
       clientId: inv.client.client_id || null,
-      
-      
-
     }));
-
 
     res.status(200).json({
       message: "Draft invoices fetched successfully.",
       code: 200,
       success: true,
-      Invoice:formatted,
+      Invoice: formatted,
     });
   } catch (error) {
     console.error("Error fetching draft invoices:", error);
@@ -1028,13 +1019,11 @@ export const getDraftById = async (req, res) => {
     });
 
     if (!invoice) {
-      return res
-        .status(404)
-        .json({
-          message: "no draft Invoice not found",
-          status: 404,
-          success: false,
-        });
+      return res.status(404).json({
+        message: "no draft Invoice not found",
+        status: 404,
+        success: false,
+      });
     }
 
     res.status(200).json({
@@ -1119,7 +1108,59 @@ export const updateInvoiceStatus = async (req, res) => {
     });
   }
 };
+export const payment = async (req, res) => {
+  try {
+    const _id = req.params.id;
 
+    if (!mongoose.Types.ObjectId.isValid(_id))
+      return res.status(404).json({ message: "No invoice with that id" });
+
+    const details = await InvoiceModel.findById(_id);
+    if (!details) return res.status(404).json({ message: "Invoice not found" });
+    console.log(details);
+    console.log(req.body);
+    const paymentAmount = parseFloat(req.body.amountPaid);
+    console.log(paymentAmount);
+    if (isNaN(paymentAmount) || paymentAmount <= 0)
+      return res.status(400).json({ message: "Invalid amountPaid" });
+
+    // Calculate new totals
+    const newAmountPaid = parseFloat(details.amountPaid || 0) + paymentAmount;
+    const newDueAmount = parseFloat(details.total) - newAmountPaid;
+
+    // Update invoice with payment and status
+    const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
+      _id,
+      {
+        $push: { payment: req.body },
+        $set: {
+          status: req.body.status || details.status,
+          amountPaid: newAmountPaid,
+          dueAmount: newDueAmount,
+        },
+      },
+      { new: true }
+    );
+
+    if (newDueAmount < 0) {
+      return res.status(200).json({
+        msg: "OverPaid!",
+        amount: Math.abs(newDueAmount),
+        data: updatedInvoice,
+      });
+    }
+
+    res.status(201).json({
+      data: updatedInvoice,
+      success: true,
+      code: 201,
+      message: "Payment record inserted successfully!",
+    });
+  } catch (error) {
+    console.error("Payment error:", error);
+    res.status(500).json({ message: "Something went wrong." });
+  }
+};
 // exports.payment = async (req, res) => {
 //   try {
 //     const _id = req.params.id;

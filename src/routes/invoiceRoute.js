@@ -14,6 +14,7 @@ import {
   getSingleInvoice,
   listInvoiceNo,
   moveToTrashInvoice,
+  payment,
   permanentDeleteInvoice,
   restoreCancelInvoice,
   restoreInvoice,
@@ -107,7 +108,7 @@ InvoiceRouter.route("/drafttoinvoice/:id").patch(
   finalizeDraftInvoice
 );
 // InvoiceRouter.patch("/updateDraft/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.updateDraftIn);
-// InvoiceRouter.patch("/payment/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.payment);
+InvoiceRouter.route("/payment/:id").patch(isAuthenticated,authenticateOrgToken(),payment)
 InvoiceRouter.route("/softDeleteInvoice/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),
