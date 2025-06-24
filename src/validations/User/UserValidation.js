@@ -1,13 +1,18 @@
 import { z } from "zod";
+const nameRegex = /^[A-Za-z]+$/;
 
 export const signupSchema = z.object({
   firstName: z
-    .string({ required_error: "First name is required" })
-    .min(1, "First name cannot be empty"),
+    .string()
+    .min(1, "First name cannot be empty")
+    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z).")
+    .optional(),
 
   lastName: z
-    .string({ required_error: "Last name is required" })
-    .min(1, "Last name cannot be empty"),
+    .string()
+    .min(1, "Last name cannot be empty")
+    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z).")
+    .optional(),
 
   email: z
     .string({ required_error: "Email is required" })
@@ -29,43 +34,26 @@ export const signupSchema = z.object({
     })
     .optional(),
 
- 
-
- 
-
- 
-
-
-
-  
-
- 
   isActive: z.boolean().optional().default(true),
 
   lastLogin: z.coerce.date().optional(),
-  
 
   // You may choose to exclude timestamps (createdAt, updatedAt) since they are automatic
 });
-
-
-
 
 export const updateUserSchema = z.object({
   firstName: z
     .string()
     .min(1, "First name cannot be empty")
+    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z).")
     .optional(),
 
   lastName: z
     .string()
     .min(1, "Last name cannot be empty")
+    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z).")
     .optional(),
-
-  email: z
-    .string()
-    .email("Invalid email address")
-    .optional(),
+  email: z.string().email("Invalid email address").optional(),
 
   password: z
     .string()

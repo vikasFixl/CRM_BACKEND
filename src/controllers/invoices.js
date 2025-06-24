@@ -898,14 +898,33 @@ export const getDrafts = async (req, res) => {
 
     const result = await paginateQuery(InvoiceModel, query, options);
      
-    
+    // Map result to return formatted client name
+    const formatted = result.data.map((inv) => ({
+      _id: inv._id,
+      invoiceNumber: inv.invoiceNumber,
+      draft: inv.draft,
+      cancel: inv.cancel,
+   
+      firmName: inv.firm?.name || "-",
+      clientName: `${inv.client?.firstName || ""} ${
+        inv.client?.lastName || ""
+      }`.trim(),
+      clientemail: inv.client?.email || "-",
+      clientaddress: inv.client?.address || "-",
+      status: inv.status,
+      firmId: inv.firm.firmId || null,
+      clientId: inv.client.client_id || null,
+      
+      
+
+    }));
 
 
     res.status(200).json({
       message: "Draft invoices fetched successfully.",
       code: 200,
       success: true,
-      data:  result,
+      Invoice:formatted,
     });
   } catch (error) {
     console.error("Error fetching draft invoices:", error);
