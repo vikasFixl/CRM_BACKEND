@@ -53,9 +53,14 @@ const BoardSchema = new mongoose.Schema(
       ref: "Team",
       default: null, // null for public/private boards
     },
-    filterQuery: {
-      type: String, // optional saved filter or query string
-      default: "",
+    // filterQuery: {
+    //   type: String, // optional saved filter or query string
+    //   default: "",
+    // },
+      // ✅ Simplified columns field
+    columns: {
+      type: [String],
+      default: [],
     },
     isDeleted: {
       type: Boolean,

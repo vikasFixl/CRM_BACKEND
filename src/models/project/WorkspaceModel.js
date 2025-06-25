@@ -35,7 +35,7 @@ const workspaceSchema = new mongoose.Schema(
       unique: true,
       required: true,
       default: generateInviteCode,
-      match: /^[A-Z0-9]{6}$/, // Optional: add stricter pattern if needed
+     match: /^[a-zA-Z0-9]{6,12}$/  // allows 6–12 chars, mixed case
     },
     isDeleted: {
       type: Boolean,

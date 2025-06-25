@@ -1,8 +1,9 @@
+import mongoose from "mongoose";
 const AuditLogSchema = new mongoose.Schema(
   {
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", index: true },
     taskId: { type: mongoose.Schema.Types.ObjectId, ref: "Task", index: true },
-    actorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     action: { type: String, required: true }, // e.g., "task_created", "status_changed"
     description: { type: String, required: true, trim: true, maxlength: 1000 },
     metadata: { type: mongoose.Schema.Types.Mixed, default: {} }, // oldValue, newValue, reason, etc.

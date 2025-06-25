@@ -62,6 +62,7 @@ import ClientRouter from "./src/routes/clientRoute.js";
 import ActivityRouter from "./src/routes/activityRoute.js";
 import TaxRouter from "./src/routes/taxRoutes.js";
 import WorkspaceRouter from "./src/routes/project/Workspaceroute.js";
+import ProjectRouter from "./src/routes/project/projectroute.js";
 
 // PayPal config
 paypal.configure({
@@ -138,6 +139,7 @@ app.use("/api/client", ClientRouter);
 app.use("/api/activities", ActivityRouter);
 app.use("/api/taxRates", TaxRouter);
 app.use("/api/workspace",WorkspaceRouter)
+app.use("/api/project",ProjectRouter)
 /**
  * 
 app.use("/api/purchase", purchesRoutes);

@@ -8,13 +8,13 @@ const ProjectSchema = new mongoose.Schema(
       trim: true,
       maxlength: 100,
     },
-    key: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true,
-      match: /^[A-Z0-9]{2,10}$/, // Optional strict project key format
-    },
+    // key: {
+    //   type: String,
+    //   required: true,
+    //   trim: true,
+    //   uppercase: true,
+    //   match: /^[A-Z0-9]{2,10}$/, // Optional strict project key format
+    // },
     slug: {
       type: String,
       unique: true,

@@ -18,7 +18,7 @@ const ProjectMemberSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["developer", "qa", "manager", "viewer"],
+      enum: ["developer", "qa", "manager", "viewer", "admin"],
       default: "viewer",
     },
     addedBy: {
@@ -30,20 +30,25 @@ const ProjectMemberSchema = new mongoose.Schema(
       enum: ["direct", "team"],
       default: "direct",
     },
-    hasCustomPermission: {
-      type: Boolean,
-      default: false,
-    },
-    permissionsOverride: [
-      {
-        module: { type: String, required: true }, // Example: "task", "issue"
-        actions: [{ type: String }], // Example: ["CREATE", "EDIT", "DELETE"]
-      },
-    ],
+    // hasCustomPermission: {
+    //   type: Boolean,
+    //   default: false,
+    // },
+    // permissionsOverride: [
+    //   {
+    //     module: { type: String, required: true }, // Example: "task", "issue"
+    //     actions: [{ type: String }], // Example: ["CREATE", "EDIT", "DELETE"]
+    //   },
+    // ],
     preferences: {
       theme: {
         type: String,
         default: "light",
+      },
+      removeReason: {
+        type: String,
+        default: "",
+        select: false,
       },
       timezone: {
         type: String,

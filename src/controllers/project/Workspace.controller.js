@@ -6,6 +6,7 @@ import { Workspace } from "../../models/project/WorkspaceModel.js";
 import { Member } from "../../models/project/MemberModel.js";
 import { Project } from "../../models/project/ProjectModel.js";
 import User from "../../models/userModel.js";
+import {RolePermission}from "../../models/RolePermission.js";
 
 export const createWorkspace = async (req, res) => {
   try {
@@ -31,11 +32,17 @@ export const createWorkspace = async (req, res) => {
     });
     await workspace.save();
     // find the owner role and add it to the workspace
+    const ownerRole = await RolePermission.findOne({ role: 'ProjectOwner' });
+    if (!ownerRole) {
+      return res.status(404).json({ message: "Owner role not found" });
+    }
+    
     // CREATE MEMBER
     const member = await Member.create({
       userId: userId,
       workspaceId: workspace._id,
       organizationId: orgId,
+      role:ownerRole._id,
       joinedAt: new Date(),
     });
     await member.save();
@@ -48,6 +55,7 @@ export const createWorkspace = async (req, res) => {
     });
   } catch (error) {
     console.error("Create workspace error:", error);
+    await Workspace.deleteOne({ _id: Workspace._id });
     return res
       .status(500)
       .json({ message: "Internal server error", error: error.message });
@@ -130,20 +138,22 @@ export const deleteWorkspace = async (req, res) => {
   }
 };
 export const getAllWorkspace = async (req, res) => {
-  try {
+  
+    try {
     const orgId = req.orgUser.orgId;
-    const workspaces = await Workspace.find({ orgId, isDeleted: false,owner: req.user.userId });
-    return res.status(200).json({
-      message: "Workspaces fetched successfully",
+
+    const workspaces = await Workspace.find({
+      orgId,
+      isDeleted: false,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "All workspaces in the organization fetched successfully",
       workspaces,
     });
   } catch (error) {
-    console.error("Get all workspaces error:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    console.error("Error fetching org workspaces:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
