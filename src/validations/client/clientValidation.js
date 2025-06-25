@@ -2,25 +2,25 @@ import { z } from "zod";
 
 // Address Schema
 const addressSchema = z.object({
-  address1: z.string().optional(),
-  address2: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  pinCode: z.number().optional(),
-  country: z.string().optional(),
+  address1: z.string({ required_error: "address1 is required" }),
+  address2: z.string({ required_error: "address2 is required" }),
+  city: z.string({ required_error: "city is required" }),
+  state: z.string({ required_error: "state is required" }),
+  pinCode: z.number({ required_error: "pinCode is required" }),
+  country: z.string({ required_error: "country is required" }),
 });
 
 // Contact Person Schema (inline address fields)
 const contactPersonSchema = z.object({
-  name: z.string().optional(),
-  email: z.string().optional(),
-  address1: z.string().optional(),
+  name: z.string({ required_error: "client contact name is required" }),
+  email: z.string({ required_error: "client contact email is required" }),
+  address1: z.string({ required_error: "client contact address is required" }),
   address2: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
-  pinCode: z.number().optional(),
-  country: z.string().optional(),
-  phone: z.number().optional(),
+  pinCode: z.number({ required_error: " pinCode is required" }),
+  country: z.string({ required_error: "client contact country is required" }),
+  phone: z.number({ required_error: "client contact phone is required" }),
   mobile: z.number().optional(),
   altPhone: z.number().optional(),
   altMobile: z.number().optional(),
@@ -34,8 +34,8 @@ export const clientSchema = z.object({
   website: z.string().optional(),
   email: z.string({ required_error: "email is required" }).email("Invalid email format"),
   phone: z.number({ required_error: "phone is required" }),
-  address: addressSchema.optional(),
-  contactPerson: contactPersonSchema.optional(),
+  address: addressSchema,
+  contactPerson: contactPersonSchema,
   taxId: z.string().optional(),
   tinNo: z.string().optional(),
   cinNo: z.string().optional(),
