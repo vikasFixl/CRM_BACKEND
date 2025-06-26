@@ -111,7 +111,7 @@ TaskSchema.index({ assigneeId: 1 });
 TaskSchema.index({ epicId: 1 });
 TaskSchema.index({ parentId: 1 });
 
-taskSchema.methods.generateTaskCode = async function () {
+TaskSchema.methods.generateTaskCode = async function () {
   this.key = generateTaskCode();
   return this.save();
 };

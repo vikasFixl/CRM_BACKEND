@@ -5,16 +5,16 @@ import mongoose from "mongoose";
 const isValidObjectId = (val) => mongoose.Types.ObjectId.isValid(val);
 
 export const createTaskSchema = z.object({
-  projectId: z.string().refine(isValidObjectId, {
+  projectId: z.string({required_error: "Project ID is required"}).refine(isValidObjectId, {
     message: "Invalid project ID",
   }),
 
   key: z.string().optional(), // Auto-generated server-side
 
   summary: z
-    .string()
+    .string( {required_error: "Summary is required"})
     .trim()
-    .min(1, "Summary is required")
+    .min(1)
     .max(300, "Summary cannot exceed 300 characters"),
 
   description: z
@@ -24,12 +24,12 @@ export const createTaskSchema = z.object({
     .optional(),
 
   type: z
-    .string()
-    .min(1, "Task type is required"),
+    .string({required_error: " task Type is required"})
+    .min(1),
 
   status: z
-    .string()
-    .min(1, "Status is required"),
+    .string({required_error: "Status is required"})
+    .min(1),
 
   priority: z
     .enum(["low", "medium", "high", "critical"])
@@ -71,6 +71,6 @@ export const createTaskSchema = z.object({
 
   labels: z.array(z.string().trim()).optional(),
   watchers: z.array(z.string().refine(isValidObjectId)).optional(),
-  attachments: z.array(z.string().refine(isValidObjectId)).optional(),
+
   customFields: z.record(z.any()).optional(),
 });

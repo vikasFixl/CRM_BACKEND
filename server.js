@@ -141,7 +141,7 @@ app.use("/api/activities", ActivityRouter);
 app.use("/api/taxRates", TaxRouter);
 app.use("/api/workspace",WorkspaceRouter)
 app.use("/api/project",ProjectRouter)
-app.use("api/task",TaskRouter)
+app.use("/api/task",TaskRouter)
 /**
  * 
 app.use("/api/purchase", purchesRoutes);
