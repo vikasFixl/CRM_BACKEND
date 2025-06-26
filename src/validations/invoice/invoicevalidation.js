@@ -60,7 +60,7 @@ const recurringInvoiceObjSchema = z.object({
 export const invoiceSchema = z.object({
   items: z
     .array(itemSchema, { required_error: "items is required" })
-    .min(1, "At least one item is required"),
+    .min(1),
   gstn: z.string().optional(),
   notes: z.string().optional(),
   remark: z.string().optional(),

@@ -24,7 +24,7 @@ const stageHistorySchema = z.object({
 
 export const leadSchema = z.object({
   // Basic Info
-  title: z.string().min(1, "Title is required"),
+  title: z.string({ required_error: "Title is required" }).min(1),
   description: z.string().optional(),
 
   // Client Info

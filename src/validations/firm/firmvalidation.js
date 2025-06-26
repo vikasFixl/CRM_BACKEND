@@ -19,9 +19,9 @@ export const firmValidationSchema = z.object({
   }),
   contectPerson: z
     .object({
-      name: z.string({ required_error: "contact name is required." }),
-      email: z.string({ required_error: "contact email is required." }),
-      address1: z.string({ required_error: "contact address is required." }),
+      name: z.string().optional(),
+      email: z.string().optional(),
+      address1: z.string().optional(),
       address2: z.string().optional(),
       city: z.string().optional(),
       state: z.string().optional(),
@@ -29,7 +29,7 @@ export const firmValidationSchema = z.object({
       country: z.string().optional(),
       phone: z.number().optional(),
       mobile: z.number().optional(),
-      altPhone: z.number({ required_error: "contact phone is required." }),
+      altPhone: z.number(),
       altMobile: z.number().optional(),
     })
     .optional(),
