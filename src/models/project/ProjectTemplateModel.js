@@ -1,9 +1,19 @@
 import mongoose from "mongoose";
 
+// 💠 Column schema (board)
+const ColumnSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  order: { type: Number, default: 0 },
+  key: { type: String, required: true, lowercase: true, trim: true },
+  color: { type: String, default: "#8e8e8e" },
+  category: { type: String }, // e.g., "todo", "inprogress", "done"
+}, { _id: false });
+
+// 🔄 State schema (workflow)
 const StateSchema = new mongoose.Schema({
   key: { type: String, required: true, trim: true },
   name: { type: String, required: true, trim: true },
-  category: { type: String },
+  category: { type: String }, // "backlog", "inprogress", "done", etc.
   color: { type: String, default: "#8e8e8e" },
   isDefault: { type: Boolean, default: false },
   order: { type: Number, default: 0 },
@@ -11,21 +21,24 @@ const StateSchema = new mongoose.Schema({
   onExit: mongoose.Schema.Types.Mixed,
 }, { _id: false });
 
+// 🔁 Transition schema
 const TransitionSchema = new mongoose.Schema({
-  from: { type: String, required: true },
-  to: { type: String, required: true },
+  from: { type: String, required: true }, // state key
+  to: { type: String, required: true },   // state key
   conditions: mongoose.Schema.Types.Mixed,
   actions: mongoose.Schema.Types.Mixed,
 }, { _id: false });
 
+// ⚙️ Automation rule schema
 const AutomationRuleSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
-  trigger: mongoose.Schema.Types.Mixed,
+  trigger: mongoose.Schema.Types.Mixed,   // e.g., onCreate, onStatusChange
   conditions: mongoose.Schema.Types.Mixed,
   actions: mongoose.Schema.Types.Mixed,
 }, { _id: false });
 
+// 🔧 Settings schema
 const SettingsSchema = new mongoose.Schema({
   enableStoryPoints: { type: Boolean, default: false },
   enableEpics: { type: Boolean, default: false },
@@ -40,20 +53,15 @@ const SettingsSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
-// const ColumnSchema = new mongoose.Schema({
-//   name: { type: String, required: true },
-//   wipLimit: { type: Number, default: 0 },
-//   stateKey: { type: String },
-//   order: { type: Number, default: 0 },
-// }, { _id: false });
-
+// 🏷 Issue Type schema
 const IssueTypeSchema = new mongoose.Schema({
-  key: { type: String, required: true },
-  name: { type: String, required: true },
+  key: { type: String, required: true },     // "bug", "task", etc.
+  name: { type: String, required: true },    // Display name
   color: { type: String, default: "#ccc" },
-  icon: { type: String },
+  icon: { type: String },                    // Optional icon path/name
 }, { _id: false });
 
+// 📋 Final ProjectTemplate Schema
 const ProjectTemplateSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
   description: String,
@@ -64,10 +72,10 @@ const ProjectTemplateSchema = new mongoose.Schema({
     required: true,
   },
 
-  // boardColumns: { // renamed from columns for clarity
-  //   type: [ColumnSchema],
-  //   default: [],
-  // },
+  boardColumns: {
+    type: [ColumnSchema],
+    default: [],
+  },
 
   workflow: {
     states: { type: [StateSchema], default: [] },
@@ -83,11 +91,11 @@ const ProjectTemplateSchema = new mongoose.Schema({
     default: []
   },
 
-  previewImage: { type: String }, // optional preview for UI
-  category: { type: String },     // e.g., "engineering", "qa"
+  previewImage: { type: String },   // Optional preview image
+  category: { type: String },       // e.g., "engineering", "qa"
   recommended: { type: Boolean, default: false },
 
-  isSystem: { type: Boolean, default: false }, // non-deletable
+  isSystem: { type: Boolean, default: false }, // true = non-deletable system template
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   baseTemplateId: { type: mongoose.Schema.Types.ObjectId, ref: "ProjectTemplate", default: null },
   version: { type: Number, default: 1 },

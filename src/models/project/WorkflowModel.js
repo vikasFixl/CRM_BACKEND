@@ -21,7 +21,7 @@ const WorkflowSchema = new mongoose.Schema(
     },
     states: [
       {
-        Key: { type: String, required: true, trim: true }, // system identifier
+        key: { type: String, required: true, trim: true }, // system identifier
         name: { type: String, required: true, trim: true },       // Display name
         category: { type: String, trim: true },                   // Optional (no enum)
         color: { type: String, default: "#8e8e8e" },

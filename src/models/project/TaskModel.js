@@ -35,8 +35,8 @@ const TaskSchema = new mongoose.Schema(
     },
     priority: {
       type: String,
-      enum: ["low", "medium", "high", "critical"],
-      default: "medium",
+      enum: ["Low", "Medium", "High", "Critical"],
+      default: "Medium",
     },
 
     // Assignment
@@ -75,7 +75,7 @@ const TaskSchema = new mongoose.Schema(
     },
     dueDate:{
       type: Date,
-      default: Date.now(),
+     
     },
     completedAt: {
       type: Date,
@@ -110,11 +110,6 @@ TaskSchema.index({ projectId: 1, sprintId: 1 });
 TaskSchema.index({ assigneeId: 1 });
 TaskSchema.index({ epicId: 1 });
 TaskSchema.index({ parentId: 1 });
-
-TaskSchema.methods.generateTaskCode = async function () {
-  this.key = generateTaskCode();
-  return this.save();
-};
 
 export const Task = mongoose.models.Task || mongoose.model("Task", TaskSchema);
 

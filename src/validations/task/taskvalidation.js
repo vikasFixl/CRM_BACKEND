@@ -32,9 +32,9 @@ export const createTaskSchema = z.object({
     .min(1),
 
   priority: z
-    .enum(["low", "medium", "high", "critical"])
+    .enum(["Low", "Medium", "High", "Critical"])
     .optional()
-    .default("medium"),
+    .default("Medium"),
 
   assigneeId: z.string().refine(isValidObjectId, {
     message: "Invalid assignee ID",
@@ -64,10 +64,18 @@ export const createTaskSchema = z.object({
   dueDate: z.coerce.date().optional(),
   completedAt: z.coerce.date().optional(),
 
-  storyPoints: z
-    .enum(["1", "2", "3", "5", "8", "13", "21"])
-    .transform(Number)
-    .optional(),
+ storyPoints: z
+  .union([
+    z.literal(1),
+    z.literal(2),
+    z.literal(3),
+    z.literal(5),
+    z.literal(8),
+    z.literal(13),
+    z.literal(21),
+  ])
+  .optional(),
+
 
   labels: z.array(z.string().trim()).optional(),
   watchers: z.array(z.string().refine(isValidObjectId)).optional(),

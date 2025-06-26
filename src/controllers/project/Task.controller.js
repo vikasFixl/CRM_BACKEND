@@ -8,6 +8,7 @@ export const createTask = async (req, res) => {
   try {
     const parsed = createTaskSchema.safeParse(req.body);
     if (!parsed.success) {
+      console.log("zod error ", parsed.error.format());
       return res.status(400).json({
         message: "Validation error",
         errors: parsed.error.errors.map((e) => e.message),
@@ -21,12 +22,10 @@ export const createTask = async (req, res) => {
       status,
       priority,
       assigneeId,
-      reporterId,
       assignedTeamId,
       sprintId,
       epicId,
       parentId,
-      startDate,
       dueDate,
       storyPoints,
       labels,
@@ -67,9 +66,10 @@ export const createTask = async (req, res) => {
         .status(404)
         .json({ message: "Board not found for the project" });
     }
+    console.log("board", board);
+    const allowedStatus = board.columns.map((c) => c.key);
+    console.log(allowedStatus, "allowedStatus", status);
 
-    const allowedStatus = board.columns.map((c) => c.stateKey);
-    console.log("allowedStatus", allowedStatus);
     if (!allowedStatus.includes(status)) {
       return res.status(400).json({
         message: `Invalid status. Must be one of: ${allowedStatus.join(", ")}`,
@@ -77,13 +77,11 @@ export const createTask = async (req, res) => {
     }
 
     // Determine board type (Kanban or Scrum)
-    const isScrum =  project.templateType=== "scrum";
-    const isKanban = board.templateType === "kanban";
-
-    // Auto-generate unique task key: e.g., "PROJKEY-1"
-    const taskCount = await Task.countDocuments({ projectId });
-    const key = `${project.key}-${taskCount + 1}`;
-
+    const isScrum = project.type === "scrum";
+    const isKanban = board.type === "kanban";
+    // let key=await Task.countDocuments({ projectId });
+    const count = await Task.countDocuments({ projectId });
+    const key = `${project.slug}-task-${count + 1}`;
     // Construct and save task
     const task = new Task({
       projectId,
@@ -94,17 +92,16 @@ export const createTask = async (req, res) => {
       status,
       priority,
       assigneeId,
-      reporterId,
+      reporterId: req.user.Id,
       assignedTeamId,
       sprintId: isScrum ? sprintId : undefined, // only if Scrum
       epicId,
       parentId,
-      startDate,
+
       dueDate,
       storyPoints,
       labels,
       watchers,
-      attachments,
       customFields,
     });
 

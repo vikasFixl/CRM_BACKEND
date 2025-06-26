@@ -38,7 +38,10 @@ export const createProject = async (req, res) => {
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
-
+const existingProject = await Project.findOne({ name, workspace: workspace._id });
+    if (existingProject) {
+      return res.status(400).json({ message: "Project name already taken" });
+    }
     const newProject = await Project.create(
       [
         {
@@ -48,7 +51,7 @@ export const createProject = async (req, res) => {
           type: template.boardType,
           templateId: template._id,
           organization: orgId,
-          boardType: template.boardType,
+          type: template.boardType,
           createdBy: userId,
         },
       ],
@@ -58,24 +61,32 @@ export const createProject = async (req, res) => {
     const project = newProject[0];
     // Assuming you already have access to the workflow.states and project.name
     console.log(template.workflow?.states, "states");
-    const boardColumns = template.workflow?.states.map((state, index) => ({
+    if (!template.workflow?.states?.every((state) => state.key)) {
+      return res
+        .status(400)
+        .json("One or more states are missing a `key` field.");
+    }
+
+    const columns = template.workflow?.states.map((state, index) => ({
       name: state.name,
-  order: index,
-  key: state.key.toLowerCase().trim() 
+      order: index,
+      key: state.key.toLowerCase().trim(),
     }));
-    console.log("boardColumns", boardColumns);
+    // console.log("boardColumns", boardColumns);
+
     await Board.create(
       [
         {
           projectId: project._id,
           name: `${name} Board`,
           type: template.boardType,
-          columns: boardColumns,
+          columns,
         },
       ],
       { session }
     );
 
+    console.log("template.workflow?.states", template.workflow?.states);
     await Workflow.create(
       [
         {
