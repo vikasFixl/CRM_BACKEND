@@ -61,8 +61,9 @@ export const createOrganization = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    // ✅ Check for duplicate organization
-    const existingOrg = await Org.findOne({ name });
+    const normalizedName = name.trim().toLowerCase();
+    const existingOrg = await Org.findOne({ name: normalizedName });
+
     if (existingOrg) {
       return res
         .status(409)
@@ -468,13 +469,13 @@ export const getAllUserInOrg = async (req, res) => {
       message: "Organization users fetched successfully (excluding OrgAdmins)",
       success: true,
       code: 200,
-       users: enrichedUsers,
-       pagination:{
-         limit: Number(limit),
-         total: paginated.total,
-         page: Number(page),
-         totalPages: paginated.totalPages,
-      }
+      users: enrichedUsers,
+      pagination: {
+        limit: Number(limit),
+        total: paginated.total,
+        page: Number(page),
+        totalPages: paginated.totalPages,
+      },
     });
   } catch (error) {
     console.error("Error in getOrgUsersExcludingOrgAdmin:", error);
@@ -631,14 +632,12 @@ export const UpdateOrganizationUser = async (req, res) => {
     Object.assign(member, updates);
     await member.save();
 
-    return res
-      .status(200)
-      .json({
-        message: `member role updated to ${Role} successfully ${
-          isRoleChanged ? "" : "with custom permisisons"
-        }`,
-        member,
-      });
+    return res.status(200).json({
+      message: `member role updated to ${Role} successfully ${
+        isRoleChanged ? "" : "with custom permisisons"
+      }`,
+      member,
+    });
   } catch (error) {
     console.error("updateOrgMember error:", error);
     return res.status(500).json({ error: "Internal server error" });
