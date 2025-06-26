@@ -15,7 +15,7 @@ const EpicSchema = new mongoose.Schema(
       maxlength: 150,
     },
     key: {
-      type: String,
+      type: String, 
       required: true,
       trim: true,
       uppercase: true,

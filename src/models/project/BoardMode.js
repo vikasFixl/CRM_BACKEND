@@ -58,10 +58,25 @@ const BoardSchema = new mongoose.Schema(
     //   default: "",
     // },
       // ✅ Simplified columns field
-    columns: {
-      type: [String],
-      default: [],
+ columns: [
+  {
+    name: {
+      type: String,
+      required: true,
     },
+    order: {
+      type: Number,
+      required: true,
+    },
+    key: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true,
+    },
+  }
+]
+,
     isDeleted: {
       type: Boolean,
       default: false,
@@ -76,3 +91,10 @@ BoardSchema.index({ projectId: 1, teamId: 1 });
 BoardSchema.index({ name: 1, projectId: 1 }, { unique: true }); // Unique board name per project
 
 export const Board = mongoose.model("Board", BoardSchema);
+
+// /const board = await Board.findOne({ projectId: task.projectId });
+// const allowedStatus = board.columns.map(c => c.stateKey);
+
+// if (!allowedStatus.includes(task.status)) {
+//   throw new Error(`Invalid status. Must be one of: ${allowedStatus.join(", ")}`);
+// }

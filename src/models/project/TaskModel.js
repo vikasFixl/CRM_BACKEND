@@ -40,11 +40,11 @@ const TaskSchema = new mongoose.Schema(
     },
 
     // Assignment
-    assigneeId: {
+    assigneeId: { // The person responsible for completing the task.
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    reporterId: {
+    reporterId: { //The person who created or reported the task/issue.
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
@@ -69,11 +69,19 @@ const TaskSchema = new mongoose.Schema(
     },
 
     // Dates
-    startDate: Date,
-    dueDate: Date,
-    completedAt: Date,
+    startDate:{
+      type: Date,
+      default: Date.now(),
+    },
+    dueDate:{
+      type: Date,
+      default: Date.now(),
+    },
+    completedAt: {
+      type: Date,
+    },
 
-    // Estimation
+    // Estimation // complexity of task
     storyPoints: {
       type: Number,
       enum: [1, 2, 3, 5, 8, 13, 21],
