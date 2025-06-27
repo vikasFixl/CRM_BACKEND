@@ -6,51 +6,78 @@ import { ProjectTemplate } from "../../models/project/ProjectTemplateModel.js";
 import { ProjectMember } from "../../models/project/projectMemberModel.js";
 import { AuditLog } from "../../models/project/auditLogModel.js";
 import { Workspace } from "../../models/project/WorkspaceModel.js";
+import { Task } from "../../models/project/TaskModel.js";
+import User from "../../models/userModel.js";
+import { OrgMember } from "../../models/OrganisationMemberSchema.js";
+import { Member } from "../../models/project/MemberModel.js";
+import { RolePermission } from "../../models/RolePermission.js";
 import mongoose from "mongoose";
+import {
+  addMemberSchema,
+  createProjectSchema,
+  projectIdSchema,
+} from "../../validations/project/project.js";
+import { workspaceIdSchema } from "../../validations/project/workspace.js";
 
 export const createProject = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+
   try {
     const userId = req.user.userId;
     const orgId = req.orgUser.orgId;
-
     const { workspaceId } = req.params;
+    const parsed = createProjectSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: parsed.error.errors.map((e) => e.message),
+      });
+    }
+    const { name, templateId, description, visibility } = parsed.data;
+
+    // 🔍 Validate input
     if (!workspaceId || !mongoose.Types.ObjectId.isValid(workspaceId)) {
       return res
         .status(400)
-        .json({ message: "Invalid workspace ID || login again ", code: 400 });
+        .json({ message: "Invalid workspace ID", code: 400 });
     }
-
-    const { name, templateId, description } = req.body;
-
     if (!name || !templateId) {
-      return res.status(400).json({ message: "name is required" });
+      return res
+        .status(400)
+        .json({ message: "Project name and template are required" });
     }
 
-    const template = await ProjectTemplate.findById(templateId);
-    if (!template) {
+    // 🔍 Validate template & workspace
+    const [template, workspace] = await Promise.all([
+      ProjectTemplate.findById(templateId),
+      Workspace.findById(workspaceId),
+    ]);
+
+    if (!template)
       return res.status(404).json({ message: "Project template not found" });
-    }
-    console.log("template", template);
-
-    const workspace = await Workspace.findById(workspaceId);
-    if (!workspace) {
+    if (!workspace)
       return res.status(404).json({ message: "Workspace not found" });
-    }
-const existingProject = await Project.findOne({ name, workspace: workspace._id });
+
+    // 🔍 Check duplicate project name
+    const existingProject = await Project.findOne({
+      name,
+      workspace: workspace._id,
+    });
     if (existingProject) {
       return res.status(400).json({ message: "Project name already taken" });
     }
-    const newProject = await Project.create(
+
+    // ✅ Create Project
+    const [project] = await Project.create(
       [
         {
           name,
           description: description || template.description || "",
           workspace: workspace._id,
-          type: template.boardType,
           templateId: template._id,
           organization: orgId,
+          visibility: visibility,
           type: template.boardType,
           createdBy: userId,
         },
@@ -58,21 +85,18 @@ const existingProject = await Project.findOne({ name, workspace: workspace._id }
       { session }
     );
 
-    const project = newProject[0];
-    // Assuming you already have access to the workflow.states and project.name
-    console.log(template.workflow?.states, "states");
-    if (!template.workflow?.states?.every((state) => state.key)) {
+    // ✅ Create Board Columns from Template Workflow
+    if (!template.workflow?.states?.every((s) => s.key)) {
       return res
         .status(400)
-        .json("One or more states are missing a `key` field.");
+        .json({ message: "Each workflow state must have a `key`" });
     }
 
-    const columns = template.workflow?.states.map((state, index) => ({
+    const boardColumns = template.workflow.states.map((state, index) => ({
       name: state.name,
       order: index,
       key: state.key.toLowerCase().trim(),
     }));
-    // console.log("boardColumns", boardColumns);
 
     await Board.create(
       [
@@ -80,71 +104,42 @@ const existingProject = await Project.findOne({ name, workspace: workspace._id }
           projectId: project._id,
           name: `${name} Board`,
           type: template.boardType,
-          columns,
+          columns: boardColumns,
         },
       ],
       { session }
     );
 
-    console.log("template.workflow?.states", template.workflow?.states);
+    // ✅ Create Workflow
     await Workflow.create(
       [
         {
           projectId: project._id,
           name: `${name} Workflow`,
-          states: template.workflow?.states || [
-            {
-              key: "todo",
-              name: "To Do",
-              category: "todo",
-              color: "#D3D3D3",
-              order: 1,
-            },
-            {
-              key: "in_progress",
-              name: "In Progress",
-              category: "in_progress",
-              color: "#87CEEB",
-              order: 2,
-            },
-            {
-              key: "done",
-              name: "Done",
-              category: "done",
-              color: "#90EE90",
-              order: 3,
-            },
-          ],
-          transitions: template.workflow?.transitions || [
-            { from: "todo", to: "in_progress" },
-            { from: "in_progress", to: "done" },
-          ],
+          states: template.workflow.states,
+          transitions: template.workflow.transitions || [],
         },
       ],
       { session }
     );
 
-    // create automation rules
-    if (template.automationRules?.length) {
-      await Promise.all(
-        template.automationRules.map((rule) =>
-          AutomationRule.create(
-            [
-              {
-                projectId: project._id,
-                name: rule.name,
-                description: rule.description,
-                trigger: rule.trigger,
-                conditions: rule.conditions,
-                actions: rule.actions,
-              },
-            ],
-            { session }
-          )
-        )
-      );
+    // ✅ Create Automation Rules
+    if (
+      Array.isArray(template.automationRules) &&
+      template.automationRules.length
+    ) {
+      const rules = template.automationRules.map((rule) => ({
+        projectId: project._id,
+        name: rule.name,
+        description: rule.description,
+        trigger: rule.trigger,
+        conditions: rule.conditions,
+        actions: rule.actions,
+      }));
+      await AutomationRule.insertMany(rules, { session });
     }
 
+    // ✅ Add User as Project Member
     await ProjectMember.create(
       [
         {
@@ -157,6 +152,7 @@ const existingProject = await Project.findOne({ name, workspace: workspace._id }
       { session }
     );
 
+    // ✅ Add Audit Log
     await AuditLog.create(
       [
         {
@@ -169,18 +165,44 @@ const existingProject = await Project.findOne({ name, workspace: workspace._id }
       { session }
     );
 
+    // ✅ Generate Sample Tasks
+    const generateKey = async (projectId) => {
+      const count = await Task.countDocuments({ projectId });
+      return `${project.slug}-task-${count + 1}`;
+    };
+
+    if (Array.isArray(template.task)) {
+      const taskDocs = await Promise.all(
+        template.task.map(async (taskTemplate) => ({
+          projectId: project._id,
+          key: await generateKey(project._id),
+          summary: taskTemplate.summary,
+          description: taskTemplate.description,
+          type: taskTemplate.type,
+          status: taskTemplate.status,
+          columnOrder: taskTemplate.columnOrder,
+          priority: taskTemplate.priority,
+          labels: taskTemplate.labels,
+          createdBy: userId,
+        }))
+      );
+
+      await Task.insertMany(taskDocs, { session });
+    }
+
+    // ✅ Commit
     await session.commitTransaction();
     session.endSession();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Project created successfully",
       project,
     });
   } catch (error) {
     console.error("Error in createProject:", error);
-    await session.abortTransaction(); // 🛑 Make sure to abort
+    await session.abortTransaction();
     session.endSession();
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to create project",
       error: error.message,
     });
@@ -198,12 +220,45 @@ export const updateProject = async (req, res) => {
 };
 
 export const deleteProject = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
-    // TODO: Soft delete a project
-    res.status(200).json({ message: "deleteProject route hit" });
+    session.startTransaction();
+    const { workspaceId } = req.body;
+    const projectId = projectIdSchema.parse(req.params.projectId);
+
+    const orgId = req.orgUser.orgId;
+    if (!workspaceId || !mongoose.Types.ObjectId.isValid(workspaceId))
+      return res.status(400).json({ message: "Workspace ID is required" });
+    if (!projectId || !mongoose.Types.ObjectId.isValid(projectId))
+      return res.status(400).json({ message: "Project ID is required" });
+    const project = await Project.findOne({
+      _id: projectId,
+      workspace: workspaceId,
+      organization: orgId,
+    }).session(session);
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+    console.log(project);
+
+    await ProjectMember.deleteMany({ projectId }).session(session);
+    await Task.deleteMany({ projectId }).session(session);
+    await Board.deleteMany({ projectId }).session(session);
+    await Workflow.deleteMany({ projectId }).session(session);
+    await AuditLog.deleteMany({ projectId }).session(session);
+    await Project.deleteOne({ _id: projectId, workspaceId }).session(session);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({ message: "Project deleted successfully" });
   } catch (error) {
+    await session.abortTransaction();
     console.error("Error in deleteProject:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -219,8 +274,52 @@ export const archiveProject = async (req, res) => {
 
 export const getAllProjectsByWorkspace = async (req, res) => {
   try {
-    // TODO: Fetch all projects under a workspace
-    res.status(200).json({ message: "getAllProjectsByWorkspace route hit" });
+    const workspaceId = workspaceIdSchema.parse(req.params.workspaceId);
+    const orgId = req.orgUser.orgId;
+    if (!workspaceId || !mongoose.Types.ObjectId.isValid(workspaceId))
+      return res.status(400).json({ message: "Workspace ID is required" });
+    const {
+      page = 1,
+      limit = 10,
+      visibility,
+      isArchived,
+      type,
+      createdAt,
+    } = req.query;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+    if (visibility) query.visibility = visibility;
+
+    // Convert "true"/"false" strings to booleans
+    if (isArchived === "true") query.isArchived = true;
+    if (isArchived === "false") query.isArchived = false;
+
+    if (type) query.type = type;
+    if (orgId) query.organization = orgId;
+    if (workspaceId) query.workspace = workspaceId;
+    if (createdAt) query.createdAt = createdAt;
+
+    const [projects, total] = await Promise.all([
+      Project.find(query)
+        .populate("createdBy", "email _id firstName lastName")
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ createdAt: -1 })
+        .lean(),
+      Project.countDocuments(query),
+    ]);
+    return res.status(200).json({
+      message: "Projects fetched successfully",
+      projects,
+      pagination: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error("Error in getAllProjectsByWorkspace:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -229,10 +328,168 @@ export const getAllProjectsByWorkspace = async (req, res) => {
 
 export const getProjectById = async (req, res) => {
   try {
-    // TODO: Fetch project by its ID
-    res.status(200).json({ message: "getProjectById route hit" });
+    // ✅ Validate projectId and workspaceId
+    const projectId = projectIdSchema.parse(req.params.projectId);
+    const workspaceId = workspaceIdSchema.parse(req.params.workspaceId);
+    const orgId = req.orgUser.orgId;
+
+    // ✅ Fetch the project
+    const project = await Project.findOne({
+      _id: projectId,
+      workspace: workspaceId,
+      organization: orgId,
+    })
+      .populate("createdBy", "email _id firstName lastName")
+      .populate("workspace", "name _id")
+      .populate("organization", "name _id")
+      .lean();
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // ✅ Get unique project members
+    const members = await ProjectMember.find({ project: projectId })
+      .populate("userId", "email _id firstName lastName")
+      .select("userId role")
+      .lean();
+
+    const uniqueMembersMap = new Map();
+    for (const member of members) {
+      uniqueMembersMap.set(member.userId._id.toString(), member); // prevent duplicates
+    }
+    const uniqueMembers = Array.from(uniqueMembersMap.values());
+
+    project.projectMembers = uniqueMembers;
+
+    // ✅ Return the project
+    return res.status(200).json({
+      message: "Project fetched successfully",
+      project,
+    });
   } catch (error) {
-    console.error("Error in getProjectById:", error);
+    console.error("❌ Error in getProjectById:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// project member routes
+export const assignMember = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const orgId = req.orgUser.orgId;
+
+    // ✅ Validate request body
+    const parsed = addMemberSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: parsed.error.errors.map((e) => e.message),
+      });
+    }
+
+    const { email, level, projectId, role: roleName } = parsed.data;
+
+    // ✅ Validate IDs
+    if (!mongoose.isValidObjectId(workspaceId)) {
+      return res.status(400).json({ message: "Invalid workspaceId" });
+    }
+    if (level === "project" && !mongoose.isValidObjectId(projectId)) {
+      return res.status(400).json({ message: "Invalid projectId" });
+    }
+
+    // ✅ Check user
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // ✅ Check if user is in organization
+    const isOrgMember = await OrgMember.exists({
+      userId: user._id,
+      organizationId: orgId,
+    });
+    if (!isOrgMember) {
+      return res.status(403).json({ message: "User is not in the organization" });
+    }
+
+    // ✅ Validate workspace
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) return res.status(404).json({ message: "Workspace not found" });
+
+    // ✅ Fetch RolePermission
+    const role = await RolePermission.findOne({ role: roleName });
+    if (!role) return res.status(404).json({ message: "Role not found" });
+
+    // ✅ Add to workspace (for both levels)
+    const existingWorkspaceMember = await Member.findOne({
+      userId: user._id,
+      workspaceId,
+      organizationId: orgId,
+    });
+
+    if (!existingWorkspaceMember) {
+      await Member.create({
+        userId: user._id,
+        workspaceId,
+        organizationId: orgId,
+        role: role._id,
+        invitedBy: req.user.userId,
+      });
+    }
+
+    // ✅ If only adding to workspace
+    if (level === "workspace") {
+      if (existingWorkspaceMember) {
+        return res.status(400).json({ message: "User already in workspace" });
+      }
+      return res.status(200).json({ message: "User added to workspace" });
+    }
+
+    // ✅ Add to project
+    const project = await Project.findOne({
+      _id: projectId,
+      workspace: workspaceId,
+    });
+    if (!project) {
+      return res.status(404).json({ message: "Project not found in workspace" });
+    }
+
+    const alreadyInProject = await ProjectMember.exists({
+      userId: user._id,
+      projectId,
+    });
+
+    if (alreadyInProject) {
+      return res.status(400).json({ message: "User already in project" });
+    }
+
+    await ProjectMember.create({
+      userId: user._id,
+      projectId,
+      workspaceId,
+      organizationId: orgId,
+      role: role._id,
+      addedBy: req.user.userId,
+    });
+
+    return res.status(200).json({ message: "User added to project" });
+  } catch (error) {
+    console.error("Error assigning member:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const getAllProjectMembers = async (req, res) => {
+  try {
+    const projectId = req.params.projectId;
+    if (!projectId)
+      return res.status(400).json({ message: "Project ID is required" });
+    console.log("projectId", projectId);
+    const members = await ProjectMember.find({ projectId });
+    res
+      .status(200)
+      .json({ message: "All project members fetched successfully", members });
+  } catch (error) {
+    console.error("Error fetching project members:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

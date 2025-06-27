@@ -8,26 +8,32 @@ import {
   getAllProjectsByWorkspace,
   getProjectById,
   archiveProject,
-} from "../../controllers/project/Project.controller.js";
+  assignMember,
+  getAllProjectMembers,
+} from "../../controllers/project/project.controller.js";
 
 const ProjectRouter = express.Router();
+// /Project CRUD Routes (Under Workspace)
 
 // 🆕 Create a project from template
-ProjectRouter.route("/create/:workspaceId").post(isAuthenticated, authenticateOrgToken(),createProject);
+ProjectRouter.route("/create/:workspaceId").post(isAuthenticated, authenticateOrgToken(), checkPermission("project", "CREATE_PROJECT"),createProject);
 
+// get all project under workspace
+ProjectRouter.route("/workspace/:workspaceId/projects").get(isAuthenticated, authenticateOrgToken(), getAllProjectsByWorkspace);
+// get project members
+ProjectRouter.route("/workspace/:workspaceId/project/:projectId").get(isAuthenticated, authenticateOrgToken(),getProjectById);
 // ✏️ Update project details
 ProjectRouter.route("/update/:projectId").patch(isAuthenticated, authenticateOrgToken(), updateProject);
 
 // 🗑 Soft delete
-ProjectRouter.route("/delete/:projectId").patch(isAuthenticated, authenticateOrgToken(), deleteProject);
+ProjectRouter.route("/delete/:projectId").delete(isAuthenticated, authenticateOrgToken(), deleteProject);
 
-// 📁 Archive
-ProjectRouter.route("/archive/:projectId").patch(isAuthenticated, authenticateOrgToken(), archiveProject);
+// // 📁 Archive
+// ProjectRouter.route("/archive/:projectId").patch(isAuthenticated, authenticateOrgToken(), archiveProject);
 
-// 🔍 Get all projects for a workspace
-ProjectRouter.route("/workspace/:workspaceId").get(isAuthenticated, authenticateOrgToken(), getAllProjectsByWorkspace);
-
-// 🔍 Get one project
-ProjectRouter.route("/get/:projectId").get(isAuthenticated, authenticateOrgToken(), getProjectById);
+// member routes 
+// ProjectRouter.route("/:projectId/members").get(isAuthenticated, authenticateOrgToken(), getAllProjectsByWorkspace);
+ProjectRouter.route("/:workspaceId/assign-member").post(isAuthenticated, authenticateOrgToken(), assignMember);
+ProjectRouter.route("/:projectId/members/all").get(isAuthenticated, authenticateOrgToken(),getAllProjectMembers);
 
 export default ProjectRouter;

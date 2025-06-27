@@ -19,7 +19,7 @@ const workspaceSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
-    owner: {
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,

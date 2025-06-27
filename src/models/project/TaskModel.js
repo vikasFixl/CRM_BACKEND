@@ -29,6 +29,10 @@ const TaskSchema = new mongoose.Schema(
       enum: ["task", "bug", "story", "epic", "spike"], // ❌ subtask removed
       required: true,
     },
+    columnOrder: {
+      type: Number,
+      required: true,
+    },
     status: {
       type: String,
       required: true,
@@ -44,7 +48,7 @@ const TaskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    reporterId: { //The person who created or reported the task/issue.
+    createdBy: { //The person who created or reported the task/issue.
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
