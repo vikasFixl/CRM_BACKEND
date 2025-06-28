@@ -6,10 +6,15 @@ export const ROLES = {
   MANAGER: "Manager",
   SUPPORT_AGENT: "SupportAgent",
   USER: "User",
- PROJECT_OWNER: "ProjectOwner",
-PROJECT_ADMIN: "ProjectAdmin",
-PROJECT_MEMBER: "ProjectMember",
-PROJECT_VIEWER: "ProjectViewer",
+
+  WORKSPACE_OWNER: "WorkspaceOwner",
+  WORKSPACE_ADMIN: "WorkspaceAdmin",
+  WORKSPACE_MEMBER: "WorkspaceMember",
+
+  PROJECT_OWNER: "ProjectOwner",
+  PROJECT_ADMIN: "ProjectAdmin",
+  PROJECT_MEMBER: "ProjectMember",
+  PROJECT_VIEWER: "ProjectViewer",
 };
 
 // 📦 Application Modules

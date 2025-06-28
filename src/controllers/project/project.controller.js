@@ -139,13 +139,18 @@ export const createProject = async (req, res) => {
       await AutomationRule.insertMany(rules, { session });
     }
 
+    // find project owner role 
+    const ownerRole = await RolePermission.findOne({ role: 'PROJECT_OWNER' });
+    if (!ownerRole) {
+      return res.status(404).json({ message: "Owner role not found" });
+    }
     // ✅ Add User as Project Member
     await ProjectMember.create(
       [
         {
           projectId: project._id,
           userId,
-          role: "admin",
+          role: ownerRole._id,
           addedBy: userId,
         },
       ],
@@ -416,7 +421,8 @@ export const assignMember = async (req, res) => {
     if (!workspace) return res.status(404).json({ message: "Workspace not found" });
 
     // ✅ Fetch RolePermission
-    const role = await RolePermission.findOne({ role: roleName });
+    let workrole=WorkspaceMember
+    const role = await RolePermission.findOne({ role: workrole });
     if (!role) return res.status(404).json({ message: "Role not found" });
 
     // ✅ Add to workspace (for both levels)
@@ -462,12 +468,13 @@ export const assignMember = async (req, res) => {
       return res.status(400).json({ message: "User already in project" });
     }
 
+    const projectrole=await RolePermission.findOne({ role: roleName });
     await ProjectMember.create({
       userId: user._id,
       projectId,
       workspaceId,
       organizationId: orgId,
-      role: role._id,
+      role: projectrole._id,
       addedBy: req.user.userId,
     });
 

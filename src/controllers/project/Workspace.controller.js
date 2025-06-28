@@ -32,7 +32,7 @@ export const createWorkspace = async (req, res) => {
     });
     await workspace.save();
     // find the owner role and add it to the workspace
-    const ownerRole = await RolePermission.findOne({ role: 'ProjectOwner' });
+    const ownerRole = await RolePermission.findOne({ role: 'WorkspaceOwner' });
     if (!ownerRole) {
       return res.status(404).json({ message: "Owner role not found" });
     }

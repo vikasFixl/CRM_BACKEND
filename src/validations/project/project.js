@@ -31,7 +31,6 @@ export const projectIdSchema = z
   // src/validations/member.validation.js
 
 const AllowedProjectRoles = [
-  "ProjectOwner",
   "ProjectAdmin",
   "ProjectMember",
   "ProjectViewer",

@@ -16,7 +16,7 @@ const ProjectRouter = express.Router();
 // /Project CRUD Routes (Under Workspace)
 
 // 🆕 Create a project from template
-ProjectRouter.route("/create/:workspaceId").post(isAuthenticated, authenticateOrgToken(), checkPermission("project", "CREATE_PROJECT"),createProject);
+ProjectRouter.route("/create/:workspaceId").post(isAuthenticated, authenticateOrgToken(),createProject);
 
 // get all project under workspace
 ProjectRouter.route("/workspace/:workspaceId/projects").get(isAuthenticated, authenticateOrgToken(), getAllProjectsByWorkspace);

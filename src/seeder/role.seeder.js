@@ -5,7 +5,7 @@ import { ROLES } from "../enums/role.enums.js";
 import { rolepermission } from "../utils/role-permission.js";
 import dotenv from "dotenv";
 
-dotenv.config({path:'../../.env'});
+dotenv.config({ path: "../../.env" });
 // console.log(process.env.Mongo_URI);
 const seedRoles = async () => {
   console.log("🌱 Seeding roles started...");
