@@ -2,7 +2,7 @@ import Org from "../models/OrgModel.js";
 import User from "../models/userModel.js";
 import { BillingPlan } from "../models/BillingPlanModel.js";
 import crypto from "crypto";
-import mongoose from "mongoose";
+import mongoose, { mongo } from "mongoose";
 import { OrganizationBilling } from "../models/OranizationBillingPlanModel.js";
 import { RolePermission } from "../models/RolePermission.js";
 import { v4 as uuidv4 } from "uuid";
@@ -15,9 +15,7 @@ import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { ROLES } from "../enums/role.enums.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 import { paginateQuery } from "../utils/pagination.js";
-
-// import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
-// import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
+// import Employee from "../models/employeeModel.js";
 
 const generateEmployeeId = () => {
   const short = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6-char hex
@@ -29,6 +27,7 @@ const frontendUrl = process.env.FRONTEND_URL;
 export const createOrganization = async (req, res) => {
   try {
     const userId = req.user.userId;
+
     const {
       name,
       contactEmail,
@@ -176,10 +175,11 @@ export const createOrganization = async (req, res) => {
 // switchOrgController.js
 export const switchOrg = async (req, res) => {
   try {
-    const userId = req.user.userId; // from JWT
+    const userId = req.user.userId;
     const orgId = req.body.orgId;
+    const employeeId = req.orgUser.employeeId;
 
-    if (!orgId) {
+    if (!orgId || !mongoose.Types.ObjectId.isValid(orgId)) {
       return res.status(400).json({ message: "No orgId provided" });
     }
     // find user
@@ -190,7 +190,7 @@ export const switchOrg = async (req, res) => {
 
     // Check if the user is a member of this organization
     const member = await OrgMember.findOne({
-      userId,
+      employeeId,
       organizationId: orgId,
       status: "active",
     })
@@ -374,24 +374,6 @@ export const getUserOrganizations = async (req, res) => {
         };
       })
     );
-
-    // console.log("memberships", memberships);
-    // const organizations = memberships.map((member) => ({
-    //   orgId: member.organizationId._id,
-    //   orgName: member.organizationId.name,
-    //   Logo: member.organizationId.OrgLogo?.url,
-    //   orgActive: member.organizationId.isActive,
-    //   orgEmail: member.organizationId.contactEmail,
-    //   orgcontact: member.organizationId.contactName,
-    //   orgPhone: member.organizationId.contactPhone,
-    //   joinedAt: member.createdAt,
-    //   employeeId: member.employeeId,
-    //   role: member.role.role,
-    //   permissions:
-    //     member.permissionsOverride?.length > 0
-    //       ? member.permissionsOverride
-    //       : member.role.permissions, // use override if exists
-    // }));
 
     res.status(200).json({
       message: "Organizations fetched successfully",
@@ -629,14 +611,12 @@ export const UpdateOrganizationUser = async (req, res) => {
     Object.assign(member, updates);
     await member.save();
 
-    return res
-      .status(200)
-      .json({
-        message: `member role updated to ${Role} successfully ${
-          isRoleChanged ? "" : "with custom permisisons"
-        }`,
-        member,
-      });
+    return res.status(200).json({
+      message: `member role updated to ${Role} successfully ${
+        isRoleChanged ? "" : "with custom permisisons"
+      }`,
+      member,
+    });
   } catch (error) {
     console.error("updateOrgMember error:", error);
     return res.status(500).json({ error: "Internal server error" });

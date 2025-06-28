@@ -1,11 +1,20 @@
 import { Schema, model } from "mongoose";
-import { ROLES, MODULES ,PERMISSIONS} from "../enums/role.enums.js";
+import { ROLES, MODULES, PERMISSIONS } from "../enums/role.enums.js";
+import mongoose from "mongoose";
 
 const RolePermissionSchema = new Schema({
+  orgId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+  },
   role: {
     type: String,
     required: true,
     enum: Object.values(ROLES),
+  },
+  name: {
+    type: String,
+    required: true,
   },
   permissions: [
     {
@@ -18,7 +27,7 @@ const RolePermissionSchema = new Schema({
         {
           type: String,
           required: true,
-         enum:Object.values(PERMISSIONS),
+          enum: Object.values(PERMISSIONS),
         },
       ],
     },

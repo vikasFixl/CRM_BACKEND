@@ -11,7 +11,6 @@ import { Task } from "../../models/project/TaskModel.js";
 import { RolePermission } from "../../models/RolePermission.js";
 import mongoose from "mongoose";
 import {
-
   createProjectSchema,
   projectIdSchema,
 } from "../../validations/project/project.js";

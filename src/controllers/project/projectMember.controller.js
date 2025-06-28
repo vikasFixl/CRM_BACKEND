@@ -8,10 +8,10 @@ import { Workspace } from "../../models/project/WorkspaceModel.js";
 import { RolePermission } from "../../models/RolePermission.js";
 import { Project } from "../../models/project/ProjectModel.js";
 import mongoose from "mongoose";
-
+      
 export const assignMember = async (req, res) => {
   try {
-    const {projectId} = req.params;
+    const { projectId } = req.params;
     const orgId = req.orgUser.orgId;
 
     // ✅ Validate request body
@@ -23,7 +23,7 @@ export const assignMember = async (req, res) => {
       });
     }
 
-    const { email, level,  workspaceId,  role: roleName } = parsed.data;
+    const { email, level, workspaceId, role: roleName } = parsed.data;
 
     // ✅ Validate IDs
     if (!mongoose.isValidObjectId(workspaceId)) {
@@ -35,7 +35,10 @@ export const assignMember = async (req, res) => {
 
     // ✅ Check user
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User dosen't exist on this platform" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ message: "User dosen't exist on this platform" });
 
     // ✅ Check if user is in organization
     const isOrgMember = await OrgMember.exists({
@@ -43,9 +46,9 @@ export const assignMember = async (req, res) => {
       organizationId: orgId,
     });
     if (!isOrgMember) {
-      return res
-        .status(403)
-        .json({ message: "User is not a member of this current  organization" });
+      return res.status(403).json({
+        message: "User is not a member of this current  organization",
+      });
     }
 
     // ✅ Validate workspace
@@ -179,3 +182,59 @@ export const getAllProjectMembers = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const UpdateProjectMember = async (req, res) => {
+  
+    try {
+    const { projectId, memberId } = req.params;
+    const { role: newRoleName, overridePermissions } = req.body;
+
+    // Find the member
+    const member = await ProjectMember.findOne({
+      _id: memberId,
+      projectId,
+    }).populate("role", "role");
+
+    if (!member) {
+      return res.status(404).json({ error: "Project member not found" });
+    }
+
+    const currentRole = member.role?.role;
+    const isRoleChanged = currentRole !== newRoleName;
+
+    const updates = {};
+
+    // ✅ 1. Handle Role Change
+    if (isRoleChanged) {
+      const newRole = await RolePermission.findOne({ role: newRoleName });
+      if (!newRole) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      updates.role = newRole._id;
+      updates.hasCustomPermission = false;
+      updates.permissionsOverride = [];
+    }
+
+    // ✅ 2. If role not changed, apply custom permissions if provided
+    if (!isRoleChanged && Array.isArray(overridePermissions) && overridePermissions.length > 0) {
+      updates.hasCustomPermission = true;
+      updates.permissionsOverride = overridePermissions;
+    }
+
+    // ✅ 3. Apply and Save
+    Object.assign(member, updates);
+    await member.save();
+
+    res.status(200).json({
+      message: `Project member role updated successfully${isRoleChanged ? " and permissions" : ""}`,
+      member,
+    });
+  } catch (error) {
+    console.error("updateProjectMember error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+export const RemoveProjectMember = async (req, res) => {
+  return res.status(200).json({ message: "RemoveProjectMember route hit" });
+};
+ 

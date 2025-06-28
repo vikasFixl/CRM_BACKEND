@@ -6,6 +6,7 @@ export const ROLES = {
   MANAGER: "Manager",
   SUPPORT_AGENT: "SupportAgent",
   USER: "User",
+  CUSTOM: "Custom",
 
   WORKSPACE_OWNER: "WorkspaceOwner",
   WORKSPACE_ADMIN: "WorkspaceAdmin",
@@ -28,8 +29,6 @@ export const MODULES = {
   TAX: "tax",
   // Project Management (grouped)
   PROJECT: "project", // umbrella for workspace, project, task, member
-
-  
 };
 
 export const PERMISSIONS = {
