@@ -8,8 +8,7 @@ import {
   getAllProjectsByWorkspace,
   getProjectById,
   archiveProject,
-  assignMember,
-  getAllProjectMembers,
+ 
 } from "../../controllers/project/project.controller.js";
 
 const ProjectRouter = express.Router();
@@ -32,8 +31,6 @@ ProjectRouter.route("/delete/:projectId").delete(isAuthenticated, authenticateOr
 // ProjectRouter.route("/archive/:projectId").patch(isAuthenticated, authenticateOrgToken(), archiveProject);
 
 // member routes 
-// ProjectRouter.route("/:projectId/members").get(isAuthenticated, authenticateOrgToken(), getAllProjectsByWorkspace);
-ProjectRouter.route("/:workspaceId/assign-member").post(isAuthenticated, authenticateOrgToken(), assignMember);
-ProjectRouter.route("/:projectId/members/all").get(isAuthenticated, authenticateOrgToken(),getAllProjectMembers);
+
 
 export default ProjectRouter;

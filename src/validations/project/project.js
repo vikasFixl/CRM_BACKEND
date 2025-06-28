@@ -48,10 +48,10 @@ export const addMemberSchema = z.object({
     required_error: "Level must be either 'workspace' or 'project'",
   }),
 
-  projectId: z
+  workspaceId: z
     .string({
-      required_error: "project ID is required",
-      invalid_type_error: "project ID must be a string",
+      required_error: "Workspace ID is required",
+      invalid_type_error: "Workspace ID must be a string",
     })
     .min(1, "Workspace ID cannot be empty"),
 

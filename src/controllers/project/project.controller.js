@@ -7,13 +7,11 @@ import { ProjectMember } from "../../models/project/projectMemberModel.js";
 import { AuditLog } from "../../models/project/auditLogModel.js";
 import { Workspace } from "../../models/project/WorkspaceModel.js";
 import { Task } from "../../models/project/TaskModel.js";
-import User from "../../models/userModel.js";
-import { OrgMember } from "../../models/OrganisationMemberSchema.js";
-import { Member } from "../../models/project/MemberModel.js";
+
 import { RolePermission } from "../../models/RolePermission.js";
 import mongoose from "mongoose";
 import {
-  addMemberSchema,
+
   createProjectSchema,
   projectIdSchema,
 } from "../../validations/project/project.js";
@@ -139,8 +137,8 @@ export const createProject = async (req, res) => {
       await AutomationRule.insertMany(rules, { session });
     }
 
-    // find project owner role 
-    const ownerRole = await RolePermission.findOne({ role: 'PROJECT_OWNER' });
+    // find project owner role
+    const ownerRole = await RolePermission.findOne({ role: "ProjectOwner" });
     if (!ownerRole) {
       return res.status(404).json({ message: "Owner role not found" });
     }
@@ -375,128 +373,5 @@ export const getProjectById = async (req, res) => {
   } catch (error) {
     console.error("❌ Error in getProjectById:", error);
     return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-// project member routes
-export const assignMember = async (req, res) => {
-  try {
-    const { workspaceId } = req.params;
-    const orgId = req.orgUser.orgId;
-
-    // ✅ Validate request body
-    const parsed = addMemberSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({
-        message: "Validation error",
-        errors: parsed.error.errors.map((e) => e.message),
-      });
-    }
-
-    const { email, level, projectId, role: roleName } = parsed.data;
-
-    // ✅ Validate IDs
-    if (!mongoose.isValidObjectId(workspaceId)) {
-      return res.status(400).json({ message: "Invalid workspaceId" });
-    }
-    if (level === "project" && !mongoose.isValidObjectId(projectId)) {
-      return res.status(400).json({ message: "Invalid projectId" });
-    }
-
-    // ✅ Check user
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    // ✅ Check if user is in organization
-    const isOrgMember = await OrgMember.exists({
-      userId: user._id,
-      organizationId: orgId,
-    });
-    if (!isOrgMember) {
-      return res.status(403).json({ message: "User is not in the organization" });
-    }
-
-    // ✅ Validate workspace
-    const workspace = await Workspace.findById(workspaceId);
-    if (!workspace) return res.status(404).json({ message: "Workspace not found" });
-
-    // ✅ Fetch RolePermission
-    let workrole=WorkspaceMember
-    const role = await RolePermission.findOne({ role: workrole });
-    if (!role) return res.status(404).json({ message: "Role not found" });
-
-    // ✅ Add to workspace (for both levels)
-    const existingWorkspaceMember = await Member.findOne({
-      userId: user._id,
-      workspaceId,
-      organizationId: orgId,
-    });
-
-    if (!existingWorkspaceMember) {
-      await Member.create({
-        userId: user._id,
-        workspaceId,
-        organizationId: orgId,
-        role: role._id,
-        invitedBy: req.user.userId,
-      });
-    }
-
-    // ✅ If only adding to workspace
-    if (level === "workspace") {
-      if (existingWorkspaceMember) {
-        return res.status(400).json({ message: "User already in workspace" });
-      }
-      return res.status(200).json({ message: "User added to workspace" });
-    }
-
-    // ✅ Add to project
-    const project = await Project.findOne({
-      _id: projectId,
-      workspace: workspaceId,
-    });
-    if (!project) {
-      return res.status(404).json({ message: "Project not found in workspace" });
-    }
-
-    const alreadyInProject = await ProjectMember.exists({
-      userId: user._id,
-      projectId,
-    });
-
-    if (alreadyInProject) {
-      return res.status(400).json({ message: "User already in project" });
-    }
-
-    const projectrole=await RolePermission.findOne({ role: roleName });
-    await ProjectMember.create({
-      userId: user._id,
-      projectId,
-      workspaceId,
-      organizationId: orgId,
-      role: projectrole._id,
-      addedBy: req.user.userId,
-    });
-
-    return res.status(200).json({ message: "User added to project" });
-  } catch (error) {
-    console.error("Error assigning member:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-export const getAllProjectMembers = async (req, res) => {
-  try {
-    const projectId = req.params.projectId;
-    if (!projectId)
-      return res.status(400).json({ message: "Project ID is required" });
-    console.log("projectId", projectId);
-    const members = await ProjectMember.find({ projectId });
-    res
-      .status(200)
-      .json({ message: "All project members fetched successfully", members });
-  } catch (error) {
-    console.error("Error fetching project members:", error);
-    res.status(500).json({ message: "Internal server error" });
   }
 };
