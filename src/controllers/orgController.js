@@ -791,7 +791,7 @@ export const acceptInvite = async (req, res) => {
     }
 
     // 2. Find the user by email from the invite
-    const existingUser = await User.findOne({ email: invite.email });
+    let existingUser = await User.findOne({ email: invite.email });
     // console.log("existingUser", existingUser);
     if (!existingUser) {
       return res
@@ -804,7 +804,7 @@ export const acceptInvite = async (req, res) => {
     if (!organization) {
       return res.status(404).json({ message: "Organization not found." });
     }
-
+console.log("organization", organization);  
     // 4. Check if user already in org using member
     const alreadyMember = await OrgMember.findOne({
       userId: existingUser._id,
@@ -831,8 +831,10 @@ export const acceptInvite = async (req, res) => {
     });
 
     existingUser.currentOrganization = organization._id;
+    await existingUser.save();
     // console.log("newmember", newmember);
     await newmember.save();
+    console.log("after update", existingUser);
 
     // 8. Mark invite as accepted
     invite.status = "accepted";
