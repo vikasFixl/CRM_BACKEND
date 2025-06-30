@@ -16,9 +16,7 @@ import {
 } from "../validations/User/UserValidation.js";
 
 import User from "../models/userModel.js";
-import Org from "../models/OrgModel.js";
-import Employee from "../models/employeeModel.js";
-import cloudinary from "../../config/cloudinary.config.js";
+
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 

@@ -54,9 +54,9 @@ export const updateUserSchema = z.object({
     .optional(),
 
   phone: z
-    .string()
+    .string({ required_error: "Phone number is required" })
     .length(10, "Phone number must be exactly 10 digits")
-    .optional(),
+    ,
 
   avatar: z
     .object({
