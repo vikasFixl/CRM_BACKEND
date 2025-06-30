@@ -6,8 +6,7 @@ export const signupSchema = z.object({
     .min(1, "First name cannot be empty"),
 
   lastName: z
-    .string({ required_error: "Last name is required" })
-    .min(1, "Last name cannot be empty"),
+    .string().optional(),
 
   email: z
     .string({ required_error: "Email is required" })
@@ -27,19 +26,7 @@ export const signupSchema = z.object({
       url: z.string().url("Invalid avatar URL"),
       public_id: z.string(),
     })
-    .optional(),
-
- 
-
- 
-
- 
-
-
-
-  
-
- 
+    .optional(), 
   isActive: z.boolean().optional().default(true),
 
   lastLogin: z.coerce.date().optional(),
@@ -59,7 +46,7 @@ export const updateUserSchema = z.object({
 
   lastName: z
     .string()
-    .min(1, "Last name cannot be empty")
+  
     .optional(),
 
   email: z

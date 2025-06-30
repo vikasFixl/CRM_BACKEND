@@ -6,7 +6,6 @@ export const ROLES = {
   MANAGER: "Manager",
   SUPPORT_AGENT: "SupportAgent",
   USER: "User",
-  CUSTOM: "Custom",
 
   WORKSPACE_OWNER: "WorkspaceOwner",
   WORKSPACE_ADMIN: "WorkspaceAdmin",
@@ -16,6 +15,7 @@ export const ROLES = {
   PROJECT_ADMIN: "ProjectAdmin",
   PROJECT_MEMBER: "ProjectMember",
   PROJECT_VIEWER: "ProjectViewer",
+  CUSTOM:"Custom"
 };
 
 // 📦 Application Modules
@@ -29,6 +29,7 @@ export const MODULES = {
   TAX: "tax",
   // Project Management (grouped)
   PROJECT: "project", // umbrella for workspace, project, task, member
+  PERMISSIONS: "permissions",
 };
 
 export const PERMISSIONS = {
@@ -90,7 +91,13 @@ export const PERMISSIONS = {
   DELETE_TAX: "DELETE_TAX",
 
   // 🔐 PERMISSION MODULE
+  MANAGE_PERMISSIONS: "CHANGE_MEMBER_ROLE",
   MANAGE_PERMISSIONS: "MANAGE_PERMISSIONS",
+  CREATE_ROLE: "CREATE_ROLE",
+  VIEW_ROLE: "VIEW_ROLE",
+  EDIT_ROLE: "EDIT_ROLE",
+  DELETE_ROLE: "DELETE_ROLE",
+
 
   // 🗂️ PROJECT MODULE (includes workspace/project/task/member)
   // Workspace

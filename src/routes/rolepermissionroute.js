@@ -1,15 +1,19 @@
 import express from "express";
 
-import { createRolePermission, getallroles } from "../controllers/RolePermissionController.js";
-const Router = express.Router();
 
-Router.route("/create").post( createRolePermission);
-Router.route("/").get( getallroles);
+import { createCustomRolePermission, deleteRole, getAllRolePermissions, getRoleNamesList, updateRole } from "../controllers/rolepermission.js";
+import { isAuthenticated } from "../middleweare/middleware.js";
+import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
+const RolePermissionRouter = express.Router();
+
+RolePermissionRouter.route("/create").post(isAuthenticated, authenticateOrgToken(), createCustomRolePermission);
+RolePermissionRouter.route("/all").get(isAuthenticated, authenticateOrgToken(), getAllRolePermissions);
+RolePermissionRouter.route("/list").get(isAuthenticated, authenticateOrgToken(), getRoleNamesList);
+RolePermissionRouter.route("/:id").delete(isAuthenticated, authenticateOrgToken(),deleteRole);
+RolePermissionRouter.route("/:id").patch(isAuthenticated, authenticateOrgToken(),updateRole);
 
 
 
-// router.patch("/update/:id", updateRole);
 
-// router.delete("/delete/:id", deleteRole);
 
-export default Router;
+export default RolePermissionRouter

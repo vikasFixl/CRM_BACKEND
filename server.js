@@ -65,6 +65,7 @@ import WorkspaceRouter from "./src/routes/project/Workspaceroute.js";
 import ProjectRouter from "./src/routes/project/projectroute.js";
 import TaskRouter from "./src/routes/project/task.route.js";
 import ProjectMemberRouter from "./src/routes/project/projectMembe.js";
+import RolePermissionRouter from "./src/routes/rolepermissionroute.js";
 
 // PayPal config
 paypal.configure({
@@ -144,6 +145,7 @@ app.use("/api/workspace",WorkspaceRouter)
 app.use("/api/project",ProjectRouter)
 app.use("/api/task",TaskRouter)
 app.use("/api/projects",ProjectMemberRouter)
+app.use("/api/role-permission",RolePermissionRouter)
 /**
  * 
 app.use("/api/purchase", purchesRoutes);

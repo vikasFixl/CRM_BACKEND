@@ -125,6 +125,18 @@ export const rolepermission = {
         PERMISSIONS.INTEGRATE_THIRD_PARTY_APPS,
       ],
     },
+    {
+
+      module:MODULES.PERMISSIONS,
+      actions:[
+        PERMISSIONS.CHANGE_MEMBER_ROLE,
+        PERMISSIONS.MANAGE_PERMISSIONS,
+        PERMISSIONS.CREATE_ROLE,
+        PERMISSIONS.VIEW_ROLE,
+        PERMISSIONS.EDIT_ROLE,
+        PERMISSIONS.DELETE_ROLE
+      ]
+    }
   ],
 
   [ROLES.ORG_ADMIN]: [
@@ -149,6 +161,18 @@ export const rolepermission = {
         PERMISSIONS.VIEW_ORG_USER,
         PERMISSIONS.UPDATE_ORG_USER,
       ],
+    },
+     {
+
+      module:MODULES.PERMISSIONS,
+      actions:[
+        PERMISSIONS.CHANGE_MEMBER_ROLE,
+        PERMISSIONS.MANAGE_PERMISSIONS,
+        PERMISSIONS.CREATE_ROLE,
+        PERMISSIONS.VIEW_ROLE,
+        PERMISSIONS.EDIT_ROLE,
+        PERMISSIONS.DELETE_ROLE
+      ]
     },
     {
       module: MODULES.FIRM,
@@ -385,7 +409,20 @@ export const rolepermission = {
         PERMISSIONS.GENERATE_REPORT,
         PERMISSIONS.INTEGRATE_THIRD_PARTY_APPS,
       ],
+
     },
+     {
+
+      module:MODULES.PERMISSIONS,
+      actions:[
+        PERMISSIONS.CHANGE_MEMBER_ROLE,
+        PERMISSIONS.MANAGE_PERMISSIONS,
+        PERMISSIONS.CREATE_ROLE,
+        PERMISSIONS.VIEW_ROLE,
+        PERMISSIONS.EDIT_ROLE,
+    
+      ]
+    }
   ],
 
   [ROLES.WORKSPACE_ADMIN]: [

@@ -49,28 +49,28 @@ const OrganizationSchema = new Schema(
 
     isActive: { type: Boolean, default: true, index: true },
     isDeleted: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
+      type: Boolean,
+      default: false,
+      index: true,
+    },
 
-  deletedAt: { type: Date },
+    deletedAt: { type: Date },
 
-  createdBy: {
-    type: Schema.Types.ObjectId,
-    ref: "User"
-  },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 
-  updatedBy: {
-    type: Schema.Types.ObjectId,
-    ref: "User"
-  },
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 
-  isSuspended: {
-    type: Boolean,
-    default: false,
-    select: false
-  }
+    isSuspended: {
+      type: Boolean,
+      default: false,
+      select: false,
+    },
   },
   { timestamps: true }
 );

@@ -6,7 +6,7 @@ import { rolepermission } from "../utils/role-permission.js";
 import dotenv from "dotenv";
 
 dotenv.config({ path: "../../.env" });
-// console.log(process.env.Mongo_URI);
+console.log(process.env.Mongo_URI);
 const seedRoles = async () => {
   console.log("🌱 Seeding roles started...");
   await connectDB();
@@ -21,6 +21,7 @@ const seedRoles = async () => {
       const update = {
         
         role: roleName,
+        name: roleName,
         permissions: permissions.map(({ module, actions }) => ({
           module,
           actions,
