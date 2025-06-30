@@ -9,7 +9,7 @@ const STAGE_ENUM = [
   "Negotiation",
   "Won",
   "Lost",
-  "Converted"
+  "Converted",
 ];
 // Sub-schemas
 const interactionSchema = new mongoose.Schema(
@@ -28,7 +28,7 @@ const interactionSchema = new mongoose.Schema(
 
 const stageHistorySchema = new mongoose.Schema(
   {
-    stageName: { type: String, required: true,   enum: STAGE_ENUM, },
+    stageName: { type: String, required: true, enum: STAGE_ENUM },
     startedAt: { type: Date, default: Date.now },
     endedAt: Date,
   },
@@ -38,7 +38,7 @@ const stageHistorySchema = new mongoose.Schema(
 const leadSchema = new mongoose.Schema(
   {
     // Basic Info
-    title: { type: String, required: true,unique: true },
+    title: { type: String, required: true, unique: true },
     description: String,
 
     // Client Info
@@ -49,13 +49,13 @@ const leadSchema = new mongoose.Schema(
         type: String,
         unique: true,
       },
-      phone:{
+      phone: {
         type: String,
-        unique: true
+        unique: true,
       },
       address: {
         line1: String,
-       
+
         city: String,
         state: String,
         country: String,
@@ -68,11 +68,11 @@ const leadSchema = new mongoose.Schema(
     currency: { type: String, default: "INR" },
 
     // Stage & Status
-    stage: { type: String, required: true ,enum: STAGE_ENUM,},
+    stage: { type: String, required: true, enum: STAGE_ENUM },
     stageHistory: [stageHistorySchema],
     status: {
       type: String,
-      enum: ["New",  "Won", "Lost", "Hold"],
+      enum: ["New", "Won", "Lost", "Hold"],
       default: "New",
       index: true,
     },
@@ -102,13 +102,13 @@ const leadSchema = new mongoose.Schema(
 
     // Tracking
     timezone: String,
-    
+
     // Interactions/Notes
     interactions: [interactionSchema],
     notes: String,
-    
+
     closureDate: { type: Date },
-    followUpDate: {type: Date},
+    followUpDate: { type: Date },
     // Lead Intelligence
     priority: {
       type: String,
@@ -142,15 +142,13 @@ const leadSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
-  
+
     // Soft Delete
     deleted: {
       type: Boolean,
       default: false,
     },
-    deletedAt: { type: Date }
-,
-
+    deletedAt: { type: Date },
     // Auto ID
     LeadId: { type: String, unique: true },
   },
@@ -177,15 +175,17 @@ function calculateLeadScore(lead) {
   return Math.min(score, 100);
 }
 export function generateUniqueLeadId() {
- const randomBytes = crypto.randomBytes(4); // 4 bytes = 32 bits
-  const randomPart = parseInt(randomBytes.toString("hex"), 16).toString(36).substring(0, 6).toUpperCase();
+  const randomBytes = crypto.randomBytes(4); // 4 bytes = 32 bits
+  const randomPart = parseInt(randomBytes.toString("hex"), 16)
+    .toString(36)
+    .substring(0, 6)
+    .toUpperCase();
   return `LEAD-${randomPart}`;
 }
 
-
 // Auto leadScore hook
 leadSchema.pre("save", async function (next) {
- this.LeadId = generateUniqueLeadId();
+  this.LeadId = generateUniqueLeadId();
 
   // Lead score calculation if needed
   this.leadScore = calculateLeadScore(this);

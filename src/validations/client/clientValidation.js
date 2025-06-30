@@ -12,19 +12,19 @@ const addressSchema = z.object({
 
 // Contact Person Schema (inline address fields)
 const contactPersonSchema = z.object({
-  name: z.string({ required_error: "client contact name is required" }),
-  email: z.string({ required_error: "client contact email is required" }),
-  address1: z.string({ required_error: "client contact address is required" }),
+  name: z.string().optional(),
+  email: z.string().optional(),
+  address1: z.string().optional(),
   address2: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
-  pinCode: z.number({ required_error: " pinCode is required" }),
-  country: z.string({ required_error: "client contact country is required" }),
-  phone: z.number({ required_error: "client contact phone is required" }),
+  pinCode: z.number().optional(),
+  country: z.string().optional(),
+    phone: z.number().optional(),
   mobile: z.number().optional(),
   altPhone: z.number().optional(),
   altMobile: z.number().optional(),
-});
+}).optional();
 
 // Main Client Schema
 export const clientSchema = z.object({

@@ -7,7 +7,7 @@ const UserSchema = new Schema(
     lastName: { type: String, required: true, trim: true, minlength: 1 },
     email: { type: String, required: true, trim: true, unique: true },
     password: { type: String, required: true, minlength: 6 },
-    phone: { type: String, trim: true, minlength: 10 },
+    phone: { type: String, trim: true, minlength: 10,required: true },
     avatar: {
       url: { type: String, trim: true ,default:"https://res.cloudinary.com/dnctmzmmx/image/upload/v1750401124/user/rvblg8czxgpg9qtap3rv.webp"},
       public_id: { type: String, trim: true },

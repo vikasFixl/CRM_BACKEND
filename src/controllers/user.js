@@ -198,6 +198,7 @@ export const signup = async (req, res) => {
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
         Globalrole: user.Globalrole,
+        phone: user.phone,
         avatar: user.avatar?.url,
         token: accessToken,
         exp: exp * 1000, // milliseconds

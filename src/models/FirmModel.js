@@ -34,10 +34,10 @@ const firmSchema = new mongoose.Schema(
       country: { type: String , required: true},
       pinCode: { type: Number, required: true },
     },
-    contectPerson: {
-      name: { type: String, required: true },
-      email: { type: String, required: true },
-      address1: { type: String, required: true },
+    contactPerson: {
+      name: { type: String},
+      email: { type: String },
+      address1: { type: String},
       address2: { type: String },
       city: { type: String },
       state: { type: String },
@@ -45,7 +45,7 @@ const firmSchema = new mongoose.Schema(
       country: { type: String },
       phone: { type: Number },
       mobile: { type: Number },
-      altPhone: { type: Number , required: true},
+      altPhone: { type: Number },
       altMobile: { type: Number },
     },
     website: { type: String},
