@@ -117,7 +117,7 @@ export const login = async (req, res) => {
       orgName: user.currentOrganization?.name || null,
       orgEmail: user.currentOrganization?.contactEmail || null,
       orgId: user.currentOrganization?._id || null,
-      currentWorkspace:user.currentWorkspace
+      currentWorkspace: user?.currentWorkspace || null,
     };
 
     res.status(200).json({
@@ -378,8 +378,8 @@ export const getUser = async (req, res) => {
       role: user.role,
       isActive: user.isActive,
       avatar: user.avatar.url,
-currentworkspace: user.currentWorkspace|| null,
-currentOrganization: user.currentOrganization || null,
+      currentworkspace: user.currentWorkspace || null,
+      currentOrganization: user.currentOrganization || null,
       hasReceivedWelcomeEmail: user.hasReceivedWelcomeEmail,
     };
 
@@ -537,7 +537,9 @@ export const updateProfileImage = async (req, res) => {
     }
 
     if (!req.files || !req.files.image) {
-      return res.status(400).json({ message: "Please upload a profile image." });
+      return res
+        .status(400)
+        .json({ message: "Please upload a profile image." });
     }
 
     const imageData = await uploadImageToCloudinary({
@@ -566,8 +568,6 @@ export const updateProfileImage = async (req, res) => {
     });
   }
 };
-
-
 
 // export const getUserList = async (req, res) => {
 //   try {
