@@ -61,6 +61,11 @@ import { errorHandler } from "./src/middleweare/errorhandler.js";
 import ClientRouter from "./src/routes/clientRoute.js";
 import ActivityRouter from "./src/routes/activityRoute.js";
 import TaxRouter from "./src/routes/taxRoutes.js";
+import WorkspaceRouter from "./src/routes/project/Workspaceroute.js";
+import ProjectRouter from "./src/routes/project/projectroute.js";
+import TaskRouter from "./src/routes/project/task.route.js";
+import ProjectMemberRouter from "./src/routes/project/projectMembe.js";
+import RolePermissionRouter from "./src/routes/rolepermissionroute.js";
 
 // PayPal config
 paypal.configure({
@@ -136,6 +141,11 @@ app.use("/api/invoice", InvoiceRouter);
 app.use("/api/client", ClientRouter);
 app.use("/api/activities", ActivityRouter);
 app.use("/api/taxRates", TaxRouter);
+app.use("/api/workspace",WorkspaceRouter)
+app.use("/api/project",ProjectRouter)
+app.use("/api/task",TaskRouter)
+app.use("/api/projects",ProjectMemberRouter)
+app.use("/api/role-permission",RolePermissionRouter)
 /**
  * 
 app.use("/api/purchase", purchesRoutes);

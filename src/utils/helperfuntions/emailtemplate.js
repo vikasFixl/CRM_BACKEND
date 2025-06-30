@@ -1158,18 +1158,8 @@ export const InviteEmailTemplate = (ORG_NAME, role, email, INVITE_LINK) => {
       <div class="container">
         <div class="magic-border"></div>
         <div class="header">
-          <div class="emoji-rain">
-            <div class="emoji" style="left: 10%; animation-delay: 0s;">🎉</div>
-            <div class="emoji" style="left: 20%; animation-delay: 1s;">🚀</div>
-            <div class="emoji" style="left: 30%; animation-delay: 2s;">⭐</div>
-            <div class="emoji" style="left: 40%; animation-delay: 3s;">🎊</div>
-            <div class="emoji" style="left: 50%; animation-delay: 4s;">💫</div>
-            <div class="emoji" style="left: 60%; animation-delay: 5s;">🌟</div>
-            <div class="emoji" style="left: 70%; animation-delay: 6s;">🎈</div>
-            <div class="emoji" style="left: 80%; animation-delay: 7s;">🎁</div>
-            <div class="emoji" style="left: 90%; animation-delay: 1.5s;">✨</div>
-          </div>
-          <h1>You've Been Invited to ${ORG_NAME}!</h1>
+        
+          <h1>Invitation to Join ${ORG_NAME}</h1>
           <div class="sparkles">
             <div class="sparkle" style="top: 20%; left: 15%; animation-delay: 0s;"></div>
             <div class="sparkle" style="top: 30%; left: 85%; animation-delay: 0.5s;"></div>

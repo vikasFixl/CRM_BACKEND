@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import path from "path";
+
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
 dotenv.config({ path: "../../.env" });
 

@@ -117,6 +117,7 @@ export const login = async (req, res) => {
       orgName: user.currentOrganization?.name || null,
       orgEmail: user.currentOrganization?.contactEmail || null,
       orgId: user.currentOrganization?._id || null,
+      currentWorkspace:user.currentWorkspace
     };
 
     res.status(200).json({
@@ -377,8 +378,8 @@ export const getUser = async (req, res) => {
       role: user.role,
       isActive: user.isActive,
       avatar: user.avatar.url,
-      currentOrganization: user.currentOrganization,
-      currentworkspace: user.currentworkspace || null,
+currentworkspace: user.currentWorkspace|| null,
+currentOrganization: user.currentOrganization || null,
       hasReceivedWelcomeEmail: user.hasReceivedWelcomeEmail,
     };
 

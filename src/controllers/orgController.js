@@ -2,7 +2,7 @@ import Org from "../models/OrgModel.js";
 import User from "../models/userModel.js";
 import { BillingPlan } from "../models/BillingPlanModel.js";
 import crypto from "crypto";
-import mongoose from "mongoose";
+import mongoose, { mongo } from "mongoose";
 import { OrganizationBilling } from "../models/OranizationBillingPlanModel.js";
 import { RolePermission } from "../models/RolePermission.js";
 import { v4 as uuidv4 } from "uuid";
@@ -15,9 +15,7 @@ import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { ROLES } from "../enums/role.enums.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 import { paginateQuery } from "../utils/pagination.js";
-
-// import { InviteEmailTemplate } from "../../utils/Emailtemplates.js";
-// import { sendEmail } from "../../utils/helperfuntions/SendEmail.js";
+// import Employee from "../models/employeeModel.js";
 
 const generateEmployeeId = () => {
   const short = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6-char hex
@@ -29,6 +27,7 @@ const frontendUrl = process.env.FRONTEND_URL;
 export const createOrganization = async (req, res) => {
   try {
     const userId = req.user.userId;
+
     const {
       name,
       contactEmail,
@@ -177,10 +176,11 @@ export const createOrganization = async (req, res) => {
 // switchOrgController.js
 export const switchOrg = async (req, res) => {
   try {
-    const userId = req.user.userId; // from JWT
+    const userId = req.user.userId;
     const orgId = req.body.orgId;
+    const employeeId = req.orgUser.employeeId;
 
-    if (!orgId) {
+    if (!orgId || !mongoose.Types.ObjectId.isValid(orgId)) {
       return res.status(400).json({ message: "No orgId provided" });
     }
     // find user
@@ -191,7 +191,7 @@ export const switchOrg = async (req, res) => {
 
     // Check if the user is a member of this organization
     const member = await OrgMember.findOne({
-      userId,
+      employeeId,
       organizationId: orgId,
       status: "active",
     })
@@ -376,24 +376,6 @@ export const getUserOrganizations = async (req, res) => {
       })
     );
 
-    // console.log("memberships", memberships);
-    // const organizations = memberships.map((member) => ({
-    //   orgId: member.organizationId._id,
-    //   orgName: member.organizationId.name,
-    //   Logo: member.organizationId.OrgLogo?.url,
-    //   orgActive: member.organizationId.isActive,
-    //   orgEmail: member.organizationId.contactEmail,
-    //   orgcontact: member.organizationId.contactName,
-    //   orgPhone: member.organizationId.contactPhone,
-    //   joinedAt: member.createdAt,
-    //   employeeId: member.employeeId,
-    //   role: member.role.role,
-    //   permissions:
-    //     member.permissionsOverride?.length > 0
-    //       ? member.permissionsOverride
-    //       : member.role.permissions, // use override if exists
-    // }));
-
     res.status(200).json({
       message: "Organizations fetched successfully",
       success: true,
@@ -458,6 +440,7 @@ export const getAllUserInOrg = async (req, res) => {
         joinedAt: member.createdAt,
         employeeId: member.employeeId,
         role: member.role?.role,
+        name:member.role?.name,
         permissions: useCustom
           ? member.permissionsOverride
           : member.role?.permissions || [],
@@ -577,48 +560,68 @@ export const getOrganizationBYId = async (req, res) => {
   }
 };
 
+
+
 export const UpdateOrganizationUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const orgId = req.orgUser.orgId; // securely extracted from auth middleware
+    const orgId = req.orgUser.orgId; // extracted from auth middleware
     const { Role, overridePermissions } = req.body;
-    console.log(orgId, userId, Role, overridePermissions);
 
-    // Find member
-    // Find member using userId + orgId
+    // ✅ 1. Prevent Org Creator from changing their own role
+    const organization = await Org.findById(orgId);
+    if (!organization) {
+      return res.status(404).json({ message: "Organization not found" });
+    }
+
+    if (String(organization.createdBy) === userId) {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Org Admin cannot change their own role" });
+    }
+
+    // ✅ 2. Find the org member
     const member = await OrgMember.findOne({
       userId,
       organizationId: orgId,
     }).populate("role", "role");
+
     if (!member) {
       return res
         .status(404)
-        .json({ error: "you are not part of this organization" });
+        .json({ message: "User is not part of this organization" });
     }
 
-    console.log("member", member);
+    const currentRole = member.role?.role;
+    const isRoleChanged = currentRole !== Role;
+
     let updates = {};
-    const isRoleChanged = member.role?.role !== Role;
-    console.log("isRoleChanged", isRoleChanged);
 
-    // ✅ 1. Handle role change
+    // ✅ 3. Handle role change
     if (isRoleChanged) {
-      const newRole = await RolePermission.findOne({ role: Role });
+      const newRole = await RolePermission.findOne({
+        role:"Custom",
+        name: Role,
+        orgId: orgId
+      });
       console.log("newRole", newRole);
-      if (!newRole) return res.status(404).json({ error: "Role not found" });
 
-      if (newRole.name === "SuperAdmin") {
+      if (!newRole) {
+        return res.status(404).json({ message: "Target role not found" });
+      }
+
+      if (newRole.role === "SuperAdmin") {
         return res
           .status(403)
-          .json({ error: "Forbidden: Cannot assign SuperAdmin role" });
+          .json({ message: "Forbidden: Cannot assign SuperAdmin role" });
       }
 
       updates.role = newRole._id;
-      updates.permissionsOverride = []; // Clear override
+      updates.permissionsOverride = []; // Reset custom perms
       updates.hasCustomPermission = false;
     }
 
-    // ✅ 2. Apply override permissions ONLY if role is not changed
+    // ✅ 4. Handle custom permission override (only if role not changed)
     if (
       !isRoleChanged &&
       Array.isArray(overridePermissions) &&
@@ -628,21 +631,22 @@ export const UpdateOrganizationUser = async (req, res) => {
       updates.hasCustomPermission = true;
     }
 
-    // ✅ 3. Apply updates and save
+    // ✅ 5. Apply updates and save
     Object.assign(member, updates);
     await member.save();
 
     return res.status(200).json({
-      message: `member role updated to ${Role} successfully ${
-        isRoleChanged ? "" : "with custom permisisons"
-      }`,
+      message: `Member role ${
+        isRoleChanged ? "updated" : "retained"
+      } as '${Role}' ${!isRoleChanged ? "with custom permissions" : ""}`,
       member,
     });
   } catch (error) {
-    console.error("updateOrgMember error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("UpdateOrganizationUser error:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 // Delete a user from an organization
 
@@ -652,7 +656,7 @@ export const DeleteOrganizationUser = async (req, res) => {
     const orgId = req.orgUser.orgId; // From authenticated org user
 
     if (!id) {
-      return res.status(400).json({ error: "User ID is required" });
+      return res.status(400).json({ message: "User ID is required" });
     }
 
     // Find membership document for user and org
@@ -662,7 +666,7 @@ export const DeleteOrganizationUser = async (req, res) => {
     });
     if (!membership) {
       return res.status(403).json({
-        error: "User does not belong to this organization",
+        message: "User does not belong to this organization",
       });
     }
 
@@ -675,7 +679,7 @@ export const DeleteOrganizationUser = async (req, res) => {
   } catch (error) {
     console.error("Error removing user from organization:", error);
     return res.status(500).json({
-      error: "Internal server error while removing user from organization",
+      message: "Internal server error while removing user from organization",
     });
   }
 };

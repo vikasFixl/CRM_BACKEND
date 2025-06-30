@@ -7,9 +7,7 @@ export const signupSchema = z.object({
     .min(1)
     .regex(nameRegex, "First name can only contain alphabetic letters (A-Z)."),
   lastName: z
-    .string({ required_error: "Last name is required" })
-    .min(1)
-    .regex(nameRegex, "last name can only contain alphabetic letters (A-Z)."),
+    .string().optional(),
 
   email: z
     .string({ required_error: "Email is required" })
@@ -25,8 +23,7 @@ export const signupSchema = z.object({
       url: z.string().url("Invalid avatar URL"),
       public_id: z.string(),
     })
-    .optional(),
-
+    .optional(), 
   isActive: z.boolean().optional().default(true),
 
   lastLogin: z.coerce.date().optional(),
@@ -42,9 +39,8 @@ export const updateUserSchema = z.object({
     .optional(),
 
   lastName: z
-    .string({ required_error: "Last name is required" })
-    .min(1)
-    .regex(nameRegex, "last name can only contain alphabetic letters (A-Z).")
+    .string()
+  
     .optional(),
   email: z.string().email("Invalid email address"),
 
