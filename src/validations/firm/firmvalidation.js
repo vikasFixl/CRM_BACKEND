@@ -89,7 +89,7 @@ export const firmUpdateSchema = z.object({
     .optional(),
 
   website: z.string().optional(),
-  // gst_no: z.string({ required_error: "gst no is required." }),
+  gst_no: z.string({ required_error: "gst no is required." }).nonempty("gst no cannot be empty."),
 
   uin: z.string().optional(),
   // tinNo: z.string({ required_error: "tax id no is required." }),
