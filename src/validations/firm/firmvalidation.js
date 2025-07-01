@@ -1,13 +1,19 @@
 import { z } from "zod";
 
 export const firmValidationSchema = z.object({
-  FirmName: z.string({ required_error: "Firm name is required." }),
+  FirmName: z
+    .string({ required_error: "Firm name is required." })
+    .nonempty("Firm name cannot be empty.")
+    .min(3, { message: "Firm name must be at least 3 characters long." }),
+
   email: z
     .string({ required_error: "Firm email is required." })
     .trim()
     .email("Invalid email format."),
-  phone: z.string({ required_error: "Phone number is required." }),
-  invoicePrefix: z.string({ required_error: "Invoice prefix is required." }),
+  phone: z.string({ required_error: "Phone number is required." }).min(10),
+  invoicePrefix: z
+    .string({ required_error: "Invoice prefix is required." })
+    .nonempty("Invoice prefix cannot be empty."),
 
   add: z.object({
     address1: z.string().optional(),
@@ -44,13 +50,18 @@ export const firmValidationSchema = z.object({
   orgId: z.string().optional(),
 });
 export const firmUpdateSchema = z.object({
-  FirmName: z.string({ required_error: "Firm name is required." }),
+  FirmName: z
+    .string({ required_error: "Firm name is required." })
+    .nonempty("Firm name cannot be empty.")
+    .min(3, { message: "Firm name must be at least 3 characters long." }),
   email: z
     .string({ required_error: "Firm email is required." })
     .trim()
     .email("Invalid email format."),
-  phone: z.string({ required_error: "Phone number is required." }),
-  invoicePrefix: z.string({ required_error: "Invoice prefix is required." }),
+  phone: z.string({ required_error: "Phone number is required." }).min(10),
+  invoicePrefix: z
+    .string({ required_error: "Invoice prefix is required." })
+    .nonempty("Invoice prefix cannot be empty."),
 
   add: z.object({
     address1: z.string().optional(),

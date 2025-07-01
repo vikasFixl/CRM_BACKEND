@@ -4,20 +4,18 @@ import mongoose from "mongoose";
 export const createProjectSchema = z.object({
   name: z
     .string({ required_error: "Project name is required" })
-    .min(1, "Project name cannot be empty"),
+    .min(1, "Project name cannot be empty").nonempty("Project name cannot be empty"),
 
   description: z
     .string()
     .max(1000, "Description must be less than 1000 characters")
     .optional(),
 
-  templateId: z
-    .string()
-    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-      message: "Invalid template ID",
-    }),
+  templateId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
+    message: "Invalid template ID",
+  }),
 
-    visibility: z.enum(["public", "private"], {
+  visibility: z.enum(["public", "private"], {
     required_error: "Visibility must be either 'public' or 'private'",
     invalid_type_error: "Visibility must be a string (public/private)",
   }),
@@ -28,13 +26,9 @@ export const projectIdSchema = z
   .refine((val) => mongoose.Types.ObjectId.isValid(val), {
     message: "Invalid project ID",
   });
-  // src/validations/member.validation.js
+// src/validations/member.validation.js
 
-const AllowedProjectRoles = [
-  "ProjectAdmin",
-  "ProjectMember",
-  "ProjectViewer",
-];
+const AllowedProjectRoles = ["ProjectAdmin", "ProjectMember", "ProjectViewer"];
 
 export const addMemberSchema = z.object({
   email: z
@@ -59,7 +53,7 @@ export const addMemberSchema = z.object({
     .string({
       required_error: "Role is required",
       invalid_type_error: "Role must be a string",
-    })
+    }).nonempty("Role cannot be empty")
     .refine((val) => AllowedProjectRoles.includes(val), {
       message: "Invalid role provided",
     }),

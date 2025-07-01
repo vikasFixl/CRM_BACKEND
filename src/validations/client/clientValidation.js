@@ -2,12 +2,12 @@ import { z } from "zod";
 
 // Address Schema
 const addressSchema = z.object({
-  address1: z.string({ required_error: "address1 is required" }),
-  address2: z.string({ required_error: "address2 is required" }),
+  address1: z.string({ required_error: "address1 is required" }).nonempty("Address 1 cannot be empty"),
+  address2: z.string({ required_error: "address2 is required" }).nonempty("Address 2 cannot be empty"),
   city: z.string().optional(),
   state: z.string().optional(),
   pinCode: z.number({ required_error: "pinCode is required" }),
-  country: z.string({ required_error: "country is required" }),
+  country: z.string({ required_error: "country is required" }).nonempty("Country cannot be empty"),
 });
 
 // Contact Person Schema (inline address fields)
@@ -33,7 +33,7 @@ export const clientSchema = z.object({
   lastName: z.string().optional(),
   website: z.string().optional(),
   email: z.string({ required_error: "email is required" }).email("Invalid email format"),
-  phone: z.number({ required_error: "phone is required" }),
+  phone: z.number({ required_error: "phone is required" }).min(10),
   address: addressSchema,
   contactPerson: contactPersonSchema,
   taxId: z.string().optional(),

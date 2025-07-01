@@ -5,9 +5,9 @@ export const signupSchema = z.object({
   firstName: z
     .string({ required_error: "First name is required" })
     .min(1)
-    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z)."),
-  lastName: z
-    .string().optional(),
+    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z).")
+    .nonempty("First name cannot be empty"),
+  lastName: z.string().optional(),
 
   email: z
     .string({ required_error: "Email is required" })
@@ -17,13 +17,15 @@ export const signupSchema = z.object({
     .string({ required_error: "Password is required" })
     .min(6, "Password must be at least 6 characters long"),
 
-  phone: z.string({required_error:"Phone number is required"}).length(10, "Phone number must be exactly 10 digits"),
+  phone: z
+    .string({ required_error: "Phone number is required" })
+    .length(10, "Phone number must be exactly 10 digits"),
   avatar: z
     .object({
       url: z.string().url("Invalid avatar URL"),
       public_id: z.string(),
     })
-    .optional(), 
+    .optional(),
   isActive: z.boolean().optional().default(true),
 
   lastLogin: z.coerce.date().optional(),
@@ -36,13 +38,16 @@ export const updateUserSchema = z.object({
     .string({ required_error: "First name is required" })
     .min(1)
     .regex(nameRegex, "First name can only contain alphabetic letters (A-Z).")
-    .optional(),
+    .nonempty("First name cannot be empty"),
 
   lastName: z
     .string()
-  
+
     .optional(),
-  email: z.string().email("Invalid email address"),
+  email: z
+    .string()
+    .email("Invalid email address")
+    .nonempty("Email cannot be empty"),
 
   password: z
     .string()
@@ -51,9 +56,7 @@ export const updateUserSchema = z.object({
 
   phone: z
     .string({ required_error: "Phone number is required" })
-    .length(10, "Phone number must be exactly 10 digits")
-    ,
-
+    .length(10, "Phone number must be exactly 10 digits"),
   avatar: z
     .object({
       url: z.string().url("Invalid avatar URL"),

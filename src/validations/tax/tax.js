@@ -5,7 +5,7 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 // Schema for a single tax rate
 const taxRateSchema = z.object({
-  name: z.string({ required_error: "Tax name is required" }).min(1),
+  name: z.string({ required_error: "Tax name is required" }).min(1).nonempty("Tax name cannot be empty"),
   rate: z
     .number({ required_error: "Rate is required" })
     .min(0, "Rate must be a positive number"),

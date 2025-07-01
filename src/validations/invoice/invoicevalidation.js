@@ -2,18 +2,28 @@ import { z } from "zod";
 
 // Common sub-schemas with required validation and messages
 const addressSchema = z.object({
-  address1: z.string({ required_error: "address1 is required" }),
+  address1: z
+    .string({ required_error: "address1 is required" })
+    .nonempty("Address 1 cannot be empty"),
   address2: z.string().optional(),
-  city: z.string({ required_error: "city is required" }),
-  state: z.string({ required_error: "state is required" }),
-  country: z.string({ required_error: "country is required" }),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z
+    .string({ required_error: "country is required" })
+    .nonempty("Country cannot be empty"),
   pinCode: z.number({ required_error: "pinCode is required" }),
 });
 
 const clientSchema = z.object({
-  firstName: z.string({ required_error: "firstName is required" }),
-  lastName: z.string({ required_error: "lastName is required" }),
-  email: z.string({ required_error: "email is required" }).email("Invalid email format"),
+  firstName: z
+    .string({ required_error: "firstName is required" })
+    .nonempty("First name cannot be empty"),
+  lastName: z
+    .string({ required_error: "lastName is required" })
+    .nonempty("Last name cannot be empty"),
+  email: z
+    .string({ required_error: "email is required" })
+    .email("Invalid email format"),
   phone: z.number({ required_error: "phone is required" }),
   taxId: z.string().optional(),
   clientFirmName: z.string().optional(),
@@ -22,17 +32,23 @@ const clientSchema = z.object({
 });
 
 const firmSchema = z.object({
-  name: z.string({ required_error: "firm name is required" }),
+  name: z
+    .string({ required_error: "firm name is required" })
+    .nonempty("Firm name cannot be empty"),
   phone: z.number().optional(),
   taxId: z.string().optional(),
   address: addressSchema.partial(), // making firm address optional
   firmId: z.string(),
-  email: z.string({ required_error: "firm email is required" }),
+  email: z
+    .string({ required_error: "firm email is required" })
+    .nonempty("Firm email cannot be empty"),
   logo: z.string().optional(),
 });
 
 const itemSchema = z.object({
-  itemName: z.string({ required_error: "itemName is required" }),
+  itemName: z
+    .string({ required_error: "itemName is required" })
+    .nonempty("Item name cannot be empty"),
   unitPrice: z.number({ required_error: "unitPrice is required" }),
   quantity: z.number({ required_error: "quantity is required" }),
   amount: z.number().optional(),
@@ -58,9 +74,7 @@ const recurringInvoiceObjSchema = z.object({
 });
 
 export const invoiceSchema = z.object({
-  items: z
-    .array(itemSchema, { required_error: "items is required" })
-    .min(1),
+  items: z.array(itemSchema, { required_error: "items is required" }).min(1),
   gstn: z.string().optional(),
   notes: z.string().optional(),
   remark: z.string().optional(),
@@ -81,7 +95,7 @@ export const invoiceSchema = z.object({
   delete: z.boolean().optional(),
   roundOff: z.number().optional(),
   cancel: z.boolean().optional(),
- 
+
   firm: firmSchema,
   payment: z.array(paymentSchema).optional(),
   recurringInvoiceObj: recurringInvoiceObjSchema.optional(),

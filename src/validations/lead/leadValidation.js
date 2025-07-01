@@ -26,21 +26,33 @@ const stageHistorySchema = z.object({
 
 export const leadSchema = z.object({
   // Basic Info
-  title: z.string({ required_error: "Title is required" }).min(1),
+  title: z
+    .string({ required_error: "Title is required" })
+    .min(1)
+    .nonempty("Title cannot be empty"),
   description: z.string().optional(),
 
   // Client Info
   client: z.object({
-    firstName: z.string({ required_error: " first name is required" }).min(1),
-    lastName: z.string({ required_error: "last name is required" }).min(1),
-    email: z.string().email({ required_error: " email is required" }),
-    phone: z.string({ required_error: " phone is required" }),
+    firstName: z
+      .string({ required_error: " first name is required" })
+      .min(1)
+      .nonempty("First name cannot be empty"),
+    lastName: z
+      .string({ required_error: "last name is required" })
+      .min(1)
+      .nonempty("Last name cannot be empty"),
+    email: z
+      .string()
+      .email({ required_error: " email is required" })
+      .nonempty("Email cannot be empty"), // email validation
+    phone: z.number({ required_error: " phone is required" }),
     address: z
       .object({
         line1: z.string({ required_error: " address line 1 is required" }),
         line2: z.string({ required_error: " address line 2 is required" }),
-        city: z.string({ required_error: " city is required" }),
-        state: z.string({ required_error: " state is required" }),
+        city: z.string().optional(),
+        state: z.string().optional(),
         country: z.string({ required_error: " country is required" }),
         postalCode: z.string({ required_error: " postal code is required" }),
       })

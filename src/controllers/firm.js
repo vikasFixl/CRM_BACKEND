@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 
-import { firmUpdateSchema, firmValidationSchema } from "../validations/firm/firmvalidation.js";
+import {
+  firmUpdateSchema,
+  firmValidationSchema,
+} from "../validations/firm/firmvalidation.js";
 import Firm from "../models/FirmModel.js";
 import ActivityModel from "../models/activityModel.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
@@ -26,9 +29,9 @@ export const createFirm = async (req, res) => {
     const form = parsed.data;
     const existingNum = await Firm.findOne({
       $or: [
-        { gst_no },
-        { tinNo },
-        { cinNo },
+        { gst_no: form.gst_no },
+        { tinNo: form.tinNo },
+        { cinNo: form.cinNo },
       ],
     });
 
@@ -83,22 +86,21 @@ export const createFirm = async (req, res) => {
       cinNo,
       orgId,
     });
-   if (req.files && req.files.image) {
-          const { image } = req.files;
-    
-          const cloudinaryResponse = await uploadImageToCloudinary({
-            file: image,
-            folder: "firm/avatar", // or any dynamic folder
-            // only if replacing
-          });
-    
-          // console.log(cloudinaryResponse, "cloudinaryResponse");
-          newFirm.FirmLogo = {
-            url: cloudinaryResponse.url,
-            public_id: cloudinaryResponse.public_id,
-          };
-        }
-    
+    if (req.files && req.files.image) {
+      const { image } = req.files;
+
+      const cloudinaryResponse = await uploadImageToCloudinary({
+        file: image,
+        folder: "firm/avatar", // or any dynamic folder
+        // only if replacing
+      });
+
+      // console.log(cloudinaryResponse, "cloudinaryResponse");
+      newFirm.FirmLogo = {
+        url: cloudinaryResponse.url,
+        public_id: cloudinaryResponse.public_id,
+      };
+    }
 
     await newFirm.save();
     // ✅ Add activity
@@ -188,22 +190,18 @@ export const getFirmList = async (req, res) => {
 
     const filter = { orgId, isDeleted: { $ne: true } };
 
-    const result = await paginateQuery(
-      Firm,
-      filter,
-      {
-        page,
-        limit,
-        sort: { createdAt: -1 },
-      }
-    );
+    const result = await paginateQuery(Firm, filter, {
+      page,
+      limit,
+      sort: { createdAt: -1 },
+    });
 
     // Only return FirmName in each item
- let firms = result.data.map(firm => ({
+    let firms = result.data.map((firm) => ({
       _id: firm._id,
-      FirmName: firm.FirmName
+      FirmName: firm.FirmName,
     }));
-// console.log("finaldata",finaldata)
+    // console.log("finaldata",finaldata)
     return res.status(200).json({
       message: "Firm list fetched successfully!",
       success: true,
@@ -221,10 +219,10 @@ export const getFirmList = async (req, res) => {
 };
 export const updateFirm = async (req, res) => {
   const { id: _id } = req.params;
-    const userId = req.user.userId;
-    const loggedinuserEmail = req.user.email;
-    const orgId = req.orgUser.orgId;
-    const empid = req.orgUser.employeeId;
+  const userId = req.user.userId;
+  const loggedinuserEmail = req.user.email;
+  const orgId = req.orgUser.orgId;
+  const empid = req.orgUser.employeeId;
 
   if (!mongoose.Types.ObjectId.isValid(_id))
     return res.status(404).send("No firm with that id.");
@@ -254,7 +252,7 @@ export const updateFirm = async (req, res) => {
       activity: "update",
       module: "firm",
       entityId: updatedFirm._id,
-    })
+    });
     await activity.save();
     res.status(200).json({
       message: "Firm updated successfully!",
@@ -274,10 +272,10 @@ export const updateFirm = async (req, res) => {
 
 export const deleteFirm = async (req, res) => {
   const { id } = req.params;
-    const userId = req.user.userId;
-    const loggedinuserEmail = req.user.email;
-    const orgId = req.orgUser.orgId;
-    const empid = req.orgUser.employeeId;
+  const userId = req.user.userId;
+  const loggedinuserEmail = req.user.email;
+  const orgId = req.orgUser.orgId;
+  const empid = req.orgUser.employeeId;
 
   if (!mongoose.Types.ObjectId.isValid(id))
     return res.status(404).json({
@@ -299,7 +297,7 @@ export const deleteFirm = async (req, res) => {
         success: false,
       });
     }
-// ✅ Add activity
+    // ✅ Add activity
     const activity = new ActivityModel({
       activityDesc: `Firm deleted by ${loggedinuserEmail} with id ${empid}`,
       userId,
@@ -307,7 +305,7 @@ export const deleteFirm = async (req, res) => {
       activity: "delete",
       module: "firm",
       entityId: deletedFirm._id,
-    })
+    });
     await activity.save();
     res.status(200).json({
       message: "Firm deleted successfully!",
@@ -326,12 +324,16 @@ export const deleteFirm = async (req, res) => {
 
 export const getAllFirm = async (req, res) => {
   const orgId = req.orgUser.orgId;
-    const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
 
   try {
-    const result = await paginateQuery(Firm, { orgId, isDeleted: { $ne: true } }, { page, limit });
-      
-let firms=result.data
+    const result = await paginateQuery(
+      Firm,
+      { orgId, isDeleted: { $ne: true } },
+      { page, limit }
+    );
+
+    let firms = result.data;
     res.status(200).json({
       message: "All firms retrieved successfully.",
       success: true,
@@ -351,10 +353,10 @@ let firms=result.data
 export const RestoreFirm = async (req, res) => {
   const { id } = req.params;
   // const orgId = req.orgUser.orgId;
-    const userId = req.user.userId;
-    const loggedinuserEmail = req.user.email;
-    const orgId = req.orgUser.orgId;
-    const empid = req.orgUser.employeeId;
+  const userId = req.user.userId;
+  const loggedinuserEmail = req.user.email;
+  const orgId = req.orgUser.orgId;
+  const empid = req.orgUser.employeeId;
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
       success: false,
@@ -389,7 +391,7 @@ export const RestoreFirm = async (req, res) => {
     firm.isDeleted = false;
     firm.deletedAt = null;
     await firm.save();
-// ✅ Add activity
+    // ✅ Add activity
     const activity = new ActivityModel({
       activityDesc: `Firm restored by ${loggedinuserEmail} with id ${empid}`,
       userId,
@@ -397,7 +399,7 @@ export const RestoreFirm = async (req, res) => {
       activity: "restore",
       module: "firm",
       entityId: firm._id,
-    })
+    });
     await activity.save();
     return res.status(200).json({
       message: "Firm restored successfully.",
@@ -417,7 +419,7 @@ export const RestoreFirm = async (req, res) => {
 export const getAllDeletedFirm = async (req, res) => {
   try {
     const orgId = req.orgUser?.orgId;
-     const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10 } = req.query;
 
     const filter = { orgId, isDeleted: true };
 
@@ -427,12 +429,12 @@ export const getAllDeletedFirm = async (req, res) => {
       sort: { updatedAt: -1 },
     });
 
-const firms=result.data
+    const firms = result.data;
     return res.status(200).json({
       message: "Soft-deleted firms fetched successfully.",
       success: true,
       code: 200,
-       firms,
+      firms,
     });
   } catch (error) {
     console.error("Error in getAllDeletedFirm:", error);
