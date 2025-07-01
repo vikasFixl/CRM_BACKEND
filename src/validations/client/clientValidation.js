@@ -4,8 +4,8 @@ import { z } from "zod";
 const addressSchema = z.object({
   address1: z.string({ required_error: "address1 is required" }),
   address2: z.string({ required_error: "address2 is required" }),
-  city: z.string({ required_error: "city is required" }),
-  state: z.string({ required_error: "state is required" }),
+  city: z.string().optional(),
+  state: z.string().optional(),
   pinCode: z.number({ required_error: "pinCode is required" }),
   country: z.string({ required_error: "country is required" }),
 });

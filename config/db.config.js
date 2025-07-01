@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 // dotenv.config({ path: "../../.env" }); /// use while seedeing 
 dotenv.config();
-console.log(process.env.Mongo_URI);
+// console.log(process.env.Mongo_URI);
 export const url =
  process.env.Mongo_URI
 

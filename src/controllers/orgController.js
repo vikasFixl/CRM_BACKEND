@@ -178,7 +178,7 @@ export const switchOrg = async (req, res) => {
   try {
     const userId = req.user.userId;
     const orgId = req.body.orgId;
-    const employeeId = req.orgUser.employeeId;
+    // const employeeId = req.orgUser.employeeId;
 
     if (!orgId || !mongoose.Types.ObjectId.isValid(orgId)) {
       return res.status(400).json({ message: "No orgId provided" });
@@ -191,7 +191,7 @@ export const switchOrg = async (req, res) => {
 
     // Check if the user is a member of this organization
     const member = await OrgMember.findOne({
-      employeeId,
+      userId: userId,
       organizationId: orgId,
       status: "active",
     })
@@ -356,15 +356,15 @@ export const getUserOrganizations = async (req, res) => {
           .populate("organizationId")
           .populate("role")
           .lean();
-
+    
         return {
-          orgId: full.organizationId._id,
-          orgName: full.organizationId.name,
-          Logo: full.organizationId.OrgLogo?.url,
-          orgActive: full.organizationId.isActive,
-          orgEmail: full.organizationId.contactEmail,
-          orgContact: full.organizationId.contactName,
-          orgPhone: full.organizationId.contactPhone,
+          orgId: full.organizationId?._id,
+          orgName: full.organizationId?.name,
+          Logo: full.organizationId?.OrgLogo.url,
+          orgActive: full.organizationId?.isActive,
+          orgEmail: full.organizationId?.contactEmail,
+          orgContact: full.organizationId?.contactName,
+          orgPhone: full.organizationId?.contactPhone,
           joinedAt: full.createdAt,
           employeeId: full.employeeId,
           role: full.role?.role,
@@ -387,6 +387,7 @@ export const getUserOrganizations = async (req, res) => {
       data: populatedData,
     });
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       message: "Failed to fetch organizations",
       success: false,
@@ -440,7 +441,7 @@ export const getAllUserInOrg = async (req, res) => {
         joinedAt: member.createdAt,
         employeeId: member.employeeId,
         role: member.role?.role,
-        name:member.role?.name,
+        name: member.role?.name,
         permissions: useCustom
           ? member.permissionsOverride
           : member.role?.permissions || [],
@@ -560,8 +561,6 @@ export const getOrganizationBYId = async (req, res) => {
   }
 };
 
-
-
 export const UpdateOrganizationUser = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -600,9 +599,9 @@ export const UpdateOrganizationUser = async (req, res) => {
     // ✅ 3. Handle role change
     if (isRoleChanged) {
       const newRole = await RolePermission.findOne({
-        role:"Custom",
+        role: "Custom",
         name: Role,
-        orgId: orgId
+        orgId: orgId,
       });
       console.log("newRole", newRole);
 
@@ -646,7 +645,6 @@ export const UpdateOrganizationUser = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 // Delete a user from an organization
 
@@ -808,7 +806,7 @@ export const acceptInvite = async (req, res) => {
     if (!organization) {
       return res.status(404).json({ message: "Organization not found." });
     }
-console.log("organization", organization);  
+    console.log("organization", organization);
     // 4. Check if user already in org using member
     const alreadyMember = await OrgMember.findOne({
       userId: existingUser._id,

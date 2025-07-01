@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-import { firmValidationSchema } from "../validations/firm/firmvalidation.js";
+import { firmUpdateSchema, firmValidationSchema } from "../validations/firm/firmvalidation.js";
 import Firm from "../models/FirmModel.js";
 import ActivityModel from "../models/activityModel.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
@@ -12,7 +12,7 @@ export const createFirm = async (req, res) => {
     const loggedinuserEmail = req.user.email;
     const orgId = req.orgUser.orgId;
     const empid = req.orgUser.employeeId;
-    console.log(userId, orgId, empid, loggedinuserEmail, "createFirm");
+    // console.log(userId, orgId, empid, loggedinuserEmail, "createFirm");
     // ✅ Validate with Zod
     const parsed = firmValidationSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -24,7 +24,19 @@ export const createFirm = async (req, res) => {
     }
 
     const form = parsed.data;
-    console.log(form);
+    const existingNum = await Firm.findOne({
+      $or: [
+        { gst_no },
+        { tinNo },
+        { cinNo },
+      ],
+    });
+
+    if (existingNum) {
+      return res.status(400).json({
+        message: "GST, TIN, or CIN number already exists .",
+      });
+    }
 
     // 🧠 Check for existing firm with same email
     const existingFirm = await Firm.findOne({
@@ -217,7 +229,7 @@ export const updateFirm = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(_id))
     return res.status(404).send("No firm with that id.");
 
-  const parsed = firmValidationSchema.safeParse(req.body);
+  const parsed = firmUpdateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
       message: "Validation error",
