@@ -27,7 +27,11 @@ export const createFirm = async (req, res) => {
     }
 
     const form = parsed.data;
-    const existingNum = await Firm.findOne({
+
+    // 🧠 Check for existing firm with same GST, TIN, CIN
+    const existing = await Firm.findOne({
+      orgId,
+      isDeleted: { $ne: true },
       $or: [
         { gst_no: form.gst_no },
         { tinNo: form.tinNo },
@@ -35,9 +39,26 @@ export const createFirm = async (req, res) => {
       ],
     });
 
-    if (existingNum) {
+    // Check which field is duplicated
+    if (existing) {
+      let duplicateFields = [];
+
+      if (existing.gst_no === form.gst_no) {
+        duplicateFields.push("GST number");
+      }
+
+      if (existing.tinNo === form.tinNo) {
+        duplicateFields.push("TIN number");
+      }
+
+      if (existing.cinNo === form.cinNo) {
+        duplicateFields.push("CIN number");
+      }
+
       return res.status(400).json({
-        message: "GST, TIN, or CIN number already exists .",
+        message: `${duplicateFields.join(", ")} already exist${
+          duplicateFields.length > 1 ? "" : "s"
+        }.`,
       });
     }
 
@@ -63,7 +84,7 @@ export const createFirm = async (req, res) => {
       phone,
       invoicePrefix,
       add,
-      contectPerson,
+      contactPerson,
       website,
       gst_no,
       uin,
@@ -78,7 +99,7 @@ export const createFirm = async (req, res) => {
       phone,
       invoicePrefix,
       add,
-      contectPerson,
+      contactPerson,
       website,
       gst_no,
       uin,

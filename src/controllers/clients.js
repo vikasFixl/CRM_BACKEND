@@ -5,7 +5,7 @@ import {
   updateClientSchema,
 } from "../validations/client/clientValidation.js";
 import ActivityModel from "../models/activityModel.js";
-import {paginateQuery} from "../utils/pagination.js";
+import { paginateQuery } from "../utils/pagination.js";
 
 export const createClient = async (req, res) => {
   try {
@@ -37,8 +37,38 @@ export const createClient = async (req, res) => {
       firmId,
     } = client.data;
 
+    const existingcleint = await ClientModel.findOne({
+      $or: [
+        { gst_no: form.gst_no },
+        { tinNo: form.tinNo },
+        { cinNo: form.cinNo },
+      ],
+    });
+
+    // Check which field is duplicated
+    if (existingcleint) {
+      let duplicateFields = [];
+
+      if (existingcleint.gst_no === form.gst_no) {
+        duplicateFields.push("GST number");
+      }
+
+      if (existingcleint.tinNo === form.tinNo) {
+        duplicateFields.push("TIN number");
+      }
+
+      if (existingcleint.cinNo === form.cinNo) {
+        duplicateFields.push("CIN number");
+      }
+
+      return res.status(400).json({
+        message: `${duplicateFields.join(", ")} already exist${
+          duplicateFields.length > 1 ? "" : "s"
+        }.`,
+      });
+    }
     const data = await ClientModel.findOne({ email });
-    console.log(data, "data");
+
     if (data) {
       res.status(400).json({
         code: 400,
@@ -108,7 +138,7 @@ export const getClientById = async (req, res) => {
 };
 
 export const getClients = async (req, res) => {
-   const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
   const orgId = req.orgUser.orgId;
   try {
     const query = {
@@ -121,19 +151,19 @@ export const getClients = async (req, res) => {
       limit: parseInt(limit),
       sort: { _id: -1 },
     };
-     const result = await paginateQuery(ClientModel, query, options);
-    
+    const result = await paginateQuery(ClientModel, query, options);
+
     res.json({
       message: "Clients fetched successfully",
       success: true,
       code: 200,
       client: result.data,
-      pagination:{
+      pagination: {
         totalDocs: result.total,
         limit: result.limit,
         page: result.page,
-        totalPages: result.totalPages
-      }
+        totalPages: result.totalPages,
+      },
     });
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -304,19 +334,19 @@ export const getALLdeletedClient = async (req, res) => {
       sort: { createdAt: -1 },
     };
 
-    const clients= await paginateQuery(ClientModel, query, options);
+    const clients = await paginateQuery(ClientModel, query, options);
 
     return res.status(200).json({
       message: "Deleted clients fetched successfully",
       code: 200,
       success: true,
       client: clients.data,
-      pagination:{
+      pagination: {
         totalDocs: clients.total,
         limit: clients.limit,
         page: clients.page,
-        totalPages: clients.totalPages
-      }
+        totalPages: clients.totalPages,
+      },
     });
   } catch (error) {
     console.error("Error in getALLdeletedClient:", error);
@@ -327,7 +357,6 @@ export const getALLdeletedClient = async (req, res) => {
       error: error.message,
     });
   }
-
 };
 
 export const RestoreClient = async (req, res) => {

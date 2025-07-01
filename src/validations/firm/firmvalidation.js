@@ -71,7 +71,7 @@ export const firmUpdateSchema = z.object({
     country: z.string().optional(),
     pinCode: z.number().optional(),
   }),
-  contectPerson: z
+  contactPerson: z
     .object({
       name: z.string().optional(),
       email: z.string().optional(),
