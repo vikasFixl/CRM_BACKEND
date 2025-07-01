@@ -33,7 +33,7 @@ export const clientSchema = z.object({
   lastName: z.string().optional(),
   website: z.string().optional(),
   email: z.string({ required_error: "email is required" }).email("Invalid email format"),
-  phone: z.number({ required_error: "phone is required" }).min(10),
+  phone: z.string({ required_error: "phone is required" }).min(10),
   address: addressSchema,
   contactPerson: contactPersonSchema,
   taxId: z.string().optional(),

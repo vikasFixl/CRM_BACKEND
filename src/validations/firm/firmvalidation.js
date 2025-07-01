@@ -81,10 +81,10 @@ export const firmUpdateSchema = z.object({
       state: z.string().optional(),
       pinCode: z.number().optional(),
       country: z.string().optional(),
-      phone: z.number().optional(),
-      mobile: z.number().optional(),
-      altPhone: z.number().optional(),
-      altMobile: z.number().optional(),
+      phone: z.string().optional(),
+      mobile: z.string().optional(),
+      altPhone: z.string().optional(),
+      altMobile: z.string().optional(),
     })
     .optional(),
 

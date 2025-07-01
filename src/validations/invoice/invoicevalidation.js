@@ -24,7 +24,7 @@ const clientSchema = z.object({
   email: z
     .string({ required_error: "email is required" })
     .email("Invalid email format"),
-  phone: z.number({ required_error: "phone is required" }),
+  phone: z.string({ required_error: "phone is required" }).length(10),
   taxId: z.string().optional(),
   clientFirmName: z.string().optional(),
   address: addressSchema,
@@ -35,7 +35,7 @@ const firmSchema = z.object({
   name: z
     .string({ required_error: "firm name is required" })
     .nonempty("Firm name cannot be empty"),
-  phone: z.number().optional(),
+  phone: z.string().optional(),
   taxId: z.string().optional(),
   address: addressSchema.partial(), // making firm address optional
   firmId: z.string(),
