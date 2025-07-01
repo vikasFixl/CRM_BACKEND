@@ -39,9 +39,9 @@ export const createClient = async (req, res) => {
 
     const existingcleint = await ClientModel.findOne({
       $or: [
-        { gst_no: form.gst_no },
-        { tinNo: form.tinNo },
-        { cinNo: form.cinNo },
+        { taxId,},
+        { tinNo },
+        { cinNo},
       ],
     });
 
@@ -49,15 +49,15 @@ export const createClient = async (req, res) => {
     if (existingcleint) {
       let duplicateFields = [];
 
-      if (existingcleint.gst_no === form.gst_no) {
-        duplicateFields.push("GST number");
+      if (existingcleint.taxId === taxId) {
+        duplicateFields.push("Tax ID ");
       }
 
-      if (existingcleint.tinNo === form.tinNo) {
+      if (existingcleint.tinNo === tinNo) {
         duplicateFields.push("TIN number");
       }
 
-      if (existingcleint.cinNo === form.cinNo) {
+      if (existingcleint.cinNo === cinNo) {
         duplicateFields.push("CIN number");
       }
 
@@ -108,6 +108,7 @@ export const createClient = async (req, res) => {
       });
     }
   } catch (err) {
+    console.log(err);
     res.status(400).json({
       message: err,
       code: 400,
