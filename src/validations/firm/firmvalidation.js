@@ -41,11 +41,11 @@ export const firmValidationSchema = z.object({
     .optional(),
 
   website: z.string().optional(),
-  gst_no: z.string({ required_error: "gst no is required." }),
+  gst_no: z.string({ required_error: "gst no is required." }).nonempty("GST no cannot be empty."),
 
   uin: z.string().optional(),
-  tinNo: z.string({ required_error: "tax id no is required." }),
-  cinNo: z.string({ required_error: "company id  is required." }),
+  tinNo: z.string({ required_error: "tax id no is required." }).nonempty("tax id no cannot be empty."),
+  cinNo: z.string({ required_error: "company id  is required." }).nonempty("company id cannot be empty."),
 
   orgId: z.string().optional(),
 });
