@@ -10,7 +10,7 @@ export const firmValidationSchema = z.object({
     .string({ required_error: "Firm email is required." })
     .trim()
     .email("Invalid email format."),
-  phone: z.string({ required_error: "Phone number is required." }).min(10),
+  phone: z.string({ required_error: "Phone number is required." }),
   invoicePrefix: z
     .string({ required_error: "Invoice prefix is required." })
     .nonempty("Invoice prefix cannot be empty."),
@@ -58,7 +58,7 @@ export const firmUpdateSchema = z.object({
     .string({ required_error: "Firm email is required." })
     .trim()
     .email("Invalid email format."),
-  phone: z.string({ required_error: "Phone number is required." }).min(10),
+  phone: z.string({ required_error: "Phone number is required." }),
   invoicePrefix: z
     .string({ required_error: "Invoice prefix is required." })
     .nonempty("Invoice prefix cannot be empty."),

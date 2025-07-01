@@ -20,10 +20,10 @@ const contactPersonSchema = z.object({
   state: z.string().optional(),
   pinCode: z.number().optional(),
   country: z.string().optional(),
-    phone: z.number().optional(),
-  mobile: z.number().optional(),
-  altPhone: z.number().optional(),
-  altMobile: z.number().optional(),
+    phone: z.string().optional(),
+  mobile: z.string().optional(),
+  altPhone: z.string().optional(),
+  altMobile: z.string().optional(),
 }).optional();
 
 // Main Client Schema
@@ -33,7 +33,7 @@ export const clientSchema = z.object({
   lastName: z.string().optional(),
   website: z.string().optional(),
   email: z.string({ required_error: "email is required" }).email("Invalid email format"),
-  phone: z.string({ required_error: "phone is required" }).min(10),
+  phone: z.string({ required_error: "phone is required" }),
   address: addressSchema,
   contactPerson: contactPersonSchema,
   taxId: z.string().optional(),

@@ -8,7 +8,7 @@ export const ValidateOrganizationSchema = z.object({
     .string({ required_error: "Email is required" })
     .email()
     .nonempty("Email cannot be empty"),
-  contactPhone: z.string().min(10).max(12),
+  contactPhone: z.string(),
   address: z.string({ required_error: "Address is required" }).min(1),
   orgCity: z.string().optional(),
   orgState: z.string().optional(),
