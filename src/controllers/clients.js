@@ -176,6 +176,7 @@ export const updateClient = async (req, res) => {
     const { id: _id } = req.params;
     const parsed = updateClientSchema.safeParse(req.body);
     if (!parsed.success) {
+      console.log("Validation error:", parsed.error);
       return res.status(400).json({
         message: "Validation error",
         errors: parsed.error.errors.map((e) => e.message),
@@ -183,6 +184,36 @@ export const updateClient = async (req, res) => {
     }
 
     const clientData = parsed.data;
+     const existingcleint = await ClientModel.findOne({
+      $or: [
+        { taxId:clientData.taxId,},
+        { tinNo:clientData.tinNo },
+        { cinNo:clientData.cinNo},
+      ],
+    });
+
+    // Check which field is duplicated
+    if (existingcleint) {
+      let duplicateFields = [];
+
+      if (existingcleint.taxId === clientData.taxId) {
+        duplicateFields.push("Tax ID ");
+      }
+
+      if (existingcleint.tinNo ===clientData.tinNo) {
+        duplicateFields.push("TIN number");
+      }
+
+      if (existingcleint.cinNo === clientData.cinNo) {
+        duplicateFields.push("CIN number");
+      }
+
+      return res.status(400).json({
+        message: `${duplicateFields.join(", ")} already exist${
+          duplicateFields.length > 1 ? "" : "s"
+        }.`,
+      });
+    }
 
     const userId = req.user.userId;
     const orgId = req.orgUser.orgId;

@@ -46,10 +46,7 @@ export const clientSchema = z.object({
 
 // Reusable phone validation
 const phoneSchema = z
-  .number()
-  .int()
-  .min(1000000000, "Phone must be at least 10 digits")
-  .max(9999999999, "Phone must be at most 10 digits");
+  .string().nonempty("Phone number cannot be empty")
 
 
 
