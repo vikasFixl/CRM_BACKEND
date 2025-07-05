@@ -342,7 +342,8 @@ export const getUserOrganizations = async (req, res) => {
       sort: { createdAt: -1 },
       populate: {
         path: "organizationId",
-        select: "name OrgLogo.url isActive contactEmail contactName contactPhone",
+        select:
+          "name OrgLogo.url isActive contactEmail contactName contactPhone",
       },
       lean: true,
     });
@@ -380,7 +381,6 @@ export const getUserOrganizations = async (req, res) => {
     });
   }
 };
-
 
 export const getAllUserInOrg = async (req, res) => {
   try {
@@ -566,32 +566,32 @@ export const getOrganizationBYId = async (req, res) => {
 
 export const UpdateOrganizationUser = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { memberId } = req.params;
     const orgId = req.orgUser.orgId; // extracted from auth middleware
     const { Role, overridePermissions, custom } = req.body;
 
+    // first fidn org member
+    const member = await OrgMember.findOne({
+      _id: memberId,
+      organizationId: orgId,
+    }).populate("role", "role");
+    if (!member) {
+      return res.status(404).json({ message: "User is not part of org " });
+    }
+    // console.log("memberexist", member);
     // ✅ 1. Prevent Org Creator from changing their own role
     const organization = await Org.findById(orgId);
     if (!organization) {
       return res.status(404).json({ message: "Organization not found" });
     }
 
-    if (String(organization.createdBy) === userId) {
+    if (
+      organization.createdBy.toString() === member?.userId.toString() &&
+      member.role?.role === "OrgAdmin"
+    ) {
       return res
         .status(403)
         .json({ message: "Forbidden: Org Admin cannot change their own role" });
-    }
-
-    // ✅ 2. Find the org member
-    const member = await OrgMember.findOne({
-      userId,
-      organizationId: orgId,
-    }).populate("role", "role");
-
-    if (!member) {
-      return res
-        .status(404)
-        .json({ message: "User is not part of this organization" });
     }
 
     const currentRole = member.role?.role;
@@ -651,7 +651,7 @@ export const UpdateOrganizationUser = async (req, res) => {
 
 export const DeleteOrganizationUser = async (req, res) => {
   try {
-    const { id } = req.params; // User ID to be removed
+    const { memberId } = req.params; // User ID to be removed
     const orgId = req.orgUser.orgId; // From authenticated org user
 
     if (!id) {
@@ -660,7 +660,7 @@ export const DeleteOrganizationUser = async (req, res) => {
 
     // Find membership document for user and org
     const membership = await OrgMember.findOne({
-      userId: id,
+      _id: memberId,
       organizationId: orgId,
     });
     if (!membership) {

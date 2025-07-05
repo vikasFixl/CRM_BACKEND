@@ -96,14 +96,14 @@ Router.route("/org/users").get(
 
 // provides access token based on org
 Router.route("/switch").post(isAuthenticated, switchOrg);
-Router.route("/updateuser/:userId").put(
+Router.route("/updateuser/:memberId").put(
   isAuthenticated,
   authenticateOrgToken(),
   checkPermission("organization", "UPDATE_ORG_USER"),
 
   UpdateOrganizationUser
 );
-Router.route("/deleteuser/:id").delete(
+Router.route("/deleteuser/:memberId").delete(
   isAuthenticated,
   authenticateOrgToken(),
   checkPermission("organization", "DELETE_ORG_USER"),
