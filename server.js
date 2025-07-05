@@ -17,7 +17,6 @@ import { connectDB } from "./config/db.config.js";
 import { startUserCleanupCron } from "./src/automation/UserDeleteAutomation.js";
 import { globalLimiter } from "./src/middleweare/ratelimitter.js";
 
-
 // const invoiceRoutes = require("./src/routes/invoiceRoute");
 // const clientRoutes = require("./src/routes/clientRoute");
 // const profileRoutes = require("./src/routes/profileRoute");
@@ -66,6 +65,7 @@ import ProjectRouter from "./src/routes/project/projectroute.js";
 import TaskRouter from "./src/routes/project/task.route.js";
 import ProjectMemberRouter from "./src/routes/project/projectMembe.js";
 import RolePermissionRouter from "./src/routes/rolepermissionroute.js";
+import BoardRouter from "./src/routes/project/boardroute.js";
 
 // PayPal config
 paypal.configure({
@@ -75,13 +75,11 @@ paypal.configure({
   client_secret:
     "EFl7mXSY6pm8Z-cWHdJaEGKkZspJl7kOLDmixxyvaylsSrrunpdC8u9YZWO0bHKBWfLwOdNhtld-0L0w",
 });
-const isprod=process.env.NODE_ENV === "production";
-
+const isprod = process.env.NODE_ENV === "production";
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 app.set("trust proxy", isprod); // or true
-
 
 // File upload configuration
 app.use(
@@ -142,11 +140,13 @@ app.use("/api/invoice", InvoiceRouter);
 app.use("/api/client", ClientRouter);
 app.use("/api/activities", ActivityRouter);
 app.use("/api/taxRates", TaxRouter);
-app.use("/api/workspace",WorkspaceRouter)
-app.use("/api/project",ProjectRouter)
-app.use("/api/task",TaskRouter)
-app.use("/api/projects",ProjectMemberRouter)
-app.use("/api/role-permission",RolePermissionRouter)
+app.use("/api/workspace", WorkspaceRouter);
+app.use("/api/project", ProjectRouter);
+app.use("/api/task", TaskRouter);
+app.use("/api/projects", ProjectMemberRouter);
+app.use("/api/board",BoardRouter)
+app.use("/api/role-permission", RolePermissionRouter);
+
 /**
  * 
 app.use("/api/purchase", purchesRoutes);
@@ -166,22 +166,20 @@ app.use("/api/Reminder", Reminder);
 app.use("/api/hrm", appRouter);
 */
 
-
-app.use(errorHandler)
+app.use(errorHandler);
 // Start the server
-const startserver= async () => {
+const startserver = async () => {
   try {
-  
-    app.listen(PORT, async() => {
+    app.listen(PORT, async () => {
       console.log(`✅ Server started on port ${PORT}`);
       await connectDB();
-    })
-      await connectDB();
+    });
+    await connectDB();
   } catch (error) {
     console.error("Error connecting to the database:", error);
   }
-}
- 
+};
+
 startserver();
 startUserCleanupCron(); //background task/cron job
 runWelcomeEmail();

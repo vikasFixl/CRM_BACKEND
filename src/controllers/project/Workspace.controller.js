@@ -6,7 +6,7 @@ import { Workspace } from "../../models/project/WorkspaceModel.js";
 import { Member } from "../../models/project/MemberModel.js";
 import { Project } from "../../models/project/ProjectModel.js";
 import User from "../../models/userModel.js";
-import {RolePermission}from "../../models/RolePermission.js";
+import { RolePermission } from "../../models/RolePermission.js";
 
 export const createWorkspace = async (req, res) => {
   try {
@@ -32,17 +32,17 @@ export const createWorkspace = async (req, res) => {
     });
     await workspace.save();
     // find the owner role and add it to the workspace
-    const ownerRole = await RolePermission.findOne({ role: 'WorkspaceOwner' });
+    const ownerRole = await RolePermission.findOne({ role: "WorkspaceOwner" });
     if (!ownerRole) {
       return res.status(404).json({ message: "Owner role not found" });
     }
-    
+
     // CREATE MEMBER
     const member = await Member.create({
       userId: userId,
       workspaceId: workspace._id,
       organizationId: orgId,
-      role:ownerRole._id,
+      role: ownerRole._id,
       joinedAt: new Date(),
     });
     await member.save();
@@ -61,7 +61,6 @@ export const createWorkspace = async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
-
 export const updateworkspace = async (req, res) => {
   try {
     const id = req.params.id;
@@ -110,15 +109,14 @@ export const deleteWorkspace = async (req, res) => {
     );
 
     if (!workspace) {
-      return res.status(404).json({ message: "Workspace not found or already deleted" });
+      return res
+        .status(404)
+        .json({ message: "Workspace not found or already deleted" });
     }
 
     // Optional: Soft delete related Projects and Members
     await Promise.all([
-      Project.updateMany(
-        { workspace: id , orgId: OrgId},
-        { isDeleted: true }
-      ),
+      Project.updateMany({ workspace: id, orgId: OrgId }, { isDeleted: true }),
       Member.updateMany(
         { workspaceId: id, organizationId: OrgId },
         { isDeleted: true }
@@ -127,7 +125,7 @@ export const deleteWorkspace = async (req, res) => {
 
     return res.status(200).json({
       message: "Workspace soft-deleted successfully",
-     workspace,
+      workspace,
     });
   } catch (error) {
     console.error("Delete workspace error:", error);
@@ -138,8 +136,7 @@ export const deleteWorkspace = async (req, res) => {
   }
 };
 export const getAllWorkspace = async (req, res) => {
-  
-    try {
+  try {
     const orgId = req.orgUser.orgId;
 
     const workspaces = await Workspace.find({
@@ -156,4 +153,3 @@ export const getAllWorkspace = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-

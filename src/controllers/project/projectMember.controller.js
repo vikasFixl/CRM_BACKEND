@@ -7,8 +7,9 @@ import { ProjectMember } from "../../models/project/projectMemberModel.js";
 import { Workspace } from "../../models/project/WorkspaceModel.js";
 import { RolePermission } from "../../models/RolePermission.js";
 import { Project } from "../../models/project/ProjectModel.js";
+import { Task } from "../../models/project/TaskModel.js";
 import mongoose from "mongoose";
-      
+// add member
 export const assignMember = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -100,19 +101,21 @@ export const assignMember = async (req, res) => {
     const alreadyInProject = await ProjectMember.exists({
       userId: user._id,
       projectId,
-    });
+    }).select("totalmembers");
 
     if (alreadyInProject) {
       return res.status(400).json({ message: "User already in project" });
     }
 
     const projectrole = await RolePermission.findOne({ role: roleName });
+
     await ProjectMember.create({
       userId: user._id,
       projectId,
       workspaceId,
       organizationId: orgId,
       role: projectrole._id,
+
       addedBy: req.user.userId,
     });
 
@@ -184,8 +187,7 @@ export const getAllProjectMembers = async (req, res) => {
 };
 
 export const UpdateProjectMember = async (req, res) => {
-  
-    try {
+  try {
     const { projectId, memberId } = req.params;
     const { role: newRoleName, overridePermissions } = req.body;
 
@@ -216,7 +218,11 @@ export const UpdateProjectMember = async (req, res) => {
     }
 
     // ✅ 2. If role not changed, apply custom permissions if provided
-    if (!isRoleChanged && Array.isArray(overridePermissions) && overridePermissions.length > 0) {
+    if (
+      !isRoleChanged &&
+      Array.isArray(overridePermissions) &&
+      overridePermissions.length > 0
+    ) {
       updates.hasCustomPermission = true;
       updates.permissionsOverride = overridePermissions;
     }
@@ -226,7 +232,9 @@ export const UpdateProjectMember = async (req, res) => {
     await member.save();
 
     res.status(200).json({
-      message: `Project member role updated successfully${isRoleChanged ? " and permissions" : ""}`,
+      message: `Project member role updated successfully${
+        isRoleChanged ? " and permissions" : ""
+      }`,
       member,
     });
   } catch (error) {
@@ -235,6 +243,40 @@ export const UpdateProjectMember = async (req, res) => {
   }
 };
 export const RemoveProjectMember = async (req, res) => {
-  return res.status(200).json({ message: "RemoveProjectMember route hit" });
+  try {
+    const memberId = req.params.memberId;
+
+    // ✅ 1. find the proejct member
+    const project = await ProjectMember.findById(memberId).populate(
+      "role",
+      "role"
+    );
+    if (!project) {
+      return res.status(404).json({ message: "Project member not found" });
+    }
+    if (project.role.role === "ProjectOwner") {
+      return res
+        .status(400)
+        .json({ message: "Owner cannot remove himself from the project" });
+    }
+    const removedMember = await ProjectMember.findByIdAndDelete(memberId);
+
+    if (!removedMember) {
+      return res.status(404).json({ message: "Project member not found" });
+    }
+
+    // ✅ 2. Unassign tasks where this member was the assignee
+    await Task.updateMany(
+      { assigneeId: memberId },
+      { $unset: { assigneeId: "" } }
+    );
+
+    return res.status(200).json({
+      message: "Project member removed and tasks unassigned",
+      removedMemberId: memberId,
+    });
+  } catch (error) {
+    console.error("Error removing project member:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 };
- 

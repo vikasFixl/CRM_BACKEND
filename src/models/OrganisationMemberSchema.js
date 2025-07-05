@@ -7,7 +7,7 @@ const orgMemberSchema = mongoose.Schema(
       ref: "User",
       required: true,
     },
-      employeeId: {
+    employeeId: {
       type: String,
       required: true,
       unique: true, // optional: only if employee IDs are globally unique
@@ -29,7 +29,7 @@ const orgMemberSchema = mongoose.Schema(
         actions: [{ type: String }],
       },
     ],
-  
+
     joinedAt: {
       type: Date,
       default: Date.now,
@@ -39,7 +39,7 @@ const orgMemberSchema = mongoose.Schema(
       enum: ["invited", "active", "suspended", "left"],
       default: "active",
     },
-      hasCustomPermission: {
+    hasCustomPermission: {
       type: Boolean,
       default: false, // false unless overridden
     },
@@ -48,4 +48,3 @@ const orgMemberSchema = mongoose.Schema(
 );
 
 export const OrgMember = mongoose.model("OrgMember", orgMemberSchema);
-

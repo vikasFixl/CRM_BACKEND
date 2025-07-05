@@ -24,12 +24,6 @@ import mongoose from "mongoose";
 
 const BoardSchema = new mongoose.Schema(
   {
-    projectId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
-      required: true,
-      index: true,
-    },
     name: {
       type: String,
       required: true,
@@ -45,38 +39,43 @@ const BoardSchema = new mongoose.Schema(
     visibility: {
       type: String,
       enum: ["public", "team", "private"],
-      default: "private",
+      default: "public",
       required: true,
     },
+
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+      required: true,
+      index: true,
+    },
+
     teamId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Team",
-      default: null, // null for public/private boards
-    },
-    // filterQuery: {
-    //   type: String, // optional saved filter or query string
-    //   default: "",
-    // },
-      // ✅ Simplified columns field
- columns: [
-  {
-    name: {
-      type: String,
-      required: true,
-    },
-    order: {
-      type: Number,
-      required: true,
-    },
-    key: {
-      type: String,
-      required: true,
-      lowercase: true,
-      trim: true,
-    },
-  }
-]
-,
+      default: null,
+    }, // null = project-level board
+    // Flag to indicate default board
+    isProjectDefault: { type: Boolean, default: false },
+
+    columns: [
+      {
+        name: {
+          type: String,
+          required: true,
+        },
+        order: {
+          type: Number,
+          required: true,
+        },
+        key: {
+          type: String,
+          required: true,
+          lowercase: true,
+          trim: true,
+        },
+      },
+    ],
     isDeleted: {
       type: Boolean,
       default: false,
@@ -98,3 +97,10 @@ export const Board = mongoose.model("Board", BoardSchema);
 // if (!allowedStatus.includes(task.status)) {
 //   throw new Error(`Invalid status. Must be one of: ${allowedStatus.join(", ")}`);
 // }
+//const getBoardForTeam = async (projectId, teamId) => {
+//   let board = await Board.findOne({ projectId, teamId, isDeleted: false });
+//   if (!board) {
+//     board = await Board.findOne({ projectId, isProjectDefault: true, isDeleted: false });
+//   }
+//   return board;
+// };

@@ -8,29 +8,53 @@ import {
   getAllProjectsByWorkspace,
   getProjectById,
   archiveProject,
- 
+  getAssignableMembers,
 } from "../../controllers/project/project.controller.js";
 
 const ProjectRouter = express.Router();
 // /Project CRUD Routes (Under Workspace)
 
 // 🆕 Create a project from template
-ProjectRouter.route("/create/:workspaceId").post(isAuthenticated, authenticateOrgToken(),createProject);
+ProjectRouter.route("/create/:workspaceId").post(
+  isAuthenticated,
+  authenticateOrgToken(),
+  createProject
+);
 
 // get all project under workspace
-ProjectRouter.route("/workspace/:workspaceId/projects").get(isAuthenticated, authenticateOrgToken(), getAllProjectsByWorkspace);
+ProjectRouter.route("/workspace/:workspaceId/projects").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getAllProjectsByWorkspace
+);
 // get project members
-ProjectRouter.route("/workspace/:workspaceId/project/:projectId").get(isAuthenticated, authenticateOrgToken(),getProjectById);
+ProjectRouter.route("/workspace/:workspaceId/project/:projectId").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getProjectById
+);
+ProjectRouter.route("/:projectId/assignable-members").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getAssignableMembers
+);
 // ✏️ Update project details
-ProjectRouter.route("/update/:projectId").patch(isAuthenticated, authenticateOrgToken(), updateProject);
+ProjectRouter.route("/update/:projectId").patch(
+  isAuthenticated,
+  authenticateOrgToken(),
+  updateProject
+);
 
 // 🗑 Soft delete
-ProjectRouter.route("/delete/:projectId").delete(isAuthenticated, authenticateOrgToken(), deleteProject);
+ProjectRouter.route("/delete/:projectId").delete(
+  isAuthenticated,
+  authenticateOrgToken(),
+  deleteProject
+);
 
 // // 📁 Archive
 // ProjectRouter.route("/archive/:projectId").patch(isAuthenticated, authenticateOrgToken(), archiveProject);
 
-// member routes 
-
+// member routes
 
 export default ProjectRouter;

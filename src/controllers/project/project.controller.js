@@ -15,6 +15,7 @@ import {
   projectIdSchema,
 } from "../../validations/project/project.js";
 import { workspaceIdSchema } from "../../validations/project/workspace.js";
+import User from "../../models/userModel.js";
 
 export const createProject = async (req, res) => {
   const session = await mongoose.startSession();
@@ -95,18 +96,20 @@ export const createProject = async (req, res) => {
       key: state.key.toLowerCase().trim(),
     }));
 
-    await Board.create(
+    const [board] = await Board.create(
       [
         {
           projectId: project._id,
           name: `${name} Board`,
           type: template.boardType,
+          isProjectDefault: true,
           columns: boardColumns,
         },
       ],
       { session }
     );
-
+    project.boardId = board._id;
+    await project.save({ session });
     // ✅ Create Workflow
     await Workflow.create(
       [
@@ -344,6 +347,7 @@ export const getProjectById = async (req, res) => {
       .populate("createdBy", "email _id firstName lastName")
       .populate("workspace", "name _id")
       .populate("organization", "name _id")
+      .populate("boardId", "_id columns")
       .lean();
 
     if (!project) {
@@ -372,5 +376,33 @@ export const getProjectById = async (req, res) => {
   } catch (error) {
     console.error("❌ Error in getProjectById:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getAssignableMembers = async (req, res) => {
+  try {
+    const projectId = req.params.projectId;
+
+    if (!projectId) {
+      return res.status(400).json({ message: "Project ID is required" });
+    }
+
+    // 1. Get all members assigned to the project
+    const projectMembers = await ProjectMember.find({ projectId });
+
+    const userIds = projectMembers.map((pm) => pm.userId);
+
+    // // 2. Fetch user details (excluding sensitive info)
+    const users = await User.find({ _id: { $in: userIds } }).select(
+      " email avatar"
+    );
+
+    res.status(200).json({
+      message: "Assignable project members fetched successfully",
+      users,
+    });
+  } catch (error) {
+    console.error("Error in getAssignableMembers:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

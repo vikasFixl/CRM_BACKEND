@@ -19,7 +19,7 @@ const MemberSchema = new mongoose.Schema(
     },
     role: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "RolePermission", 
+      ref: "RolePermission",
       required: true,
     },
     hasCustomPermission: {
@@ -36,6 +36,7 @@ const MemberSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+ 
     status: {
       type: String,
       default: "active", // enums like invited/pending can be added later
@@ -59,7 +60,10 @@ const MemberSchema = new mongoose.Schema(
 );
 
 // Unique membership constraint per workspace + org
-MemberSchema.index({ workspaceId: 1, userId: 1, organizationId: 1 }, { unique: true });
+MemberSchema.index(
+  { workspaceId: 1, userId: 1, organizationId: 1 },
+  { unique: true }
+);
 
 // Static to filter active members
 MemberSchema.statics.findActive = function (query = {}) {
@@ -67,5 +71,5 @@ MemberSchema.statics.findActive = function (query = {}) {
 };
 //const members = await Member.findActive({ workspaceId: someId }); use of about statics
 
-
-export const Member = mongoose.models.Member || mongoose.model("Member", MemberSchema);
+export const Member =
+  mongoose.models.Member || mongoose.model("Member", MemberSchema);

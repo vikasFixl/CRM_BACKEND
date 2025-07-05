@@ -14,9 +14,7 @@ Router.route("/getBillingPlan/:id").get((req, res) => {
 });
 
 // update by id
-Router.route("/updateBillingPlan/:id").put((req, res) => {
-  res.send("updateBillingPlan");
-});
+Router.route("/updateBillingPlan/:id").patch(updateBillingPlan);
 // delete by id
 Router.route("/deleteBillingPlan/:id").delete((req, res) => {
   res.send("delteBillingPlan");

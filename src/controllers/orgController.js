@@ -27,81 +27,74 @@ const frontendUrl = process.env.FRONTEND_URL;
 export const createOrganization = async (req, res) => {
   try {
     const userId = req.user.userId;
-
     const {
       name,
       contactEmail,
       contactPhone,
       contactName,
       address,
-
       orgCity,
       orgState,
       orgCountry,
     } = req.body;
 
-    // ✅ Validate required fields
-    if (
-      !name ||
-      !contactEmail ||
-      !contactPhone ||
-      !contactName ||
-      !orgCountry ||
-      !address ||
-      !orgCity ||
-      !orgState ||
-      !orgCountry ||
-      !contactName
-    ) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-    // find the user in the database
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const normalizedName = name.trim().toLowerCase();
-    const existingOrg = await Org.findOne({ name: normalizedName });
-
-    if (existingOrg) {
-      return res
-        .status(409)
-        .json({ message: "Organization name already taken" });
-    }
-
-    // ✅ Fetch Free billing plan
-    const billingPlan = await BillingPlan.findOne({ name: "Free Plan" });
-    if (!billingPlan) {
-      return res.status(404).json({ message: "Billing plan not found" });
-    }
-
-    // ✅ Create new organization
-    const newOrg = new Org({
+    // ✅ Basic field validation
+    const requiredFields = {
       name,
-      billingPlan: billingPlan._id,
-      modules: billingPlan.features,
       contactEmail,
       contactPhone,
       contactName,
       address,
       orgCity,
       orgState,
+      orgCountry,
+    };
 
+    for (const [key, value] of Object.entries(requiredFields)) {
+      if (!value || value.trim() === "") {
+        return res.status(400).json({ message: `${key} is required` });
+      }
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const normalizedName = name.trim().toLowerCase();
+    const existingOrg = await Org.findOne({ name: normalizedName });
+    if (existingOrg) {
+      return res
+        .status(409)
+        .json({ message: "Organization name already taken" });
+    }
+
+    // ✅ Fetch billing plan
+    const billingPlan = await BillingPlan.findOne({ code: "FREE" });
+    if (!billingPlan)
+      return res.status(404).json({ message: "Billing plan not found" });
+
+    // ✅ Create organization instance
+    const newOrg = new Org({
+      name: normalizedName,
+      billingPlan: billingPlan._id,
+      contactEmail,
+      contactPhone,
+      contactName,
+      address,
+      orgCity,
+      orgState,
       orgCountry,
       createdBy: userId,
       updatedBy: userId,
       isActive: true,
     });
-    if (req.files && req.files.image) {
-      const { image } = req.files;
 
+    // ✅ Upload logo if image exists
+    if (req.files?.image) {
       const cloudinaryResponse = await uploadImageToCloudinary({
-        file: image,
-        folder: "organization/avatar", // or any dynamic folder
-        // only if replacing
+        file: req.files.image,
+        folder: "organization/avatar",
       });
 
-      // console.log(cloudinaryResponse, "cloudinaryResponse");
       newOrg.OrgLogo = {
         url: cloudinaryResponse.url,
         public_id: cloudinaryResponse.public_id,
@@ -110,69 +103,70 @@ export const createOrganization = async (req, res) => {
 
     const savedOrg = await newOrg.save();
 
-    // ✅ Create billing record
+    // ✅ Create billing info
     const newBilling = new OrganizationBilling({
       organizationId: savedOrg._id,
       billingPlanId: billingPlan._id,
       subscriptionStartDate: new Date(),
-      paymentStatus: "trialing",
-      autoRenew: true,
-      paymentMethod: { type: "trialing" },
       trialEndDate: billingPlan.trialDays
         ? new Date(Date.now() + billingPlan.trialDays * 24 * 60 * 60 * 1000)
         : null,
+      paymentStatus: "trialing",
+      autoRenew: true,
+      paymentMethod: { type: "trialing" },
       createdBy: savedOrg._id,
       updatedBy: savedOrg._id,
     });
 
     await newBilling.save();
 
-    const role = "OrgAdmin";
-
-    const OrgAdminRole = await RolePermission.findOne({ role });
-    // console.log(OrgAdminRole);
+    // ✅ Assign OrgAdmin Role
+    const orgAdminRole = await RolePermission.findOne({ role: "OrgAdmin" });
+    if (!orgAdminRole) {
+      return res.status(500).json({ message: "OrgAdmin role not found" });
+    }
 
     const employeeId = generateEmployeeId(savedOrg._id);
 
-    // add user to organization member schema
-    const orgmember = new OrgMember({
+    const orgMember = new OrgMember({
       userId,
       employeeId,
       organizationId: savedOrg._id,
-      role: OrgAdminRole._id,
+      role: orgAdminRole._id,
     });
 
-    await orgmember.save();
-    // ✅ OPTIONAL: Return org-scoped JWT token
-    const orgtoken = generateOrgToken({
+    await orgMember.save();
+
+    // ✅ Generate org-scoped JWT token
+    const orgToken = generateOrgToken({
       userId,
       orgId: savedOrg._id,
       employeeId,
-      role: OrgAdminRole.role,
-      permissions: OrgAdminRole.permissions,
+      role: orgAdminRole.role,
+      permissions: orgAdminRole.permissions,
     });
 
-    // set user curret org
     user.currentOrganization = savedOrg._id;
     await user.save();
-    const { exp } = jwt.decode(orgtoken);
+
+    const { exp } = jwt.decode(orgToken);
 
     return res.status(201).json({
       message: "Organization and Billing created successfully",
       orgId: savedOrg._id,
       employeeId,
-      orgtoken: orgtoken,
+      orgtoken: orgToken,
       expiresAt: exp * 1000,
     });
   } catch (error) {
-    console.error("Org creation failed:", error);
-
+    console.error("Organization creation failed:", error);
     return res.status(500).json({
       message: "Error creating organization and billing",
       error: error.message,
     });
   }
 };
+
 // switchOrgController.js
 export const switchOrg = async (req, res) => {
   try {
@@ -333,8 +327,7 @@ export const switchOrg = async (req, res) => {
 
 export const getUserOrganizations = async (req, res) => {
   try {
-    const userId = req.user.userId; // assuming this is set by auth middleware
-    // fetch user org form the member model
+    const userId = req.user.userId;
     const { page = 1, limit = 10 } = req.query;
 
     const filter = {
@@ -342,41 +335,32 @@ export const getUserOrganizations = async (req, res) => {
       status: "active",
     };
 
+    // Use your custom pagination utility
     const result = await paginateQuery(OrgMember, filter, {
       page,
       limit,
       sort: { createdAt: -1 },
+      populate: {
+        path: "organizationId",
+        select: "name OrgLogo.url isActive contactEmail contactName contactPhone",
+      },
+      lean: true,
     });
 
-    // Populate user and role info manually after pagination
-    const populatedData = await Promise.all(
-      result.data.map(async (member) => {
-        const full = await OrgMember.findById(member._id)
+    const data = result.data.map((member) => ({
+      memberId: member._id, // For identification in frontend updates
+      orgId: member.organizationId?._id,
+      orgName: member.organizationId?.name,
+      logo: member.organizationId?.OrgLogo?.url || null,
+      orgActive: member.organizationId?.isActive,
+      orgEmail: member.organizationId?.contactEmail,
+      orgContact: member.organizationId?.contactName,
+      orgPhone: member.organizationId?.contactPhone,
+      joinedAt: member.createdAt,
+      employeeId: member.employeeId,
+    }));
 
-          .populate("organizationId")
-          .populate("role")
-          .lean();
-    
-        return {
-          orgId: full.organizationId?._id,
-          orgName: full.organizationId?.name,
-          Logo: full.organizationId?.OrgLogo.url,
-          orgActive: full.organizationId?.isActive,
-          orgEmail: full.organizationId?.contactEmail,
-          orgContact: full.organizationId?.contactName,
-          orgPhone: full.organizationId?.contactPhone,
-          joinedAt: full.createdAt,
-          employeeId: full.employeeId,
-          role: full.role?.role,
-          permissions:
-            full.permissionsOverride?.length > 0
-              ? full.permissionsOverride
-              : full.role?.permissions || [],
-        };
-      })
-    );
-
-    res.status(200).json({
+    return res.status(200).json({
       message: "Organizations fetched successfully",
       success: true,
       code: 200,
@@ -384,11 +368,11 @@ export const getUserOrganizations = async (req, res) => {
       page: result.page,
       totalPages: result.totalPages,
       limit: result.limit,
-      data: populatedData,
+      data,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    console.error("Error fetching user organizations:", error);
+    return res.status(500).json({
       message: "Failed to fetch organizations",
       success: false,
       code: 500,
@@ -397,76 +381,95 @@ export const getUserOrganizations = async (req, res) => {
   }
 };
 
+
 export const getAllUserInOrg = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
-    const { page = 1, limit = 10 } = req.query;
 
-    // Step 1: Base filter (before populating roles)
-    const paginated = await paginateQuery(
-      OrgMember,
-      { organizationId: orgId, status: "active" },
-      { page, limit, sort: { createdAt: -1 } }
-    );
+    const {
+      page = 1,
+      limit = 10,
+      role, // Optional filter
+      status, // Optional filter: active/inactive
+    } = req.query;
 
-    // Step 2: Populate userId and role fields after pagination
-    const populatedMembers = await Promise.all(
-      paginated.data.map((member) =>
-        OrgMember.findById(member._id)
-          .populate("userId", "firstName lastName email phone")
-          .populate("role")
-          .lean()
-      )
-    );
+    const skip = (Number(page) - 1) * Number(limit);
 
-    // Step 3: Filter out OrgAdmin members
-    const nonAdminMembers = populatedMembers.filter(
+    const query = {
+      organizationId: orgId,
+    };
+
+    // Optional filters
+    if (role) query["role.role"] = role;
+    if (status) query.status = status;
+    else query.status = "active"; // Default
+
+    // Step 1: Fetch filtered members
+    const members = await OrgMember.find(query)
+      .populate("userId", "firstName lastName email phone")
+      .populate("role")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
+
+    // Step 2: Exclude OrgAdmin
+    const filteredMembers = members.filter(
       (member) => member.role?.role !== "OrgAdmin"
     );
 
-    // Step 4: Construct enriched user data
-    const enrichedUsers = nonAdminMembers.map((member) => {
+    const users = filteredMembers.map((member) => {
       const useCustom =
         member.hasCustomPermission ||
         (member.permissionsOverride && member.permissionsOverride.length > 0);
 
       return {
+        memberId: member._id,
         orgId: member.organizationId,
         orgName: member.organizationId?.name,
         Logo: member.organizationId?.OrgLogo?.url,
         orgActive: member.organizationId?.isActive,
         orgEmail: member.organizationId?.contactEmail,
-        orgcontact: member.organizationId?.contactName,
+        orgContact: member.organizationId?.contactName,
         orgPhone: member.organizationId?.contactPhone,
         joinedAt: member.createdAt,
         employeeId: member.employeeId,
+        email: member.userId?.email,
+        phone: member.userId?.phone,
+        name: member.userId?.firstName + " " + member.userId?.lastName,
+
         role: member.role?.role,
-        name: member.role?.name,
+
         permissions: useCustom
           ? member.permissionsOverride
           : member.role?.permissions || [],
-        user: member.userId, // Contains firstName, lastName, email, phone
       };
     });
 
+    // Step 3: Count total documents (excluding OrgAdmin)
+    const allMatchingMembers = await OrgMember.find(query)
+      .populate("role")
+      .lean();
+    const total = allMatchingMembers.filter(
+      (m) => m.role?.role !== "OrgAdmin"
+    ).length;
+
     return res.status(200).json({
-      message: "Organization users fetched successfully (excluding OrgAdmins)",
+      message: "Organization users fetched successfully",
       success: true,
-      code: 200,
-      users: enrichedUsers,
+      users,
       pagination: {
-        limit: Number(limit),
-        total: paginated.total,
+        total,
         page: Number(page),
-        totalPages: paginated.totalPages,
+        limit: Number(limit),
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (error) {
-    console.error("Error in getOrgUsersExcludingOrgAdmin:", error);
+    console.error("Error in getAllUserInOrg:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
-      code: 500,
     });
   }
 };
@@ -565,7 +568,7 @@ export const UpdateOrganizationUser = async (req, res) => {
   try {
     const { userId } = req.params;
     const orgId = req.orgUser.orgId; // extracted from auth middleware
-    const { Role, overridePermissions } = req.body;
+    const { Role, overridePermissions, custom } = req.body;
 
     // ✅ 1. Prevent Org Creator from changing their own role
     const organization = await Org.findById(orgId);
@@ -593,26 +596,24 @@ export const UpdateOrganizationUser = async (req, res) => {
 
     const currentRole = member.role?.role;
     const isRoleChanged = currentRole !== Role;
-
+    console.log("isRoleChanged", isRoleChanged);
     let updates = {};
 
     // ✅ 3. Handle role change
     if (isRoleChanged) {
       const newRole = await RolePermission.findOne({
-        role: "Custom",
-        name: Role,
-        orgId: orgId,
+        role: Role,
+        isCustom: custom,
       });
-      console.log("newRole", newRole);
 
       if (!newRole) {
         return res.status(404).json({ message: "Target role not found" });
       }
 
-      if (newRole.role === "SuperAdmin") {
+      if (newRole.role === "SuperAdmin" || newRole.role === "OrgAdmin") {
         return res
           .status(403)
-          .json({ message: "Forbidden: Cannot assign SuperAdmin role" });
+          .json({ message: "Forbidden: Cannot assign this role" });
       }
 
       updates.role = newRole._id;

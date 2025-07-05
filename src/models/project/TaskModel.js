@@ -44,11 +44,13 @@ const TaskSchema = new mongoose.Schema(
     },
 
     // Assignment
-    assigneeId: { // The person responsible for completing the task.
+    assigneeId: {
+      // The person responsible for completing the task.
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "ProjectMember",
     },
-    createdBy: { //The person who created or reported the task/issue.
+    createdBy: {
+      //The person who created or reported the task/issue.
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
@@ -73,13 +75,12 @@ const TaskSchema = new mongoose.Schema(
     },
 
     // Dates
-    startDate:{
+    startDate: {
       type: Date,
       default: Date.now(),
     },
-    dueDate:{
+    dueDate: {
       type: Date,
-     
     },
     completedAt: {
       type: Date,
@@ -90,6 +91,10 @@ const TaskSchema = new mongoose.Schema(
       type: Number,
       enum: [1, 2, 3, 5, 8, 13, 21],
       default: 1,
+    },
+    boardId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Board",
     },
 
     // Metadata

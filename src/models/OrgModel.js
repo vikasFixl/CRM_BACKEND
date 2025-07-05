@@ -85,7 +85,7 @@ OrganizationSchema.pre("save", async function (next) {
     const BillingPlan = mongoose.model("BillingPlan");
     const plan = await BillingPlan.findById(this.billingPlan);
     if (plan) {
-      this.modules = plan.features;
+      this.modules = plan.modules;
     }
   }
   next();

@@ -1,5 +1,6 @@
 // config/rolepermission.js
-import { ROLES, PERMISSIONS, MODULES } from "../enums/role.enums.js";
+import { ROLES, PERMISSIONS, MODULES,ALL_PERMISSIONS } from "../enums/role.enums.js";
+console.log("ALL_PERMISSIONS", ALL_PERMISSIONS);
 
 export const rolepermission = {
   [ROLES.SUPER_ADMIN]: [

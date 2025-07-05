@@ -49,13 +49,14 @@ const ProjectSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    settings: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {},
-    },
+  
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+    },
+    boardId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Board",
     },
     templateId: {
       type: mongoose.Schema.Types.ObjectId,
