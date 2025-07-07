@@ -21,10 +21,10 @@ const storage = multerS3({
     cb(
       null,
       file.fieldname +
-        "-" +
-        Math.random() +
-        Date.now() +
-        path.extname(file.originalname)
+      "-" +
+      Math.random() +
+      Date.now() +
+      path.extname(file.originalname)
     );
   },
 });

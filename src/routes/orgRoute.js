@@ -123,7 +123,7 @@ Router.route("/declineInvite/:token").post(declineInvite);
 Router.route("/all/Invite").get(
   isAuthenticated,
   authenticateOrgToken(),
-  
+
   getOrganizationInvite
 );
 

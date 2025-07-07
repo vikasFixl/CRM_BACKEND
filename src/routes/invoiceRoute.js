@@ -18,7 +18,7 @@ import {
   permanentDeleteInvoice,
   restoreCancelInvoice,
   restoreInvoice,
- 
+
   updateInvoiceStatus,
 } from "../controllers/invoices.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
@@ -108,7 +108,7 @@ InvoiceRouter.route("/drafttoinvoice/:id").patch(
   finalizeDraftInvoice
 );
 // InvoiceRouter.patch("/updateDraft/:id", authorize("Update", "invoice", ["Admin", "subAdmin", "Custom"]), invoiceController.updateDraftIn);
-InvoiceRouter.route("/payment/:id").patch(isAuthenticated,authenticateOrgToken(),payment)
+InvoiceRouter.route("/payment/:id").patch(isAuthenticated, authenticateOrgToken(), payment)
 InvoiceRouter.route("/softDeleteInvoice/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),

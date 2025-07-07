@@ -7,7 +7,6 @@ import {
   gettaxrates,
   getGlobalTaxs,
   getAllTaxes,
-  
   deletetaxRate,
   disabletaxRate,
   updateTaxRateById,

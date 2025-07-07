@@ -5,7 +5,13 @@ const WorkflowSchema = new mongoose.Schema(
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
-      required: true,
+      default: null,
+      index: true,
+    },
+    teamId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Team",
+      default: null,
       index: true,
     },
     name: {
@@ -19,18 +25,20 @@ const WorkflowSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
     },
+
     states: [
       {
-        key: { type: String, required: true, trim: true }, // system identifier
-        name: { type: String, required: true, trim: true },       // Display name
-        category: { type: String, trim: true },                   // Optional (no enum)
-        color: { type: String, default: "#8e8e8e" },
-        isDefault: { type: Boolean, default: false },
-        order: { type: Number, default: 0 },
-        onEnter: mongoose.Schema.Types.Mixed, // optional hooks
+        key: { type: String, required: true, trim: true },      // system key (e.g., "todo")
+        name: { type: String, required: true, trim: true },     // display label (e.g., "To Do")
+        category: { type: String, trim: true },                 // optional: "backlog", "inprogress", etc.
+        color: { type: String, default: "#8e8e8e" },            // UI color
+        isDefault: { type: Boolean, default: false },           // initial state
+        order: { type: Number, default: 0 },                    // display order
+        onEnter: mongoose.Schema.Types.Mixed,                   // optional hook
         onExit: mongoose.Schema.Types.Mixed,
       },
     ],
+
     transitions: [
       {
         from: { type: String, required: true },
@@ -41,12 +49,23 @@ const WorkflowSchema = new mongoose.Schema(
         actions: mongoose.Schema.Types.Mixed,
       },
     ],
+
+    isDefaultWorkflow: { type: Boolean, default: false },       // reusable template flag
     isDeleted: { type: Boolean, default: false },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
 
-WorkflowSchema.index({ projectId: 1, name: 1 }, { unique: true });
+// ✅ At least one of projectId or teamId must be present
+WorkflowSchema.pre("validate", function (next) {
+  if (!this.projectId && !this.teamId) {
+    return next(new Error("Either projectId or teamId must be set."));
+  }
+  next();
+});
+
+// ✅ Unique name within project or team (if provided)
+WorkflowSchema.index({ projectId: 1, teamId: 1, name: 1 }, { unique: true, sparse: true });
 
 export const Workflow = mongoose.model("Workflow", WorkflowSchema);

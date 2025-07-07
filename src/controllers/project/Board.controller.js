@@ -23,18 +23,6 @@ export const getBoard = async (req, res) => {
   }
 };
 
-// // 🔹 Update board
-// export const updateBoard = async (req, res) => {
-//   try {
-//     const board = await Board.findByIdAndUpdate(req.params.boardId, req.body, {
-//       new: true,
-//     });
-//     if (!board) return res.status(404).json({ error: "Board not found" });
-//     res.json({ success: true, board });
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// };
 
 // 🔹 Delete board (soft delete)
 export const deleteBoard = async (req, res) => {
