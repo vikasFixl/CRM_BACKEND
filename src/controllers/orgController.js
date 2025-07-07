@@ -16,6 +16,7 @@ import { ROLES } from "../enums/role.enums.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 import { paginateQuery } from "../utils/pagination.js";
 
+
 // import Employee from "../models/employeeModel.js";
 
 const generateEmployeeId = () => {
@@ -541,16 +542,16 @@ export const getOrganizationBYId = async (req, res) => {
       ).lean();
       customOrg.billingPlan = billingPlan
         ? {
-            id: billingPlan._id,
-            name: billingPlan.name,
-            price: billingPlan.price,
-            features: billingPlan.features,
-            maxUsers: billingPlan.maxUsers,
-            billingCycle: billingPlan.billingCycle,
-            maxStorageGB: billingPlan.maxStorageGB,
-            trialDays: billingPlan.trialDays,
-            permissions: billingPlan.permissions,
-          }
+          id: billingPlan._id,
+          name: billingPlan.name,
+          price: billingPlan.price,
+          features: billingPlan.features,
+          maxUsers: billingPlan.maxUsers,
+          billingCycle: billingPlan.billingCycle,
+          maxStorageGB: billingPlan.maxStorageGB,
+          trialDays: billingPlan.trialDays,
+          permissions: billingPlan.permissions,
+        }
         : null;
     }
 
@@ -629,23 +630,26 @@ export const UpdateOrganizationUser = async (req, res) => {
       overridePermissions.length > 0
     ) {
       updates.permissionsOverride = overridePermissions;
+
       updates.hasCustomPermission = true;
     }
 
     // ✅ 5. Apply updates and save
     Object.assign(member, updates);
     await member.save();
-    const formateddata={
-      memberId:member._id,
-      role:member.role?.role,
-     permission:member.overridePermissions?.length>0?member.overridePermissions:member.role?.permissions,
-      hasCustomPermission:member.hasCustomPermission
+    const permission = member.hasCustomPermission ? member.permissionsOverride : member.permissions
+    console.log(member)
+    const formateddata = {
+      memberId: member._id,
+      role: member.role?.role,
+
+      permissions: permission,
+      hasCustomPermission: member.hasCustomPermission
     }
 
     return res.status(200).json({
-      message: `Member role ${
-        isRoleChanged ? "updated" : "retained"
-      } as '${Role}' ${!isRoleChanged ? "with custom permissions" : ""}`,
+      message: `Member role ${isRoleChanged ? "updated" : "retained"
+        } as '${Role}' ${!isRoleChanged ? "with custom permissions" : ""}`,
       formateddata,
     });
   } catch (error) {

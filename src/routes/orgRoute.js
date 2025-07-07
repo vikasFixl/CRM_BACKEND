@@ -86,7 +86,7 @@ Router.route("/:id").get(
 // return all organizations for a user
 Router.route("/all").get(isAuthenticated, getUserOrganizations);
 // return all users in an organization
-Router.route("/users").get(
+Router.route("/users/all").get(
   isAuthenticated,
   authenticateOrgToken(),
   checkPermission("organization", "VIEW_ORG_USER"),
