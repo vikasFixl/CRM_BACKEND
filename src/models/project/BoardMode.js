@@ -1,25 +1,4 @@
-/**
- * Organization
-  └── Workspace
-        └── Project
-              ├── Board (many per project)
-              │     ├── Displays Task (filtered by board.filter_query)
-              │     ├── Can be Kanban or Scrum type
-              │     └── Can show Sprints (if scrum)
-              └── Task (linked by projectId, and optionally by sprintId or epicId)
 
-              {
-  "project_id": "665b12fa78d...",
-  "name": "Sprint 14 Board",
-  "type": "scrum",
-  "filter_query": "{ sprintId: ObjectId('665b...'), status: { $ne: 'Done' } }"
-}
-  🧩 Summary
-Feature	Jira Support	Your System Should Support
-Multiple Boards per Project	✅ Yes	✅ Yes
-Boards filtered by task criteria	✅ Yes	✅ Yes (filter_query)
-Mixed board types in 1 project	✅ Yes	✅ Yes (Kanban + Scrum)
- */
 import mongoose from "mongoose";
 
 const BoardSchema = new mongoose.Schema(
@@ -76,6 +55,11 @@ const BoardSchema = new mongoose.Schema(
         },
       },
     ],
+    workflow: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Workflow",
+      required:true
+    },
     isDeleted: {
       type: Boolean,
       default: false,

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { generateTaskCode } from "../../utils/helperfuntions/generateInviteCode.js";
 
+
 const TaskSchema = new mongoose.Schema(
   {
     projectId: {
@@ -9,9 +10,10 @@ const TaskSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    key: {
+    taskCode: {
       type: String,
       required: true,
+         default: generateTaskCode,
     },
     summary: {
       type: String,
@@ -120,45 +122,9 @@ TaskSchema.index({ assigneeId: 1 });
 TaskSchema.index({ epicId: 1 });
 TaskSchema.index({ parentId: 1 });
 
+TaskSchema.methods.generateTaskCode = async function () {
+  this.taskCode = generateTaskCode();
+  return this.save();
+};
 export const Task = mongoose.models.Task || mongoose.model("Task", TaskSchema);
 
-// // In controller/service
-// const project = await Project.findById(projectId);
-// const count = await Task.countDocuments({ projectId });
-
-// const key = `${project.key}-${count + 1}`;
-
-/**✅ Solution: Use a Flag in the Request
-Request payload to create task
-json
-Copy
-Edit
-{
-  "projectId": "proj123",
-  "summary": "Refactor authentication",
-  "type": "task"
-}
-Request payload to create subtask
-json
-Copy
-Edit
-{
-  "projectId": "proj123",
-  "summary": "Implement login form",
-  "type": "task",
-  "parentId": "task123"
-}
-✅ Backend logic
-js
-Copy
-Edit
-if (req.body.parentId) {
-  // Treat as subtask
-  const parentTask = await Task.findById(req.body.parentId);
-  if (!parentTask) return res.status(400).send("Invalid parent task");
-}
-
- * 
- * 
- * 
- */

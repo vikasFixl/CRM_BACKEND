@@ -25,39 +25,40 @@ const WorkflowSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
     },
-
     states: [
       {
-        key: { type: String, required: true, trim: true },      // system key (e.g., "todo")
-        name: { type: String, required: true, trim: true },     // display label (e.g., "To Do")
-        category: { type: String, trim: true },                 // optional: "backlog", "inprogress", etc.
-        color: { type: String, default: "#8e8e8e" },            // UI color
-        isDefault: { type: Boolean, default: false },           // initial state
-        order: { type: Number, default: 0 },                    // display order
-        onEnter: mongoose.Schema.Types.Mixed,                   // optional hook
-        onExit: mongoose.Schema.Types.Mixed,
+        key: { type: String, required: true, trim: true },
+        name: { type: String, required: true, trim: true },
+        category: { type: String, trim: true },
+        color: { type: String, default: "#8e8e8e" },
+        isDefault: { type: Boolean, default: false },
+        order: { type: Number, default: 0 },
       },
     ],
+   transitions: [
+  {
+    fromKey: { type: String, required: true },           // system key (e.g., "todo")
+    toKey: { type: String, required: true },             // system key (e.g., "inprogress")
 
-    transitions: [
-      {
-        from: { type: String, required: true },
-        to: { type: String, required: true },
-        label: { type: String },
-        requiresApproval: { type: Boolean, default: false },
-        conditions: mongoose.Schema.Types.Mixed,
-        actions: mongoose.Schema.Types.Mixed,
-      },
-    ],
+    fromOrder: { type: Number },                         // optional: index of source column
+    toOrder: { type: Number },                           // optional: index of target column
 
-    isDefaultWorkflow: { type: Boolean, default: false },       // reusable template flag
+    label: { type: String },                             // transition name (e.g., "Start Progress")
+    requiresApproval: { type: Boolean, default: false }, // manual approval before transitioning
+  },
+],
+
+    isDefaultWorkflow: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   { timestamps: true }
 );
 
-// ✅ At least one of projectId or teamId must be present
+// Ensure either projectId or teamId is provided
 WorkflowSchema.pre("validate", function (next) {
   if (!this.projectId && !this.teamId) {
     return next(new Error("Either projectId or teamId must be set."));
@@ -65,7 +66,7 @@ WorkflowSchema.pre("validate", function (next) {
   next();
 });
 
-// ✅ Unique name within project or team (if provided)
+// Ensure unique workflow name per project or team
 WorkflowSchema.index({ projectId: 1, teamId: 1, name: 1 }, { unique: true, sparse: true });
 
 export const Workflow = mongoose.model("Workflow", WorkflowSchema);

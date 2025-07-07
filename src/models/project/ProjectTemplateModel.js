@@ -27,16 +27,20 @@ const StateSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// 🔁 Transition schema
 const TransitionSchema = new mongoose.Schema(
   {
-    from: { type: String, required: true }, // state key
-    to: { type: String, required: true }, // state key
+    fromKey: { type: String, required: true }, // state key
+    toKey: { type: String, required: true },   // state key
+    fromOrder: { type: Number },               // index in states array
+    toOrder: { type: Number },
+    label: { type: String },
+    requiresApproval: { type: Boolean, default: false },
     conditions: mongoose.Schema.Types.Mixed,
     actions: mongoose.Schema.Types.Mixed,
   },
   { _id: false }
 );
+
 
 // ⚙️ Automation rule schema
 const AutomationRuleSchema = new mongoose.Schema(
@@ -131,7 +135,7 @@ const ProjectTemplateSchema = new mongoose.Schema(
       type: [IssueTypeSchema],
       default: [],
     },
-    task:[TaskTemplateSchema],
+    task: [TaskTemplateSchema],
 
     previewImage: { type: String }, // Optional preview image
     category: { type: String }, // e.g., "engineering", "qa"
