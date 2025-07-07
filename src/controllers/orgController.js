@@ -15,6 +15,7 @@ import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { ROLES } from "../enums/role.enums.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 import { paginateQuery } from "../utils/pagination.js";
+
 // import Employee from "../models/employeeModel.js";
 
 const generateEmployeeId = () => {
@@ -574,7 +575,7 @@ export const UpdateOrganizationUser = async (req, res) => {
     const member = await OrgMember.findOne({
       _id: memberId,
       organizationId: orgId,
-    }).populate("role", "role");
+    }).populate("role", "role permissions");
     if (!member) {
       return res.status(404).json({ message: "User is not part of org " });
     }
@@ -634,12 +635,18 @@ export const UpdateOrganizationUser = async (req, res) => {
     // ✅ 5. Apply updates and save
     Object.assign(member, updates);
     await member.save();
+    const formateddata={
+      memberId:member._id,
+      role:member.role?.role,
+     permission:member.overridePermissions?.length>0?member.overridePermissions:member.role?.permissions,
+      hasCustomPermission:member.hasCustomPermission
+    }
 
     return res.status(200).json({
       message: `Member role ${
         isRoleChanged ? "updated" : "retained"
       } as '${Role}' ${!isRoleChanged ? "with custom permissions" : ""}`,
-      member,
+      formateddata,
     });
   } catch (error) {
     console.error("UpdateOrganizationUser error:", error);

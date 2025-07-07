@@ -81,13 +81,12 @@ Router.route("/declineInvite/:token").post(lightLimiter, declineInvite);
 Router.route("/").post(isAuthenticated, createOrganization);
 Router.route("/:id").get(
   isAuthenticated,
-
   getOrganizationBYId
 );
 // return all organizations for a user
-Router.route("/user/all").get(isAuthenticated, getUserOrganizations);
+Router.route("/all").get(isAuthenticated, getUserOrganizations);
 // return all users in an organization
-Router.route("/org/users").get(
+Router.route("/users").get(
   isAuthenticated,
   authenticateOrgToken(),
   checkPermission("organization", "VIEW_ORG_USER"),
