@@ -61,7 +61,7 @@ export const checkPermission = (moduleName, actionName) => {
           .json({ error: "User not part of this organization" });
       }
 
-      console.log("member", member);
+      // console.log("member", member);
       let permissions = [];
 
       // Use custom override if it exists
@@ -70,9 +70,9 @@ export const checkPermission = (moduleName, actionName) => {
       } else if (member.role && member.role.permissions) {
         permissions = member.role.permissions;
       }
-      console.log("permissions", member.role?.permissions);
+      // console.log("permissions", member.role?.permissions);
       const modulePerm = permissions.find((perm) => perm.module === moduleName);
-      console.log("modulePerm", modulePerm);
+      // console.log("modulePerm", modulePerm);
 
       if (!modulePerm || !modulePerm.actions.includes(actionName)) {
         return res

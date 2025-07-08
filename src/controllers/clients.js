@@ -9,18 +9,23 @@ import { paginateQuery } from "../utils/pagination.js";
 
 export const createClient = async (req, res) => {
   try {
-    const orgId = req.orgUser.orgId;
-    const userId = req.user.userId;
-    const empid = req.orgUser.employeeId;
-    const loggedinuserEmail = req.user.email;
-    const client = clientSchema.safeParse(req.body);
-    if (!client.success) {
+    // Extract required data from request
+    const { orgId, employeeId: empid } = req.orgUser;
+    const { userId, email: loggedinuserEmail } = req.user;
+
+    // Validate client data
+    const clientValidation = clientSchema.safeParse(req.body);
+    if (!clientValidation.success) {
       return res.status(400).json({
         message: "Validation error",
-        errors: client.error.errors.map((e) => e.message),
+        errors: clientValidation.error.errors.map((e) => e.message),
+        code: 400,
+        success: false
       });
     }
-    const {
+
+    const clientData = clientValidation.data;
+    const { 
       clientFirmName,
       firstName,
       lastName,
@@ -29,90 +34,87 @@ export const createClient = async (req, res) => {
       phone,
       address,
       contactPerson,
-
       taxId,
       tinNo,
       cinNo,
+      firmId
+    } = clientData;
 
-      firmId,
-    } = client.data;
 
-    const existingcleint = await ClientModel.findOne({
-      $or: [
-        { taxId,},
-        { tinNo },
-        { cinNo},
-      ],
+    // Check for existing client with same identifiers
+    const queryConditions = [];
+    if (taxId) queryConditions.push({ taxId });
+    if (tinNo) queryConditions.push({ tinNo });
+    if (cinNo) queryConditions.push({ cinNo });
+
+    if (queryConditions.length > 0) {
+      const existingClient = await ClientModel.findOne({ $or: queryConditions });
+      
+      if (existingClient) {
+        const duplicateFields = [];
+        if (existingClient.taxId === taxId) duplicateFields.push("Tax ID");
+        if (existingClient.tinNo === tinNo) duplicateFields.push("TIN number");
+        if (existingClient.cinNo === cinNo) duplicateFields.push("CIN number");
+
+        return res.status(400).json({
+          message: `${duplicateFields.join(", ")} already exist${duplicateFields.length > 1 ? "" : "s"}.`,
+          code: 400,
+          success: false
+        });
+      }
+    }
+
+    // Check for existing email
+    const existingEmailClient = await ClientModel.findOne({ email });
+    if (existingEmailClient) {
+      return res.status(400).json({
+        message: `Client already registered with ${email}.`,
+        code: 400,
+        success: false
+      });
+    }
+
+    // Create new client
+    const newClient = await ClientModel.create({
+      clientFirmName,
+      firstName,
+      lastName,
+      website,
+      email,
+      phone,
+      address,
+      contactPerson,
+      taxId,
+      tinNo,
+      cinNo,
+      orgId,
+      firmId
     });
 
-    // Check which field is duplicated
-    if (existingcleint) {
-      let duplicateFields = [];
+    // Log activity
+    await ActivityModel.create({
+      activityDesc: `Client created by ${loggedinuserEmail} with empid ${empid}`,
+      userId,
+      orgId,
+      activity: "create",
+      module: "client",
+      entityId: newClient._id
+    });
 
-      if (existingcleint.taxId === taxId) {
-        duplicateFields.push("Tax ID ");
-      }
+    return res.status(201).json({
+      code: 201,
+      success: true,
+      message: "Client created successfully!",
+      data: newClient
+    });
 
-      if (existingcleint.tinNo === tinNo) {
-        duplicateFields.push("TIN number");
-      }
-
-      if (existingcleint.cinNo === cinNo) {
-        duplicateFields.push("CIN number");
-      }
-
-      return res.status(400).json({
-        message: `${duplicateFields.join(", ")} already exist${
-          duplicateFields.length > 1 ? "" : "s"
-        }.`,
-      });
-    }
-    const data = await ClientModel.findOne({ email });
-
-    if (data) {
-      res.status(400).json({
-        code: 400,
-        success: false,
-        message: `Client already registered with ${email}.`,
-      });
-    } else {
-      const newClient = new ClientModel({
-        clientFirmName,
-        firstName,
-        lastName,
-        website,
-        email,
-        phone,
-        address,
-        contactPerson,
-        taxId,
-        tinNo,
-        cinNo,
-        orgId,
-        firmId,
-      });
-      await newClient.save();
-      const activity = new ActivityModel({
-        activityDesc: `Client created by ${loggedinuserEmail} with empid ${empid}`,
-        userId,
-        orgId,
-        activity: "create",
-        module: "client",
-        entityId: newClient._id,
-      });
-      await activity.save();
-      res.status(201).json({
-        code: 201,
-        success: true,
-        message: "Client created successfully!",
-      });
-    }
-  } catch (err) {
-    console.log(err);
-    res.status(400).json({
-      message: err,
-      code: 400,
+  } catch (error) {
+    console.error("Error creating client:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      code: 500,
       success: false,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -184,11 +186,11 @@ export const updateClient = async (req, res) => {
     }
 
     const clientData = parsed.data;
-     const existingcleint = await ClientModel.findOne({
+    const existingcleint = await ClientModel.findOne({
       $or: [
-        { taxId:clientData.taxId,},
-        { tinNo:clientData.tinNo },
-        { cinNo:clientData.cinNo},
+        { taxId: clientData.taxId, },
+        { tinNo: clientData.tinNo },
+        { cinNo: clientData.cinNo },
       ],
     });
 
@@ -200,7 +202,7 @@ export const updateClient = async (req, res) => {
         duplicateFields.push("Tax ID ");
       }
 
-      if (existingcleint.tinNo ===clientData.tinNo) {
+      if (existingcleint.tinNo === clientData.tinNo) {
         duplicateFields.push("TIN number");
       }
 
@@ -209,9 +211,8 @@ export const updateClient = async (req, res) => {
       }
 
       return res.status(400).json({
-        message: `${duplicateFields.join(", ")} already exist${
-          duplicateFields.length > 1 ? "" : "s"
-        }.`,
+        message: `${duplicateFields.join(", ")} already exist${duplicateFields.length > 1 ? "" : "s"
+          }.`,
       });
     }
 
