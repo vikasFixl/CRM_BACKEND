@@ -19,12 +19,12 @@ import User from "../../models/userModel.js";
 
 export const createProject = async (req, res) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
     const userId = req.user.userId;
     const orgId = req.orgUser.orgId;
     const { workspaceId } = req.params;
+
     const parsed = createProjectSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({
@@ -32,62 +32,29 @@ export const createProject = async (req, res) => {
         errors: parsed.error.errors.map((e) => e.message),
       });
     }
+
     const { name, templateId, description, visibility } = parsed.data;
 
-    // 🔍 Validate input
     if (!workspaceId || !mongoose.Types.ObjectId.isValid(workspaceId)) {
-      return res
-        .status(400)
-        .json({ message: "Invalid workspace ID", code: 400 });
-    }
-    if (!name || !templateId) {
-      return res
-        .status(400)
-        .json({ message: "Project name and template are required" });
+      return res.status(400).json({ message: "Invalid workspace ID" });
     }
 
-    // 🔍 Validate template & workspace
-    const [template, workspace] = await Promise.all([
-      ProjectTemplate.findById(templateId),
-      Workspace.findById(workspaceId),
+    if (!name || !templateId) {
+      return res.status(400).json({ message: "Project name and template are required" });
+    }
+
+    const [template, workspace, existingProject] = await Promise.all([
+      ProjectTemplate.findById(templateId).session(session),
+      Workspace.findById(workspaceId).session(session),
+      Project.findOne({ name, workspace: workspaceId }).session(session),
     ]);
 
-    if (!template)
-      return res.status(404).json({ message: "Project template not found" });
-    if (!workspace)
-      return res.status(404).json({ message: "Workspace not found" });
+    if (!template) return res.status(404).json({ message: "Project template not found" });
+    if (!workspace) return res.status(404).json({ message: "Workspace not found" });
+    if (existingProject) return res.status(400).json({ message: "Project name already taken" });
 
-    // 🔍 Check duplicate project name
-    const existingProject = await Project.findOne({
-      name,
-      workspace: workspace._id,
-    });
-    if (existingProject) {
-      return res.status(400).json({ message: "Project name already taken" });
-    }
-
-    // ✅ Create Project
-    const [project] = await Project.create(
-      [
-        {
-          name,
-          description: description || template.description || "",
-          workspace: workspace._id,
-          templateId: template._id,
-          organization: orgId,
-          visibility: visibility,
-          type: template.boardType,
-          createdBy: userId,
-        },
-      ],
-      { session }
-    );
-
-    // ✅ Create Board Columns from Template Workflow
     if (!template.workflow?.states?.every((s) => s.key)) {
-      return res
-        .status(400)
-        .json({ message: "Each workflow state must have a `key`" });
+      return res.status(400).json({ message: "Each workflow state must have a `key`" });
     }
 
     const boardColumns = template.workflow.states.map((state, index) => ({
@@ -96,123 +63,102 @@ export const createProject = async (req, res) => {
       key: state.key.toLowerCase().trim(),
     }));
 
-    const [board] = await Board.create(
-      [
-        {
-          projectId: project._id,
-          name: `${name} Board`,
-          type: template.boardType,
-          isProjectDefault: true,
-          columns: boardColumns,
-        },
-      ],
-      { session }
-    );
+    const ownerRole = await RolePermission.findOne({ role: "ProjectAdmin" }).session(session);
+    if (!ownerRole) return res.status(404).json({ message: "Owner role not found" });
+
+    // Main creation flow
+    const [project] = await Project.create([{
+      name,
+      description: description || template.description || "",
+      workspace: workspace._id,
+      templateId: template._id,
+      organization: orgId,
+      visibility,
+      type: template.boardType,
+      createdBy: userId,
+    }], { session });
+
+    const [workflow] = await Workflow.create([{
+      projectId: project._id,
+      name: `${name} Workflow`,
+      states: template.workflow?.states,
+      transitions: template.workflow?.transitions,
+      createdBy: userId,
+    }], { session });
+
+    const [board] = await Board.create([{
+      projectId: project._id,
+      name: `${name} Board`,
+      type: template.boardType,
+      isProjectDefault: true,
+      columns: boardColumns,
+      workflow: workflow._id,
+      createdBy:req.user.userId
+    }], { session });
+
     project.boardId = board._id;
     await project.save({ session });
-    // ✅ Create Workflow
-    await Workflow.create(
-      [
-        {
-          projectId: project._id,
-          name: `${name} Workflow`,
-          states: template.workflow.states,
-          transitions: template.workflow.transitions || [],
-        },
-      ],
-      { session }
-    );
 
-    // ✅ Create Automation Rules
-    if (
-      Array.isArray(template.automationRules) &&
-      template.automationRules.length
-    ) {
+    if (template.automationRules?.length > 0) {
       const rules = template.automationRules.map((rule) => ({
         projectId: project._id,
-        name: rule.name,
-        description: rule.description,
-        trigger: rule.trigger,
-        conditions: rule.conditions,
-        actions: rule.actions,
+        ...rule,
       }));
       await AutomationRule.insertMany(rules, { session });
     }
 
-    // find project owner role
-    const ownerRole = await RolePermission.findOne({ role: "ProjectOwner" });
-    if (!ownerRole) {
-      return res.status(404).json({ message: "Owner role not found" });
-    }
-    // ✅ Add User as Project Member
-    await ProjectMember.create(
-      [
-        {
-          projectId: project._id,
-          userId,
-          role: ownerRole._id,
-          addedBy: userId,
-        },
-      ],
-      { session }
-    );
+    await ProjectMember.create([{
+      projectId: project._id,
+      userId,
+      role: ownerRole._id,
+      addedBy: userId,
+    }], { session });
 
-    // ✅ Add Audit Log
-    await AuditLog.create(
-      [
-        {
-          projectId: project._id,
-          userId,
-          action: "CREATE_PROJECT",
-          description: `Project '${name}' created with template '${template.name}'`,
-        },
-      ],
-      { session }
-    );
+    await AuditLog.create([{
+      projectId: project._id,
+      userId,
+      action: "CREATE_PROJECT",
+      description: `Project '${name}' created with template '${template.name}'`,
+    }], { session });
 
-    // ✅ Generate Sample Tasks
-    const generateKey = async (projectId) => {
-      const count = await Task.countDocuments({ projectId });
-      return `${project.slug}-task-${count + 1}`;
-    };
-
-    if (Array.isArray(template.task)) {
-      const taskDocs = await Promise.all(
-        template.task.map(async (taskTemplate) => ({
-          projectId: project._id,
-          key: await generateKey(project._id),
-          summary: taskTemplate.summary,
-          description: taskTemplate.description,
-          type: taskTemplate.type,
-          status: taskTemplate.status,
-          columnOrder: taskTemplate.columnOrder,
-          priority: taskTemplate.priority,
-          labels: taskTemplate.labels,
-          createdBy: userId,
-        }))
-      );
-
+    if (template.task?.length > 0) {
+      const taskDocs = template.task.map((taskTemplate) => ({
+        projectId: project._id,
+        summary: taskTemplate.summary,
+        description: taskTemplate.description,
+        type: taskTemplate.type,
+        status: taskTemplate.status,
+        columnOrder: taskTemplate.columnOrder,
+        priority: taskTemplate.priority,
+        labels: taskTemplate.labels,
+        createdBy: userId,
+      }));
       await Task.insertMany(taskDocs, { session });
     }
 
-    // ✅ Commit
-    await session.commitTransaction();
-    session.endSession();
+    await session.endSession();
 
     return res.status(201).json({
       message: "Project created successfully",
-      project,
+      project: {
+        ...project.toObject(),
+        workflowId: workflow._id,
+        boardId: board._id,
+      },
     });
+
   } catch (error) {
     console.error("Error in createProject:", error);
-    await session.abortTransaction();
-    session.endSession();
-    return res.status(500).json({
-      message: "Failed to create project",
-      error: error.message,
+    await session.endSession();
+
+    return res.status(error?.status || 500).json({
+      message: error?.message || "Internal Server Error",
+      ...(error.errors ? { errors: error.errors } : {}),
     });
   }
 };
+
+
 
 export const updateProject = async (req, res) => {
   try {
@@ -360,9 +306,10 @@ export const getProjectById = async (req, res) => {
       .select("userId role")
       .lean();
 
+      console.log("project member",members)
     const uniqueMembersMap = new Map();
     for (const member of members) {
-      uniqueMembersMap.set(member.userId._id.toString(), member); // prevent duplicates
+      uniqueMembersMap.set(member.userId?._id.toString(), member); // prevent duplicates
     }
     const uniqueMembers = Array.from(uniqueMembersMap.values());
 

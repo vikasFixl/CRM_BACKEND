@@ -9,9 +9,10 @@ const TaskSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    key: {
+    taskCode: {
       type: String,
       required: true,
+      default: generateTaskCode,
     },
     summary: {
       type: String,
@@ -26,7 +27,7 @@ const TaskSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["task", "bug", "story", "epic", "spike"], // ❌ subtask removed
+      enum: ["task", "bug", "story", "epic", "spike"],
       required: true,
     },
     columnOrder: {
@@ -45,12 +46,10 @@ const TaskSchema = new mongoose.Schema(
 
     // Assignment
     assigneeId: {
-      // The person responsible for completing the task.
       type: mongoose.Schema.Types.ObjectId,
       ref: "ProjectMember",
     },
     createdBy: {
-      //The person who created or reported the task/issue.
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
@@ -66,35 +65,30 @@ const TaskSchema = new mongoose.Schema(
     },
     epicId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Epic", // <-- FIXED
+      ref: "Epic",
     },
-
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Task", // Self-reference for subtasks
+      ref: "Task",
+    },
+    boardId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Board",
     },
 
     // Dates
     startDate: {
       type: Date,
-      default: Date.now(),
+      default: Date.now,
     },
-    dueDate: {
-      type: Date,
-    },
-    completedAt: {
-      type: Date,
-    },
+    dueDate: Date,
+    completedAt: Date,
 
-    // Estimation // complexity of task
+    // Estimation
     storyPoints: {
       type: Number,
       enum: [1, 2, 3, 5, 8, 13, 21],
       default: 1,
-    },
-    boardId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Board",
     },
 
     // Metadata
@@ -103,10 +97,16 @@ const TaskSchema = new mongoose.Schema(
     attachments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Attachment" }],
     customFields: mongoose.Schema.Types.Mixed,
 
-    // Flags
+    // Soft Delete
     isDeleted: {
       type: Boolean,
       default: false,
+      index: true,
+      select: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
       select: false,
     },
   },
@@ -119,46 +119,12 @@ TaskSchema.index({ projectId: 1, sprintId: 1 });
 TaskSchema.index({ assigneeId: 1 });
 TaskSchema.index({ epicId: 1 });
 TaskSchema.index({ parentId: 1 });
+TaskSchema.index({ deletedAt: 1 }); // for cleanup automation
+
+// ✅ Task Code Generator
+TaskSchema.methods.generateTaskCode = async function () {
+  this.taskCode = generateTaskCode();
+  return this.save();
+};
 
 export const Task = mongoose.models.Task || mongoose.model("Task", TaskSchema);
-
-// // In controller/service
-// const project = await Project.findById(projectId);
-// const count = await Task.countDocuments({ projectId });
-
-// const key = `${project.key}-${count + 1}`;
-
-/**✅ Solution: Use a Flag in the Request
-Request payload to create task
-json
-Copy
-Edit
-{
-  "projectId": "proj123",
-  "summary": "Refactor authentication",
-  "type": "task"
-}
-Request payload to create subtask
-json
-Copy
-Edit
-{
-  "projectId": "proj123",
-  "summary": "Implement login form",
-  "type": "task",
-  "parentId": "task123"
-}
-✅ Backend logic
-js
-Copy
-Edit
-if (req.body.parentId) {
-  // Treat as subtask
-  const parentTask = await Task.findById(req.body.parentId);
-  if (!parentTask) return res.status(400).send("Invalid parent task");
-}
-
- * 
- * 
- * 
- */

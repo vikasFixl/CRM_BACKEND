@@ -7,6 +7,7 @@ import {
   createTaskSchema,
   updateTaskSchema,
 } from "../../validations/task/taskvalidation.js";
+import { AuditLog } from "../../models/project/auditLogModel.js";
 
 export const createTask = async (req, res) => {
   try {
@@ -83,14 +84,11 @@ export const createTask = async (req, res) => {
       });
     }
 
-    // 7. Generate task key
-    const count = await Task.countDocuments({ projectId });
-    const key = `task-${count + 1}`;
+
 
     // 8. Create task
     const task = new Task({
       projectId,
-      key,
       summary,
       description,
       type,
@@ -104,6 +102,7 @@ export const createTask = async (req, res) => {
       parentId,
       columnOrder: column.order,
       columnId: column._id,
+      boardId: board._id,
       dueDate,
       storyPoints,
       labels,
@@ -128,7 +127,7 @@ export const createTask = async (req, res) => {
 
 export const getAllTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ projectId: req.params.projectId });
+    const tasks = await Task.find({ projectId: req.params.projectId, isDeleted: false });
     return res
       .status(200)
       .json({ tasks, message: "Tasks fetched successfully" });
@@ -138,42 +137,65 @@ export const getAllTasks = async (req, res) => {
   }
 };
 export const deleteTask = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { projectId, taskId } = req.params;
+    const userId = req.user.userId;
 
     if (!projectId || !taskId) {
-      return res
-        .status(400)
-        .json({ message: "Project ID and Task ID are required" });
+      return res.status(400).json({ message: "Project ID and Task ID are required" });
     }
 
-    const project = await Project.findOne({ _id: projectId });
+    if (!mongoose.Types.ObjectId.isValid(projectId) || !mongoose.Types.ObjectId.isValid(taskId)) {
+      return res.status(400).json({ message: "Invalid Project ID or Task ID" });
+    }
+
+    const project = await Project.findOne({ _id: projectId, isDeleted: false }).session(session);
     if (!project) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Project does not exist" });
     }
 
-    const task = await Task.findOne({ _id: taskId, projectId });
-
+    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false }).session(session);
     if (!task) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // 🔁 Recursive deletion of all nested subtasks
-    await Task.deleteMany({ parentId: task._id });
+    // 🔁 Soft delete all subtasks recursively
+    await Task.updateMany(
+      { parentId: task._id, isDeleted: false },
+      { $set: { isDeleted: true, deletedBy: userId, deletedAt: new Date() } },
+      { session }
+    );
 
-    // 🗑️ Delete the task
-    await Task.deleteOne({ _id: task._id });
+    // 🗑️ Soft delete the main task
+    task.isDeleted = true;
+    task.deletedBy = userId;
+    task.deletedAt = new Date();
+    await task.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     return res.status(200).json({
-      message: "Task and all its subtasks deleted successfully",
+      message: "Task and its subtasks soft deleted successfully",
       success: true,
       code: 200,
     });
+
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error deleting task:", error);
     return res.status(500).json({ message: "Internal server error", error });
   }
 };
+
 
 export const GetAllSubTasks = async (req, res) => {
   const taskId = req.params.taskId;
@@ -185,7 +207,7 @@ export const GetAllSubTasks = async (req, res) => {
       .json({ message: "Task ID and Project ID are required" });
   }
   try {
-    const tasks = await Task.find({ parentId: taskId, projectId });
+    const tasks = await Task.find({ parentId: taskId, projectId, isDeleted: false });
     if (!tasks) {
       return res.status(404).json({ message: "Subtasks not found", data: [] });
     }
@@ -208,7 +230,7 @@ export const getTaskById = async (req, res) => {
         .status(400)
         .json({ message: "Task ID and Project ID are required" });
     }
-    const task = await Task.findOne({ _id: taskId, projectId }).populate(
+    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false }).populate(
       "assigneeId"
     );
     if (!task) {
@@ -222,98 +244,313 @@ export const getTaskById = async (req, res) => {
 };
 
 export const updateTask = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { taskId, projectId } = req.params;
+    const userId = req.user.userId;
 
-    // Validate IDs first
+    // Validate IDs
     if (!taskId || !projectId) {
-      return res
-        .status(400)
-        .json({ message: "Task ID and Project ID are required" });
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: "Task ID and Project ID are required" });
     }
 
-    if (
-      !mongoose.Types.ObjectId.isValid(taskId) ||
-      !mongoose.Types.ObjectId.isValid(projectId)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(taskId) || !mongoose.Types.ObjectId.isValid(projectId)) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ message: "Invalid Task ID or Project ID" });
     }
 
-    // Validate body
+    // Validate request body
     const parsed = updateTaskSchema.safeParse(req.body);
     if (!parsed.success) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         message: "Validation error",
         errors: parsed.error.errors.map((e) => e.message),
       });
     }
 
-    // Update task
-    const updatedTask = await Task.findOneAndUpdate(
-      { _id: taskId, projectId },
-      { $set: parsed.data },
-      { new: true }
-    );
+    const { status, ...updateData } = parsed.data;
 
-    if (!updatedTask) {
+    // Fetch task with populated board and workflow (inside board) 
+    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false })
+      .populate({
+        path: 'boardId',
+        populate: {
+          path: 'workflow',
+          model: 'Workflow'
+        }
+      })
+      .session(session);
+
+    if (!task) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Task not found" });
     }
 
-    res
-      .status(200)
-      .json({ message: "Task updated successfully", task: updatedTask });
+    // Handle status update if present in request
+    if (status !== undefined) {
+      if (!task.boardId) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({ message: "Task is not associated with a board" });
+      }
+
+      // Validate status against board columns
+      const targetColumn = task.boardId.columns.find(col => col.key === status);
+      if (!targetColumn) {
+        const allowedStatuses = task.boardId.columns.map(c => c.key);
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          message: `Invalid status. Allowed values: ${allowedStatuses.join(', ')}`,
+          allowedStatuses
+        });
+      }
+
+      // Check workflow transitions if status is changing
+      if (task.status !== status) {
+        const currentColumn = task.boardId.columns.find(col => col.key === task.status);
+
+        // Only validate transition if we're coming from a valid state
+        if (currentColumn) {
+          // Safely check for workflow and transitions
+          if (!task.boardId.workflow?.transitions) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({
+              message: "Workflow transitions not defined for this board"
+            });
+          }
+
+          const isTransitionAllowed = task.boardId.workflow.transitions.some(
+            transition =>
+              transition.fromOrder === currentColumn.order &&
+              transition.toOrder === targetColumn.order
+          );
+
+          if (!isTransitionAllowed) {
+            const allowedTransitions = task.boardId.workflow.transitions
+              .filter(t => t.fromOrder === currentColumn.order)
+              .map(t => ({
+                to: task.boardId.columns.find(c => c.order === t.toOrder)?.key,
+                name: t.name
+              }));
+
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({
+              message: `Transition from '${task.status}' to '${status}' is not allowed`,
+              currentStatus: task.status,
+              allowedTransitions
+            });
+          }
+        }
+
+        // Update history if status changed
+        updateData.history = [
+          ...(task.history || []),
+          {
+            changedBy: userId,
+            changedAt: new Date(),
+            fromStatus: task.status,
+            toStatus: status,
+            description: `Status changed via update`
+          }
+        ];
+
+        // Update both status and column order
+        updateData.status = status;
+        updateData.columnOrder = targetColumn.order;
+      }
+    }
+
+    // Perform the update
+    const updatedTask = await Task.findOneAndUpdate(
+      { _id: taskId, projectId },
+      { $set: updateData },
+      { new: true, session }
+    );
+
+    // Create audit log
+    if (Object.keys(updateData).length > 0) {
+      await AuditLog.create([{
+        taskId: updatedTask._id,
+        projectId: updatedTask.projectId,
+        userId: userId,
+        action: "TASK_UPDATED",
+        description: `Task ${status !== undefined ? 'status and ' : ''}fields updated`,
+        metadata: {
+          updatedFields: Object.keys(updateData),
+          ...(status !== undefined && {
+            statusChange: {
+              from: task.status,
+              to: status
+            }
+          })
+        }
+      }], { session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      message: "Task updated successfully",
+      task: updatedTask,
+      ...(status !== undefined && {
+        statusTransition: {
+          from: task.status,
+          to: status,
+          valid: true
+        }
+      })
+    });
+
   } catch (error) {
     console.error("Error in updateTask:", error);
-    res.status(500).json({ message: "Internal server error" });
+    await session.abortTransaction().catch(err => console.error('Abort transaction error:', err));
+    session.endSession().catch(err => console.error('Session end error:', err));
+    return res.status(500).json({
+      message: "Failed to update task",
+      error: error.message,
+      ...(error instanceof TypeError && error.message.includes('some') && {
+        hint: "Workflow transitions might not be properly defined"
+      })
+    });
   }
 };
 
+
 export const reorderTasks = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { boardId } = req.params;
-    const { taskId, order } = req.body;
+    const { taskId, from, to } = req.body;
 
     // Validate IDs
     if (
       !mongoose.Types.ObjectId.isValid(boardId) ||
       !mongoose.Types.ObjectId.isValid(taskId)
     ) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ message: "Invalid board or task ID" });
     }
 
-    // 1. Find the board
-    const board = await Board.findById(boardId);
+    // Fetch board with workflow
+    const board = await Board.findById(boardId)
+      .populate("workflow")
+      .session(session);
+
     if (!board) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Board not found" });
     }
-    console.log("board", board);
-    const col = board.columns.find((col) => col.order == order);
-    console.log("col", col);
 
-    // 2. Check if the column exists in the board
-    const column = board.columns.find((col) => col.order === order);
+    // Validate columns
+    const fromColumn = board.columns.find((col) => col.order === from);
+    const toColumn = board.columns.find((col) => col.order === to);
 
-    if (!column) {
+    if (!fromColumn || !toColumn) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
-        message: `Invalid column order: '${order}' not found in board`,
+        message: `Invalid column orders. from='${from}', to='${to}'`,
+        availableColumns: board.columns.map(c => ({ order: c.order, name: c.name }))
       });
     }
 
-    // 3. Update the task’s column and order
-    const task = await Task.findById(taskId);
+    // Find matching transition
+    const transition = board.workflow.transitions.find(
+      (t) => t.fromOrder === from && t.toOrder === to
+    );
+
+    if (!transition) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(403).json({
+        message: `Transition from '${fromColumn.name}' to '${toColumn.name}' is not allowed`,
+        allowedTransitions: board.workflow.transitions.map(t => ({
+          from: t.fromOrder,
+          to: t.toOrder,
+          name: t.name,
+          action: t.action
+        }))
+      });
+    }
+
+    // Find and update task
+    const task = await Task.findById(taskId).session(session);
     if (!task) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Task not found" });
     }
 
-    task.columnOrder = order; // the task should have this field
-    // must be maintained in schema
-    await task.save();
-    return res.status(200).json({ message: "Task moved successfully", task });
+    // Update task based on transition
+    task.columnOrder = to;
+    task.status = toColumn.key; // Using column key as status
+    task.history = task.history || [];
+    task.history.push({
+      changedBy: req.user.userId,
+      changedAt: new Date(),
+      fromStatus: fromColumn.key,
+      toStatus: toColumn.key,
+      transition: transition.name
+    });
+
+    await task.save({ session });
+
+    // Create audit log
+    await AuditLog.create([{
+      taskId: task._id,
+      projectId: task.projectId,
+      userId: req.user.userId,
+      action: "TASK_MOVED",
+      description: `Task moved via transition '${transition.name}' from '${fromColumn.name}' to '${toColumn.name}'`,
+      metadata: {
+        fromColumn: fromColumn.name,
+        toColumn: toColumn.name,
+        transition: transition.name
+      }
+    }], { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      message: `Task moved succesfully `,
+      task: {
+        id: task._id,
+        status: task.status,
+        columnOrder: task.columnOrder,
+        transition: transition.name
+      },
+      transition: {
+        name: transition.name,
+        action: transition.action,
+        fromState: fromColumn.name,
+        toState: toColumn.name
+      }
+    });
   } catch (error) {
     console.error("Error moving task:", error);
-    return res
-      .status(500)
-      .json({ message: "Failed to move task", error: error.message });
+    await session.abortTransaction().catch(() => { });
+    session.endSession().catch(() => { });
+    return res.status(500).json({
+      message: "Failed to move task",
+      error: error.message,
+    });
   }
 };
 
@@ -322,45 +559,61 @@ export const getTasksByBoardColumn = async (req, res) => {
     const { boardId } = req.body;
     const { projectId } = req.params;
 
+    // Validate inputs
     if (!projectId || !boardId) {
       return res.status(400).json({
         message: "Both projectId (params) and boardId (body) are required",
       });
     }
 
-    const board = await Board.findOne({ _id: boardId, projectId });
-    if (!board) {
-      return res
-        .status(404)
-        .json({ message: "No board found for the given project" });
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(projectId) || !mongoose.Types.ObjectId.isValid(boardId)) {
+      return res.status(400).json({ message: "Invalid projectId or boardId format" });
     }
 
-    const boardColumns = board.columns || [];
+    // Fetch board and tasks in parallel
+    const [board, tasks] = await Promise.all([
+      Board.findOne({ _id: boardId, projectId }).lean(),
+      Task.find({ boardId, isDeleted: false }).select("columnOrder summary _id status priority").lean()
+    ]);
 
-    const columnMap = {};
-    boardColumns.forEach((col) => {
-      columnMap[col.order] = {
+    if (!board) {
+      return res.status(404).json({ message: "Board not found for the given project" });
+    }
+
+    // Create column structure with empty task arrays
+    const columns = (board.columns || [])
+      .sort((a, b) => a.order - b.order)
+      .map(col => ({
+        id: col._id,
         name: col.name,
         order: col.order,
-        tasks: [],
-      };
-    });
+        key: col.key,
+        tasks: [] // Initialize empty task array
+      }));
 
-    const tasks = await Task.find({ boardId }).select("columnOrder summary");
+    // Create a lookup map for columns by order
+    const columnMap = new Map();
+    columns.forEach(col => columnMap.set(col.order, col));
 
-    tasks.forEach((task) => {
-      if (typeof task.columnOrder === "number" && columnMap[task.columnOrder]) {
-        columnMap[task.columnOrder].tasks.push(task);
+    // Group tasks by column
+    tasks.forEach(task => {
+      if (columnMap.has(task.columnOrder)) {
+        columnMap.get(task.columnOrder).tasks.push(task);
       }
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Tasks grouped by board columns",
-
-      columns: Object.values(columnMap).sort((a, b) => a.order - b.order),
+      columns,
+      totalTasks: tasks.length
     });
+
   } catch (error) {
     console.error("Error in getTasksByBoardColumn:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({
+      message: "Failed to fetch tasks",
+      error: error.message
+    });
   }
 };

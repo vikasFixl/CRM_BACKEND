@@ -17,6 +17,7 @@ export const createCustomRolePermission = async (req, res) => {
     const validModules = Object.values(MODULES);
     const validActions = Object.keys(PERMISSIONS);
 
+
     // Validate permissions (module + actions)
     for (const perm of permissions) {
       if (!validModules.includes(perm.module)) {
@@ -47,7 +48,7 @@ export const createCustomRolePermission = async (req, res) => {
     const existing = await RolePermission.findOne(query);
     if (existing) {
       return res.status(400).json({
-        message: "A role with this name already exists in this scope",
+        message: "A role with this name already exists in this organization",
       });
     }
 
