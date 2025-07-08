@@ -3,10 +3,12 @@ import { connectDB } from "../../config/db.config.js";
 import { RolePermission } from "../models/RolePermission.js"; // Adjust if your export differs
 import { ROLES } from "../enums/role.enums.js";
 import { rolepermission } from "../utils/role-permission.js";
+
 import dotenv from "dotenv";
 
 dotenv.config({ path: "../../.env" });
 console.log(process.env.Mongo_URI);
+
 const seedRoles = async () => {
   console.log("🌱 Seeding roles started...");
   await connectDB();
@@ -16,7 +18,7 @@ const seedRoles = async () => {
 
   try {
     for (const roleName of Object.values(ROLES)) {
-      const permissions = rolepermission[roleName] || [];
+      const permissions =rolepermission[roleName] || [];
 
       const update = {
         
