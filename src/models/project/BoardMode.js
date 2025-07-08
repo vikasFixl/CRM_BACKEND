@@ -58,33 +58,43 @@ const BoardSchema = new mongoose.Schema(
     workflow: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Workflow",
-      required:true
+      required: true
     },
     isDeleted: {
       type: Boolean,
       default: false,
       select: false,
     },
+    // help to identify that we can delte bord or not 
+    deletable: {
+      type: Boolean,
+      default: true,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    }
+
   },
   { timestamps: true }
 );
 
 // Compound index to speed up queries filtering by project and team
 BoardSchema.index({ projectId: 1, teamId: 1 });
-BoardSchema.index({ name: 1, projectId: 1 }, { unique: true }); // Unique board name per project
+BoardSchema.index({ name: 1, projectId: 1 }, { unique: true }); // unique name per project
+
+BoardSchema.index(
+  { projectId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isProjectDefault: true }
+  }
+);
 
 export const Board = mongoose.model("Board", BoardSchema);
-
-// /const board = await Board.findOne({ projectId: task.projectId });
-// const allowedStatus = board.columns.map(c => c.stateKey);
-
-// if (!allowedStatus.includes(task.status)) {
-//   throw new Error(`Invalid status. Must be one of: ${allowedStatus.join(", ")}`);
-// }
-//const getBoardForTeam = async (projectId, teamId) => {
-//   let board = await Board.findOne({ projectId, teamId, isDeleted: false });
-//   if (!board) {
-//     board = await Board.findOne({ projectId, isProjectDefault: true, isDeleted: false });
-//   }
-//   return board;
-// };

@@ -1,6 +1,5 @@
 import { Workflow } from "../../models/project/WorkflowModel.js";
 
-// ✅ Create a new workflow
 export const createWorkflow = async (req, res) => {
   try {
     const { name, projectId, teamId, states, transitions, isDefaultWorkflow } = req.body;
@@ -26,14 +25,24 @@ export const createWorkflow = async (req, res) => {
   }
 };
 
-// ✅ Get all workflows for a project or team
+
+
+
 export const getWorkflows = async (req, res) => {
   try {
-    const { projectId, teamId } = req.query;
-
+    const { projectId, teamId, boardId } = req.query;
     const query = { isDeleted: false };
-    if (projectId) query.projectId = projectId;
-    if (teamId) query.teamId = teamId;
+
+    if (boardId) {
+      const board = await Board.findById(boardId).select("projectId teamId");
+      if (!board) return res.status(404).json({ message: "Board not found" });
+
+      if (board.teamId) query.teamId = board.teamId;
+      else query.projectId = board.projectId;
+    } else {
+      if (teamId) query.teamId = teamId;
+      if (projectId) query.projectId = projectId;
+    }
 
     const workflows = await Workflow.find(query).sort({ createdAt: -1 });
     return res.status(200).json({ success: true, data: workflows });
@@ -41,8 +50,6 @@ export const getWorkflows = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
-// ✅ Get single workflow by ID
 export const getWorkflowById = async (req, res) => {
   try {
     const workflow = await Workflow.findOne({ _id: req.params.id, isDeleted: false });
@@ -55,7 +62,6 @@ export const getWorkflowById = async (req, res) => {
   }
 };
 
-// ✅ Update workflow
 export const updateWorkflow = async (req, res) => {
   try {
     const { name, states, transitions, isDefaultWorkflow } = req.body;
@@ -77,7 +83,6 @@ export const updateWorkflow = async (req, res) => {
   }
 };
 
-// ✅ Soft delete workflow
 export const deleteWorkflow = async (req, res) => {
   try {
     const workflow = await Workflow.findById(req.params.id);
@@ -93,3 +98,14 @@ export const deleteWorkflow = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+export const getWorkflowForBoard = async (boardId) => {
+  const board = await Board.findById(boardId).select("projectId teamId");
+  if (!board) throw new Error("Board not found");
+
+  const query = board.teamId
+    ? { teamId: board.teamId, isDeleted: false }
+    : { projectId: board.projectId, isDeleted: false };
+
+  return Workflow.find(query);
+};
+

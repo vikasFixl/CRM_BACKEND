@@ -35,7 +35,7 @@ export const rolepermission = {
       module: MODULES.FIRM,
       actions: [
         PERMISSIONS.CREATE_FIRM,
-        PERMISSIONS.VIEW_FIRM,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_FIRM,
         PERMISSIONS.DELETE_FIRM,
         PERMISSIONS.EXPORT_FIRM,
@@ -48,7 +48,7 @@ export const rolepermission = {
       module: MODULES.CLIENT,
       actions: [
         PERMISSIONS.CREATE_CLIENT,
-        PERMISSIONS.VIEW_CLIENT,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_CLIENT,
         PERMISSIONS.DELETE_CLIENT,
         PERMISSIONS.RESTORE_CLIENT,
@@ -59,7 +59,7 @@ export const rolepermission = {
       module: MODULES.INVOICE,
       actions: [
         PERMISSIONS.CREATE_INVOICE,
-        PERMISSIONS.VIEW_INVOICE,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_INVOICE,
         PERMISSIONS.DELETE_INVOICE,
         PERMISSIONS.EXPORT_INVOICE,
@@ -71,7 +71,7 @@ export const rolepermission = {
       module: MODULES.LEAD,
       actions: [
         PERMISSIONS.CREATE_LEAD,
-        PERMISSIONS.VIEW_LEAD,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_LEAD,
         PERMISSIONS.DELETE_LEAD,
         PERMISSIONS.ASSIGN_LEAD,
@@ -83,7 +83,7 @@ export const rolepermission = {
       module: MODULES.TAX,
       actions: [
         PERMISSIONS.CREATE_TAX,
-        PERMISSIONS.VIEW_TAX,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_TAX,
         PERMISSIONS.DELETE_TAX,
       ],
@@ -92,6 +92,7 @@ export const rolepermission = {
       module: MODULES.PROJECT,
       actions: [
         PERMISSIONS.CREATE_WORKSPACE,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_WORKSPACE,
         PERMISSIONS.DELETE_WORKSPACE,
         PERMISSIONS.MANAGE_WORKSPACE_SETTINGS,
@@ -146,7 +147,7 @@ export const rolepermission = {
       module: MODULES.USER,
       actions: [
         PERMISSIONS.CREATE_USER,
-        PERMISSIONS.VIEW_USER,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_USER,
         PERMISSIONS.DELETE_USER,
       ],
@@ -180,7 +181,7 @@ export const rolepermission = {
       module: MODULES.FIRM,
       actions: [
         PERMISSIONS.CREATE_FIRM,
-        PERMISSIONS.VIEW_FIRM,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_FIRM,
         PERMISSIONS.DELETE_FIRM,
         PERMISSIONS.EXPORT_FIRM,
@@ -193,7 +194,7 @@ export const rolepermission = {
       module: MODULES.CLIENT,
       actions: [
         PERMISSIONS.CREATE_CLIENT,
-        PERMISSIONS.VIEW_CLIENT,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_CLIENT,
         PERMISSIONS.DELETE_CLIENT,
         PERMISSIONS.RESTORE_CLIENT,
@@ -204,7 +205,7 @@ export const rolepermission = {
       module: MODULES.INVOICE,
       actions: [
         PERMISSIONS.CREATE_INVOICE,
-        PERMISSIONS.VIEW_INVOICE,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_INVOICE,
         PERMISSIONS.DELETE_INVOICE,
         PERMISSIONS.EXPORT_INVOICE,
@@ -216,7 +217,7 @@ export const rolepermission = {
       module: MODULES.LEAD,
       actions: [
         PERMISSIONS.CREATE_LEAD,
-        PERMISSIONS.VIEW_LEAD,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_LEAD,
         PERMISSIONS.DELETE_LEAD,
         PERMISSIONS.ASSIGN_LEAD,
@@ -228,7 +229,7 @@ export const rolepermission = {
       module: MODULES.TAX,
       actions: [
         PERMISSIONS.CREATE_TAX,
-        PERMISSIONS.VIEW_TAX,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_TAX,
         PERMISSIONS.DELETE_TAX,
       ],
@@ -285,7 +286,7 @@ export const rolepermission = {
     {
       module: MODULES.FIRM,
       actions: [
-        PERMISSIONS.VIEW_FIRM,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_FIRM,
         PERMISSIONS.CREATE_FIRM,
         PERMISSIONS.VIEW_TRASH,
@@ -296,7 +297,7 @@ export const rolepermission = {
       module: MODULES.CLIENT,
       actions: [
         PERMISSIONS.CREATE_CLIENT,
-        PERMISSIONS.VIEW_CLIENT,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_CLIENT,
         PERMISSIONS.RESTORE_CLIENT,
         PERMISSIONS.VIEW_TRASH,
@@ -306,7 +307,7 @@ export const rolepermission = {
       module: MODULES.INVOICE,
       actions: [
         PERMISSIONS.CREATE_INVOICE,
-        PERMISSIONS.VIEW_INVOICE,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_INVOICE,
         PERMISSIONS.RESTORE_INVOICE,
         PERMISSIONS.VIEW_TRASH,
@@ -316,7 +317,7 @@ export const rolepermission = {
       module: MODULES.LEAD,
       actions: [
         PERMISSIONS.CREATE_LEAD,
-        PERMISSIONS.VIEW_LEAD,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_LEAD,
         PERMISSIONS.ASSIGN_LEAD,
         PERMISSIONS.RESTORE_LEAD,
@@ -336,19 +337,19 @@ export const rolepermission = {
     },
     {
       module: MODULES.FIRM,
-      actions: [PERMISSIONS.VIEW_FIRM],
+      actions: [PERMISSIONS.VIEW_ONLY],
     },
     {
       module: MODULES.CLIENT,
-      actions: [PERMISSIONS.VIEW_CLIENT],
+      actions: [PERMISSIONS.VIEW_ONLY],
     },
     {
       module: MODULES.INVOICE,
-      actions: [PERMISSIONS.VIEW_INVOICE],
+      actions: [PERMISSIONS.VIEW_ONLY],
     },
     {
       module: MODULES.LEAD,
-      actions: [PERMISSIONS.VIEW_LEAD],
+      actions: [PERMISSIONS.VIEW_ONLY],
     },
   ],
 
@@ -360,17 +361,17 @@ export const rolepermission = {
     {
       module: MODULES.CLIENT,
       actions: [
-        PERMISSIONS.VIEW_CLIENT,
+        PERMISSIONS.VIEW_ONLY,
         // PERMISSIONS.EDIT_CLIENT,
       ],
     },
     {
       module: MODULES.INVOICE,
-      actions: [PERMISSIONS.VIEW_INVOICE],
+      actions: [PERMISSIONS.VIEW_ONLY],
     },
     {
       module: MODULES.LEAD,
-      actions: [PERMISSIONS.VIEW_LEAD],
+      actions: [PERMISSIONS.VIEW_ONLY],
     },
   ],
   [ROLES.WORKSPACE_OWNER]: [

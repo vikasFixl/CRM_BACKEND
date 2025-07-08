@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import { generateTaskCode } from "../../utils/helperfuntions/generateInviteCode.js";
 
-
 const TaskSchema = new mongoose.Schema(
   {
     projectId: {
@@ -13,7 +12,7 @@ const TaskSchema = new mongoose.Schema(
     taskCode: {
       type: String,
       required: true,
-         default: generateTaskCode,
+      default: generateTaskCode,
     },
     summary: {
       type: String,
@@ -28,7 +27,7 @@ const TaskSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["task", "bug", "story", "epic", "spike"], // ❌ subtask removed
+      enum: ["task", "bug", "story", "epic", "spike"],
       required: true,
     },
     columnOrder: {
@@ -47,12 +46,10 @@ const TaskSchema = new mongoose.Schema(
 
     // Assignment
     assigneeId: {
-      // The person responsible for completing the task.
       type: mongoose.Schema.Types.ObjectId,
       ref: "ProjectMember",
     },
     createdBy: {
-      //The person who created or reported the task/issue.
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
@@ -68,35 +65,30 @@ const TaskSchema = new mongoose.Schema(
     },
     epicId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Epic", // <-- FIXED
+      ref: "Epic",
     },
-
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Task", // Self-reference for subtasks
+      ref: "Task",
+    },
+    boardId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Board",
     },
 
     // Dates
     startDate: {
       type: Date,
-      default: Date.now(),
+      default: Date.now,
     },
-    dueDate: {
-      type: Date,
-    },
-    completedAt: {
-      type: Date,
-    },
+    dueDate: Date,
+    completedAt: Date,
 
-    // Estimation // complexity of task
+    // Estimation
     storyPoints: {
       type: Number,
       enum: [1, 2, 3, 5, 8, 13, 21],
       default: 1,
-    },
-    boardId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Board",
     },
 
     // Metadata
@@ -105,10 +97,16 @@ const TaskSchema = new mongoose.Schema(
     attachments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Attachment" }],
     customFields: mongoose.Schema.Types.Mixed,
 
-    // Flags
+    // Soft Delete
     isDeleted: {
       type: Boolean,
       default: false,
+      index: true,
+      select: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
       select: false,
     },
   },
@@ -121,10 +119,12 @@ TaskSchema.index({ projectId: 1, sprintId: 1 });
 TaskSchema.index({ assigneeId: 1 });
 TaskSchema.index({ epicId: 1 });
 TaskSchema.index({ parentId: 1 });
+TaskSchema.index({ deletedAt: 1 }); // for cleanup automation
 
+// ✅ Task Code Generator
 TaskSchema.methods.generateTaskCode = async function () {
   this.taskCode = generateTaskCode();
   return this.save();
 };
-export const Task = mongoose.models.Task || mongoose.model("Task", TaskSchema);
 
+export const Task = mongoose.models.Task || mongoose.model("Task", TaskSchema);

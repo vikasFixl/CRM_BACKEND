@@ -17,8 +17,8 @@ export const createBoard = async (req, res) => {
     if (!projectId && !teamId) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ 
-        error: "Either projectId or teamId must be provided" 
+      return res.status(400).json({
+        error: "Either projectId or teamId must be provided"
       });
     }
 
@@ -78,8 +78,8 @@ export const createBoard = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       board,
       ...(workflowData && { workflowId: workflowData })
     });
@@ -87,9 +87,9 @@ export const createBoard = async (req, res) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    res.status(400).json({ 
-      success: false, 
-      error: err.message 
+    res.status(400).json({
+      success: false,
+      error: err.message
     });
   }
 };
@@ -119,45 +119,72 @@ export const getBoard = async (req, res) => {
   }
 };
 
-// 🔹 Delete board (soft delete)
+
+
 export const deleteBoard = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const board = await Board.findById(req.params.boardId).session(session);
-    
-    if (!board) {
+    const userId = req.user.userId;
+    const { boardId } = req.params;
+
+    const board = await Board.findById(boardId).session(session);
+
+    if (!board || board.isDeleted) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(404).json({ error: "Board not found" });
+      return res.status(404).json({ error: "Board not found or already deleted" });
     }
 
-    // Check for existing tasks
-    const taskCount = await Task.countDocuments({ boardId: board._id }).session(session);
-    if (taskCount > 0) {
+    if (!board.teamId) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ 
-        error: "Cannot delete board with existing tasks" 
+      return res.status(403).json({
+        error: "Only team-assigned boards can be deleted"
       });
     }
 
-    // Soft delete
+    if (!board.deletable) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(403).json({
+        error: "This board cannot be deleted (protected)"
+      });
+    }
+
+    // Soft delete associated tasks
+    await Task.updateMany(
+      { boardId: board._id, isDeleted: { $ne: true } },
+      {
+        $set: {
+          isDeleted: true,
+          deletedBy: userId,
+          deletedAt: new Date()
+        }
+      },
+      { session }
+    );
+
+    // Soft delete the board
     board.isDeleted = true;
+    board.deletedBy = userId;
+    board.deletedAt = new Date();
     await board.save({ session });
 
     await session.commitTransaction();
     session.endSession();
 
-    res.json({ success: true, message: "Board deleted" });
+    return res.status(200).json({ success: true, message: "Board and tasks deleted successfully" });
 
-  } catch (err) {
+  } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    res.status(400).json({ error: err.message });
+    return res.status(500).json({ error: error.message });
   }
 };
+
+
 
 // 🔹 Add column (with workflow state sync)
 export const addColumn = async (req, res) => {
@@ -213,23 +240,56 @@ export const addColumn = async (req, res) => {
       name,
       key,
       order,
-      color: req.body.color || "#" + Math.floor(Math.random()*16777215).toString(16)
+      color: req.body.color || "#" + Math.floor(Math.random() * 16777215).toString(16)
     });
 
-    // If board has workflow, add corresponding state
+    // If board has workflow, add corresponding state + transitions
     if (board.workflow) {
       const workflow = await Workflow.findById(board.workflow).session(session);
       if (workflow) {
-        workflow.states.push({
+        const newState = {
           key,
           name,
           order,
-          color: req.body.color || "#" + Math.floor(Math.random()*16777215).toString(16)
-        });
-        await workflow.save({ session });
-      } 
-    }
+          color: req.body.color || "#" + Math.floor(Math.random() * 16777215).toString(16)
+        };
 
+        // Add the new state
+        workflow.states.push(newState);
+
+        // Generate new transitions
+        const newTransitions = [];
+
+        // Include new transitions from existing states to the new state
+        for (const existingState of workflow.states) {
+          if (existingState.key !== key) {
+            newTransitions.push({
+              fromKey: existingState.key,
+              toKey: newState.key,
+              fromOrder: existingState.order,
+              toOrder: newState.order
+            });
+          }
+        }
+
+        // Include new transitions from the new state to all other states
+        for (const existingState of workflow.states) {
+          if (existingState.key !== key) {
+            newTransitions.push({
+              fromKey: newState.key,
+              toKey: existingState.key,
+              fromOrder: newState.order,
+              toOrder: existingState.order
+            });
+          }
+        }
+
+        // Push new transitions
+        workflow.transitions = [...workflow.transitions, ...newTransitions];
+
+        await workflow.save({ session });
+      }
+    }
     await board.save({ session });
     await session.commitTransaction();
     session.endSession();
@@ -247,9 +307,9 @@ export const addColumn = async (req, res) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    res.status(500).json({ 
-      error: "Internal server error", 
-      details: err.message 
+    res.status(500).json({
+      error: "Internal server error",
+      details: err.message
     });
   }
 };
@@ -288,7 +348,7 @@ export const updateColumn = async (req, res) => {
     const newKey = name.toLowerCase().replace(/\s+/g, '_');
 
     // Check for duplicate key (excluding current column)
-    if (board.columns.some(col => 
+    if (board.columns.some(col =>
       col._id.toString() !== columnId && col.key === newKey
     )) {
       await session.abortTransaction();
@@ -321,8 +381,8 @@ export const updateColumn = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: "Column updated",
       column: {
         id: columnId,
@@ -335,9 +395,9 @@ export const updateColumn = async (req, res) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    res.status(500).json({ 
-      error: "Internal server error", 
-      details: err.message 
+    res.status(500).json({
+      error: "Internal server error",
+      details: err.message
     });
   }
 };
@@ -351,6 +411,7 @@ export const deleteColumn = async (req, res) => {
     const { boardId } = req.params;
     const { columnId } = req.body;
 
+    // Fetch board
     const board = await Board.findById(boardId).session(session);
     if (!board || board.isDeleted) {
       await session.abortTransaction();
@@ -358,6 +419,7 @@ export const deleteColumn = async (req, res) => {
       return res.status(404).json({ error: "Board not found" });
     }
 
+    // Find the column
     const column = board.columns.id(columnId);
     if (!column) {
       await session.abortTransaction();
@@ -365,10 +427,12 @@ export const deleteColumn = async (req, res) => {
       return res.status(404).json({ error: "Column not found" });
     }
 
-    // Check for tasks in this column
-    const taskCount = await Task.countDocuments({ 
-      boardId: board._id, 
-      columnOrder: column.order 
+    const columnKey = column.key;
+
+    // Prevent deletion if tasks exist in that column
+    const taskCount = await Task.countDocuments({
+      boardId: board._id,
+      columnOrder: column.order
     }).session(session);
 
     if (taskCount > 0) {
@@ -379,39 +443,44 @@ export const deleteColumn = async (req, res) => {
       });
     }
 
-    // If board has workflow, remove corresponding state
-    if (board.workflow) {
+    // Remove corresponding workflow state & transitions
+    if (board.workflow && columnKey) {
       const workflow = await Workflow.findById(board.workflow).session(session);
+
       if (workflow) {
-        workflow.states = workflow.states.filter(s => s.key !== column.key);
-        
-        // Remove any transitions involving this state
-        workflow.transitions = workflow.transitions.filter(
-          t => t.fromKey !== column.key && t.toKey !== column.key
+        // Remove the state matching the column key
+        workflow.states = workflow.states.filter(
+          (state) => state.key !== columnKey
         );
-        
+
+        // Remove transitions involving this state
+        workflow.transitions = workflow.transitions.filter(
+          (t) => t.fromKey !== columnKey && t.toKey !== columnKey
+        );
+
         await workflow.save({ session });
       }
     }
 
-    // Remove column
+    // Remove the column from the board
     column.remove();
     await board.save({ session });
+
     await session.commitTransaction();
     session.endSession();
 
-    res.json({ 
-      success: true, 
-      message: "Column deleted",
+    res.json({
+      success: true,
+      message: "Column deleted successfully",
       remainingColumns: board.columns.length
     });
 
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    res.status(500).json({ 
-      error: "Internal server error", 
-      details: err.message 
+    res.status(500).json({
+      error: "Internal server error",
+      details: err.message
     });
   }
 };

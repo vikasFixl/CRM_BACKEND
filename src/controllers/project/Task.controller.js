@@ -127,7 +127,7 @@ export const createTask = async (req, res) => {
 
 export const getAllTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ projectId: req.params.projectId });
+    const tasks = await Task.find({ projectId: req.params.projectId, isDeleted: false });
     return res
       .status(200)
       .json({ tasks, message: "Tasks fetched successfully" });
@@ -137,45 +137,65 @@ export const getAllTasks = async (req, res) => {
   }
 };
 export const deleteTask = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { projectId, taskId } = req.params;
+    const userId = req.user.userId;
 
     if (!projectId || !taskId) {
-      return res
-        .status(400)
-        .json({ message: "Project ID and Task ID are required" });
+      return res.status(400).json({ message: "Project ID and Task ID are required" });
     }
+
     if (!mongoose.Types.ObjectId.isValid(projectId) || !mongoose.Types.ObjectId.isValid(taskId)) {
       return res.status(400).json({ message: "Invalid Project ID or Task ID" });
     }
 
-    const project = await Project.findOne({ _id: projectId });
+    const project = await Project.findOne({ _id: projectId, isDeleted: false }).session(session);
     if (!project) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Project does not exist" });
     }
 
-    const task = await Task.findOne({ _id: taskId, projectId });
-
+    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false }).session(session);
     if (!task) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // 🔁 Recursive deletion of all nested subtasks
-    await Task.deleteMany({ parentId: task._id });
+    // 🔁 Soft delete all subtasks recursively
+    await Task.updateMany(
+      { parentId: task._id, isDeleted: false },
+      { $set: { isDeleted: true, deletedBy: userId, deletedAt: new Date() } },
+      { session }
+    );
 
-    // 🗑️ Delete the task
-    await Task.deleteOne({ _id: task._id });
+    // 🗑️ Soft delete the main task
+    task.isDeleted = true;
+    task.deletedBy = userId;
+    task.deletedAt = new Date();
+    await task.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     return res.status(200).json({
-      message: "Task and all its subtasks deleted successfully",
+      message: "Task and its subtasks soft deleted successfully",
       success: true,
       code: 200,
     });
+
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error deleting task:", error);
     return res.status(500).json({ message: "Internal server error", error });
   }
 };
+
 
 export const GetAllSubTasks = async (req, res) => {
   const taskId = req.params.taskId;
@@ -187,7 +207,7 @@ export const GetAllSubTasks = async (req, res) => {
       .json({ message: "Task ID and Project ID are required" });
   }
   try {
-    const tasks = await Task.find({ parentId: taskId, projectId });
+    const tasks = await Task.find({ parentId: taskId, projectId, isDeleted: false });
     if (!tasks) {
       return res.status(404).json({ message: "Subtasks not found", data: [] });
     }
@@ -210,7 +230,7 @@ export const getTaskById = async (req, res) => {
         .status(400)
         .json({ message: "Task ID and Project ID are required" });
     }
-    const task = await Task.findOne({ _id: taskId, projectId }).populate(
+    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false }).populate(
       "assigneeId"
     );
     if (!task) {
@@ -258,7 +278,7 @@ export const updateTask = async (req, res) => {
     const { status, ...updateData } = parsed.data;
 
     // Fetch task with populated board and workflow (inside board) 
-    const task = await Task.findOne({ _id: taskId, projectId })
+    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false })
       .populate({
         path: 'boardId',
         populate: {
@@ -554,7 +574,7 @@ export const getTasksByBoardColumn = async (req, res) => {
     // Fetch board and tasks in parallel
     const [board, tasks] = await Promise.all([
       Board.findOne({ _id: boardId, projectId }).lean(),
-      Task.find({ boardId }).select("columnOrder summary _id status priority").lean()
+      Task.find({ boardId, isDeleted: false }).select("columnOrder summary _id status priority").lean()
     ]);
 
     if (!board) {
