@@ -46,8 +46,14 @@ export const checkPermission = (moduleName, actionName) => {
       const member = await OrgMember.findOne({
         userId,
         organizationId: orgId,
-      }).populate("role");
-      // console.log("member", member);
+      })
+        .populate({
+          path: "role",
+          populate: {
+            path: "permissions", // <-- this is the array of Permission documents
+          },
+        });
+
       // const permisionscheck=member.role.permissions.map(perm=>console.log(perm));
       if (!member) {
         return res
@@ -55,6 +61,7 @@ export const checkPermission = (moduleName, actionName) => {
           .json({ error: "User not part of this organization" });
       }
 
+      console.log("member", member);
       let permissions = [];
 
       // Use custom override if it exists
@@ -63,14 +70,15 @@ export const checkPermission = (moduleName, actionName) => {
       } else if (member.role && member.role.permissions) {
         permissions = member.role.permissions;
       }
-
+      console.log("permissions", member.role?.permissions);
       const modulePerm = permissions.find((perm) => perm.module === moduleName);
+      console.log("modulePerm", modulePerm);
 
       if (!modulePerm || !modulePerm.actions.includes(actionName)) {
         return res
           .status(403)
           .json({
-            error:  `you don't have permission for this action . contact admin for permission`,
+            error: `you don't have permission for this action . contact admin for permission`,
           });
       }
 

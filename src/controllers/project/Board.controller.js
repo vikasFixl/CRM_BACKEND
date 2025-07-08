@@ -227,7 +227,7 @@ export const addColumn = async (req, res) => {
           color: req.body.color || "#" + Math.floor(Math.random()*16777215).toString(16)
         });
         await workflow.save({ session });
-      }
+      } 
     }
 
     await board.save({ session });

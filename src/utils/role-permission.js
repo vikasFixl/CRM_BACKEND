@@ -1,5 +1,5 @@
 // config/rolepermission.js
-import { ROLES, PERMISSIONS, MODULES,ALL_PERMISSIONS } from "../enums/role.enums.js";
+import { ROLES, PERMISSIONS, MODULES, } from "../enums/role.enums.js";
 // console.log("ALL_PERMISSIONS", ALL_PERMISSIONS);
 
 export const rolepermission = {
@@ -128,11 +128,12 @@ export const rolepermission = {
     },
     {
 
-      module:MODULES.PERMISSIONS,
-      actions:[
+      module: MODULES.PERMISSIONS,
+      actions: [
         PERMISSIONS.CHANGE_MEMBER_ROLE,
         PERMISSIONS.MANAGE_PERMISSIONS,
-        PERMISSIONS.CREATE_ROLE,
+        PERMISSIONS.CREATE_ROLE, PERMISSIONS.VIEW_ONLY,
+
         PERMISSIONS.VIEW_ROLE,
         PERMISSIONS.EDIT_ROLE,
         PERMISSIONS.DELETE_ROLE
@@ -154,7 +155,7 @@ export const rolepermission = {
       module: MODULES.ORGANIZATION,
       actions: [
         PERMISSIONS.CREATE_ORGANIZATION,
-        PERMISSIONS.VIEW_ORGANIZATION,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_ORGANIZATION,
         PERMISSIONS.DELETE_ORGANIZATION,
         PERMISSIONS.SEND_INVITATION,
@@ -163,14 +164,14 @@ export const rolepermission = {
         PERMISSIONS.UPDATE_ORG_USER,
       ],
     },
-     {
+    {
 
-      module:MODULES.PERMISSIONS,
-      actions:[
+      module: MODULES.PERMISSIONS,
+      actions: [
         PERMISSIONS.CHANGE_MEMBER_ROLE,
         PERMISSIONS.MANAGE_PERMISSIONS,
         PERMISSIONS.CREATE_ROLE,
-        PERMISSIONS.VIEW_ROLE,
+        PERMISSIONS.VIEW_ONLY,
         PERMISSIONS.EDIT_ROLE,
         PERMISSIONS.DELETE_ROLE
       ]
@@ -232,7 +233,7 @@ export const rolepermission = {
         PERMISSIONS.DELETE_TAX,
       ],
     },
-      {
+    {
       module: MODULES.PROJECT,
       actions: [
         PERMISSIONS.CREATE_WORKSPACE,
@@ -258,7 +259,7 @@ export const rolepermission = {
         PERMISSIONS.VIEW_PROJECT_ACTIVITY,
 
         PERMISSIONS.CREATE_TASK,
-        PERMISSIONS.EDIT_TASK,        
+        PERMISSIONS.EDIT_TASK,
         PERMISSIONS.DELETE_TASK,
         PERMISSIONS.ASSIGN_TASK,
         PERMISSIONS.MARK_TASK_COMPLETE,
@@ -372,7 +373,7 @@ export const rolepermission = {
       actions: [PERMISSIONS.VIEW_LEAD],
     },
   ],
-   [ROLES.WORKSPACE_OWNER]: [
+  [ROLES.WORKSPACE_OWNER]: [
     {
       module: MODULES.PROJECT,
       actions: [
@@ -412,16 +413,16 @@ export const rolepermission = {
       ],
 
     },
-     {
+    {
 
-      module:MODULES.PERMISSIONS,
-      actions:[
+      module: MODULES.PERMISSIONS,
+      actions: [
         PERMISSIONS.CHANGE_MEMBER_ROLE,
         PERMISSIONS.MANAGE_PERMISSIONS,
         PERMISSIONS.CREATE_ROLE,
         PERMISSIONS.VIEW_ROLE,
         PERMISSIONS.EDIT_ROLE,
-    
+
       ]
     }
   ],
