@@ -21,20 +21,20 @@ import {
 ClientRouter.route("/all").get(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("client", "VIEW_CLIENT"),
+  checkPermission("client", "VIEW_ONLY"),
   getClients
 );
 
 ClientRouter.route("/users").get(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("client", "VIEW_CLIENT"),
+  checkPermission("client", "VIEW_ONLY"),
   getClientsByUser
 );
 ClientRouter.route("/singleUser/:id").get(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("client", "VIEW_CLIENT"),
+  checkPermission("client", "VIEW_ONLY"),
   getClientById
 );
 ClientRouter.route("/deleted/all").get(

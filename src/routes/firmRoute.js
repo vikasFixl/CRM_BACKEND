@@ -52,7 +52,7 @@ Router.route("/delete/:id").delete(
 Router.route("/getFirm/:id").get(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("firm", "VIEW_FIRM"),
+  checkPermission("firm", "VIEW_ONLY"),
   firmController.getFirmbyId
 );
 
@@ -60,7 +60,7 @@ Router.route("/getFirm/:id").get(
 Router.route("/getAllFirm").get(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("firm", "VIEW_FIRM"),
+  checkPermission("firm", "VIEW_ONLY"),
   firmController.getAllFirm
 );
 
@@ -68,7 +68,7 @@ Router.route("/getAllFirm").get(
 Router.route("/getFirmList").get(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("firm", "VIEW_FIRM"),
+  checkPermission("firm", "VIEW_ONLY"),
   firmController.getFirmList
 );
 

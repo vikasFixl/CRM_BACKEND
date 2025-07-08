@@ -33,14 +33,14 @@ LeadRouter.route("/create").post(
 LeadRouter.route("/getAllLeads").get(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("lead", "VIEW_LEAD"),
+  checkPermission("lead", "VIEW_ONLY"),
   getAllLeads
 );
 // get lead stage-history
 LeadRouter.route("/:id/stage-history").get(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("lead", "VIEW_LEAD"),
+  checkPermission("lead", "VIEW_ONLY"),
   getLeadStageHistory
 );
 
@@ -50,7 +50,7 @@ LeadRouter.route("/:id/stage-history").get(
 
 // Get single lead | Update lead
 LeadRouter.route("/filter/status").post(isAuthenticated,authenticateOrgToken(),getLeadsByStatusAndFirm)
-LeadRouter.route("/:id").get(isAuthenticated,authenticateOrgToken(),checkPermission("lead", "VIEW_LEAD"),getLeadById);
+LeadRouter.route("/:id").get(isAuthenticated,authenticateOrgToken(),checkPermission("lead", "VIEW_ONLY"),getLeadById);
 LeadRouter.route("/update/:id").patch(isAuthenticated,authenticateOrgToken(),checkPermission("lead", "EDIT_LEAD"),updateLead);
 
 // Update stage of a lead

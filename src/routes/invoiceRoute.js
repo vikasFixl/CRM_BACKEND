@@ -74,13 +74,13 @@ InvoiceRouter.route("/create").post(
 InvoiceRouter.route("/getSingleInvoice").post(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("invoice", "VIEW_INVOICE"),
+  checkPermission("invoice", "VIEW_ONLY"),
   getSingleInvoice
 );
 InvoiceRouter.route("/getInvoiceByClient").post(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("invoice", "VIEW_INVOICE"),
+  checkPermission("invoice", "VIEW_ONLY"),
   getInvoiceByClient
 );
 InvoiceRouter.route("/getInvoiceByFirm").post(
@@ -92,7 +92,7 @@ InvoiceRouter.route("/getInvoiceByFirm").post(
 InvoiceRouter.route("/listInvoiceNo").post(
   isAuthenticated,
   authenticateOrgToken(),
-  checkPermission("invoice", "VIEW_INVOICE"),
+  checkPermission("invoice", "VIEW_ONLY"),
   listInvoiceNo
 );
 // InvoiceInvoiceRouter.post("/listInvoiceNumber",  invoiceController.listInvoiceNo);
