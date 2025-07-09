@@ -43,7 +43,7 @@ const ProjectSchema = new mongoose.Schema(
     visibility: {
       type: String,
       enum: ["private", "workspace", "public"],
-      default: "private",
+      default: "public",
     },
     isArchived: {
       type: Boolean,

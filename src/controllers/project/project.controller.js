@@ -25,6 +25,7 @@ export const createProject = async (req, res) => {
     const orgId = req.orgUser.orgId;
     const { workspaceId } = req.params;
 
+
     const parsed = createProjectSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({
@@ -93,7 +94,7 @@ export const createProject = async (req, res) => {
       isProjectDefault: true,
       columns: boardColumns,
       workflow: workflow._id,
-      createdBy:req.user.userId
+      createdBy: req.user.userId
     }], { session });
 
     project.boardId = board._id;
@@ -223,6 +224,7 @@ export const archiveProject = async (req, res) => {
   }
 };
 
+// admin routes 
 export const getAllProjectsByWorkspace = async (req, res) => {
   try {
     const workspaceId = workspaceIdSchema.parse(req.params.workspaceId);
@@ -276,6 +278,45 @@ export const getAllProjectsByWorkspace = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+export const getMyProjectsByWorkspace = async (req, res) => {
+  try {
+    const workspaceId = workspaceIdSchema.parse(req.params.workspaceId);
+    const userId = req.user.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+      return res.status(400).json({ message: "Invalid workspace ID" });
+    }
+
+    // 1. Find all ProjectMember entries for this user
+    const memberships = await ProjectMember.find({
+      userId,
+      isRemoved: false, // optional filter to ignore removed members
+    }).select("projectId");
+    console.log("memberships", memberships)
+
+    // 2. Extract project IDs
+    const projectIds = memberships.map((m) => m.projectId);
+
+    // 3. Find projects in this workspace that match those IDs
+    const projects = await Project.find({
+      _id: { $in: projectIds },
+      workspace: workspaceId,
+    })
+      .populate("createdBy", "email _id firstName lastName")
+      .lean();
+
+    return res.status(200).json({
+      message: "User's projects in this workspace fetched successfully",
+      projects,
+    });
+  } catch (error) {
+    console.error("Error in getMyProjectsByWorkspace:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+
 
 export const getProjectById = async (req, res) => {
   try {
@@ -306,7 +347,7 @@ export const getProjectById = async (req, res) => {
       .select("userId role")
       .lean();
 
-      console.log("project member",members)
+    console.log("project member", members)
     const uniqueMembersMap = new Map();
     for (const member of members) {
       uniqueMembersMap.set(member.userId?._id.toString(), member); // prevent duplicates
@@ -337,19 +378,141 @@ export const getAssignableMembers = async (req, res) => {
     // 1. Get all members assigned to the project
     const projectMembers = await ProjectMember.find({ projectId });
 
-    const userIds = projectMembers.map((pm) => pm.userId);
+    if (projectMembers.length === 0) {
+      return res.status(200).json({
+        message: "No members assigned to this project",
+        members: [],
+      });
+    }
 
-    // // 2. Fetch user details (excluding sensitive info)
-    const users = await User.find({ _id: { $in: userIds } }).select(
-      " email avatar"
-    );
+    // 2. Get userIds and map memberId
+    const memberDataMap = projectMembers.reduce((acc, member) => {
+      acc[member.userId.toString()] = member._id;
+      return acc;
+    }, {});
+
+    const userIds = Object.keys(memberDataMap);
+
+    // 3. Fetch user details (email and avatar)
+    const users = await User.find({ _id: { $in: userIds } }).select("email avatar");
+
+    // 4. Combine user info with projectMember ID
+    const members = users.map((user) => ({
+      memberId: memberDataMap[user._id.toString()],
+      userId: user._id,
+      email: user.email,
+      avatar: user.avatar || null,
+    }));
 
     res.status(200).json({
       message: "Assignable project members fetched successfully",
-      users,
+      members,
     });
   } catch (error) {
     console.error("Error in getAssignableMembers:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const getProjectAnalytics = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: "Invalid project ID" });
+    }
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    const taskMatch = { projectId: new mongoose.Types.ObjectId(projectId) };
+
+    const totalTasks = await Task.countDocuments(taskMatch);
+
+    const [completedTasks, pendingTasks, overdueTasks] = await Promise.all([
+      Task.countDocuments({ ...taskMatch, status: "Done" }),
+      Task.countDocuments({ ...taskMatch, status: { $ne: "Done" } }),
+      Task.countDocuments({
+        ...taskMatch,
+        status: { $ne: "Done" },
+        dueDate: { $lt: new Date() },
+      }),
+    ]);
+
+    const tasksPerMember = await Task.aggregate([
+      { $match: { ...taskMatch, assigneeId: { $ne: null } } },
+      {
+        $group: {
+          _id: "$assigneeId",
+          taskCount: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "projectmembers",
+          localField: "_id",
+          foreignField: "_id",
+          as: "member",
+        },
+      },
+      { $unwind: "$member" },
+      {
+        $lookup: {
+          from: "users",
+          localField: "member.userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      {
+        $project: {
+          _id: 0,
+          memberId: "$member._id",
+          userId: "$user._id",
+          email: "$user.email",
+          avatar: "$user.avatar",
+          name: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+          taskCount: 1,
+        },
+      },
+    ]);
+
+    // 🧩 Add tasksPerState grouping by status
+    const tasksPerState = await Task.aggregate([
+      { $match: taskMatch },
+      {
+        $group: {
+          _id: "$status", // or "$workflowStateId" if using workflow states
+          taskCount: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          state: "$_id",
+          taskCount: 1,
+          _id: 0,
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      message: "Project analytics fetched successfully",
+      success: true,
+      data: {
+        totalTasks,
+        completedTasks,
+        pendingTasks,
+        overdueTasks,
+        tasksPerMember,
+        tasksPerState,
+      },
+    });
+  } catch (error) {
+    console.error("Error in getProjectAnalytics:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+

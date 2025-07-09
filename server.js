@@ -66,6 +66,7 @@ import TaskRouter from "./src/routes/project/task.route.js";
 import ProjectMemberRouter from "./src/routes/project/projectMembe.js";
 import RolePermissionRouter from "./src/routes/rolepermissionroute.js";
 import BoardRouter from "./src/routes/project/boardroute.js";
+import WorkflowRouter from "./src/routes/project/workflowroute.js";
 
 // PayPal config
 paypal.configure({
@@ -146,6 +147,7 @@ app.use("/api/task", TaskRouter);
 app.use("/api/projects", ProjectMemberRouter);
 app.use("/api/board",BoardRouter)
 app.use("/api/role-permission", RolePermissionRouter);
+app.use("/api/workflow",WorkflowRouter)
 
 /**
  * 

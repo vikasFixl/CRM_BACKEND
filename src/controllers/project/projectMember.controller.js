@@ -78,7 +78,8 @@ export const assignMember = async (req, res) => {
         invitedBy: req.user.userId,
       });
     }
-
+    user.currentWorkspace = workspaceId;
+    await user.save();
     // ✅ If only adding to workspace
     if (level === "workspace") {
       if (existingWorkspaceMember) {
@@ -232,9 +233,8 @@ export const UpdateProjectMember = async (req, res) => {
     await member.save();
 
     res.status(200).json({
-      message: `Project member role updated successfully${
-        isRoleChanged ? " and permissions" : ""
-      }`,
+      message: `Project member role updated successfully${isRoleChanged ? " and permissions" : ""
+        }`,
       member,
     });
   } catch (error) {

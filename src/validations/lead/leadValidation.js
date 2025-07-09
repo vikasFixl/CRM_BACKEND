@@ -35,7 +35,7 @@ export const leadSchema = z.object({
   // Client Info
   client: z.object({
     firstName: z
-      .string({ required_error: " first name is required" })
+      .string({ required_error: " first name is required" }) 
       .min(1)
       .nonempty("First name cannot be empty"),
     lastName: z

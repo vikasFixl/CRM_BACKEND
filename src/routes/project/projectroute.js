@@ -9,6 +9,8 @@ import {
   getProjectById,
   archiveProject,
   getAssignableMembers,
+  getMyProjectsByWorkspace,
+  getProjectAnalytics,
 } from "../../controllers/project/project.controller.js";
 
 const ProjectRouter = express.Router();
@@ -27,6 +29,11 @@ ProjectRouter.route("/workspace/:workspaceId/projects").get(
   authenticateOrgToken(),
   getAllProjectsByWorkspace
 );
+ProjectRouter.route("/workspace/:workspaceId/my-projects").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getMyProjectsByWorkspace
+);
 // get project members
 ProjectRouter.route("/workspace/:workspaceId/project/:projectId").get(
   isAuthenticated,
@@ -37,6 +44,11 @@ ProjectRouter.route("/:projectId/assignable-members").get(
   isAuthenticated,
   authenticateOrgToken(),
   getAssignableMembers
+);
+ProjectRouter.route("/:projectId/Analytics").get(
+  isAuthenticated,
+  authenticateOrgToken(),
+  getProjectAnalytics
 );
 // ✏️ Update project details
 ProjectRouter.route("/update/:projectId").patch(

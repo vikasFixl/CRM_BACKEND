@@ -76,7 +76,7 @@ export const createTask = async (req, res) => {
     }
 
     // 6. Match status with column
-    const column = board.columns.find((col) => col.key === status);
+    const column = board.columns.find((col) => col.name === status);
     if (!column) {
       const allowedStatus = board.columns.map((c) => c.key);
       return res.status(400).json({
@@ -230,9 +230,8 @@ export const getTaskById = async (req, res) => {
         .status(400)
         .json({ message: "Task ID and Project ID are required" });
     }
-    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false }).populate(
-      "assigneeId"
-    );
+    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false })
+    console.log(task)
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
