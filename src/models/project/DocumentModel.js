@@ -2,40 +2,54 @@ import mongoose from "mongoose";
 
 const documentSchema = mongoose.Schema(
   {
-    projectId: {
+    organizationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
+      ref: "Organization",
       required: true,
       index: true,
     },
+
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Workspace",
+      default: null,
+      index: true,
+    },
+
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+      default: null,
+      index: true,
+    },
+
     taskId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Task",
       default: null,
       index: true,
     },
-    workspaceId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Workspace",
+
+    level: {
+      type: String,
+      enum: ["organization", "workspace", "project", "task"],
       required: true,
-    },
-    organizationId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Organization",
-      required: true,
+      index: true,
+      description: "Scope level at which the document is stored",
     },
 
     file: {
-      name: { type: String, required: true },        // Filename
-      url: { type: String, required: true },         // Cloudinary or other provider URL
-      public_id: { type: String, required: true },   // Cloudinary/S3 public_id
+      name: { type: String },        // Filename
+      url: { type: String},         // Cloudinary or other provider URL
+      public_id: { type: String },   // Cloudinary/S3 public_id
       type: { type: String },                        // MIME type
       size: { type: Number },                        // File size (bytes)
     },
 
     image: {
       url: { type: String, default: null },          // Optional preview thumbnail
-      public_id: { type: String, default: null },    // Optional for deletion
+      public_id: { type: String, default: null }, 
+      size: { type: Number, default: null },         // Optional for deletion
     },
 
     uploadedBy: {
@@ -53,9 +67,5 @@ const documentSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-// Indexes
-documentSchema.index({ projectId: 1 });
-documentSchema.index({ taskId: 1 });
-documentSchema.index({ "file.public_id": 1 });
-
-export const Document = mongoose.model("Document", documentSchema);
+export const Document =
+  mongoose.models.Document || mongoose.model("Document", documentSchema);

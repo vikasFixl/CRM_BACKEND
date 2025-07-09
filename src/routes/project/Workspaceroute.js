@@ -6,7 +6,7 @@ import { createWorkspace,deleteWorkspace,updateworkspace ,getAllWorkspace, getMy
 
 
 WorkspaceRouter.route("/create").post(isAuthenticated, authenticateOrgToken(), createWorkspace);
-WorkspaceRouter.route("/:workspaceId").post(isAuthenticated, authenticateOrgToken(),getWorkspaceById);
+WorkspaceRouter.route("/:workspaceId").get(isAuthenticated, authenticateOrgToken(),getWorkspaceById);
 // soft delete
 WorkspaceRouter.route("/delete/:id").patch(isAuthenticated, authenticateOrgToken(), deleteWorkspace);
 WorkspaceRouter.route("/update/:id").patch(isAuthenticated, authenticateOrgToken(), updateworkspace);

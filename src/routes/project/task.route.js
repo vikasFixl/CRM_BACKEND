@@ -7,7 +7,7 @@ import {
   deleteTask,
   GetAllSubTasks,
   getAllTasks,
- 
+
   getTaskById,
   getTasksByBoardColumn,
   reorderTasks,
@@ -56,7 +56,7 @@ TaskRouter.route("/:boardId/re-order").patch(
 TaskRouter.route("/:projectId/by-board").get(
   isAuthenticated,
   authenticateOrgToken(),
-getTasksByBoardColumn
+  getTasksByBoardColumn
 );
 
 
