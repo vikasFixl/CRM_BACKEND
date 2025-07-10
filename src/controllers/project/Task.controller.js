@@ -135,24 +135,40 @@ export const getAllTasks = async (req, res) => {
     const tasks = await Task.find({
       projectId: req.params.projectId,
       isDeleted: false
-    })
-      .populate({
-        path: "assigneeId",
-        populate: {
-          path: "userId",
-          select: "firstName email avatar"
-        }
-      });
+    }).populate({
+      path: "assigneeId",
+      populate: {
+        path: "userId",
+        select: "firstName email avatar"
+      }
+    }).populate("parentId", "name taskCode");
 
+    const cleanedTasks = tasks.map((task) => {
+      const assignee = task.assigneeId;
+      const user = assignee?.userId;
 
-    return res
-      .status(200)
-      .json({ tasks, message: "Tasks fetched successfully" });
+      return {
+        ...task.toObject(),
+        assigneeId: user
+          ? {
+              firstName: user.firstName,
+              email: user.email,
+              avatar: user.avatar
+            }
+          : null
+      };
+    });
+
+    return res.status(200).json({
+      tasks: cleanedTasks,
+      message: "Tasks fetched successfully"
+    });
   } catch (error) {
     console.error("Error in getAllTasks:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
+
 export const deleteTask = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();

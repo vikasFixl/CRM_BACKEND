@@ -25,7 +25,7 @@ export const createProject = async (req, res) => {
     const orgId = req.orgUser.orgId;
     const { workspaceId } = req.params;
 
-
+console.log("req.body", req.body)
     const parsed = createProjectSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({
@@ -125,7 +125,7 @@ export const createProject = async (req, res) => {
     if (template.task?.length > 0) {
       const taskDocs = template.task.map((taskTemplate) => ({
         projectId: project._id,
-        summary: taskTemplate.summary,
+        name: taskTemplate.summary,
         description: taskTemplate.description,
         type: taskTemplate.type,
         status: taskTemplate.status,
