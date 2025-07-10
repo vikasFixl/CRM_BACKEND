@@ -13,7 +13,7 @@ export const uploadImageToCloudinary = async ({
   folder = "user",
   oldPublicId = null, // optional: pass if replacing existing image
 }) => {
- 
+
 
   if (!allowedFileTypes.includes(file.mimetype)) {
     throw new Error(
@@ -43,14 +43,14 @@ export const uploadImageToCloudinary = async ({
     url: result.secure_url,
     public_id: result.public_id,
     bytes: result.bytes,
-    
+
   };
 };
 // ✅ Upload any file (PDF, image, doc, etc.) to Cloudinary
 export const uploadFileToCloudinary = async ({
   file,
   folder = "documents",
-  oldPublicId = null, 
+  oldPublicId = null,
 }) => {
   if (!file || !file.tempFilePath) {
     throw new Error("File is required for upload");
@@ -74,7 +74,7 @@ export const uploadFileToCloudinary = async ({
     resource_type: "auto", // Support all file types
   });
 
-  console.log(result,"resukltl ");
+  console.log(result, "resukltl ");
 
   return {
     url: result.secure_url,
@@ -82,16 +82,15 @@ export const uploadFileToCloudinary = async ({
     format: result.format,
     size: result.bytes,
     type: result.resource_type,
-  
+
   };
 };
 
 // ✅ Delete any Cloudinary asset
-export const deleteCloudinaryAsset = async (publicId, resourceType = "auto") => {
+export const deleteCloudinaryAsset = async (publicId) => {
   try {
-    const result = await cloudinary.uploader.destroy(publicId, {
-      resource_type: resourceType,
-    });
+    const result = await cloudinary.uploader.destroy(publicId
+    );
     return result;
   } catch (error) {
     console.error("Failed to delete Cloudinary asset:", error.message);

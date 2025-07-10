@@ -48,7 +48,7 @@ export const getWorkflow = async (req, res) => {
       filter.teamId = teamId;
     }
 
-    const workflow = await Workflow.findOne(filter);
+    const workflow = await Workflow.findOne(filter).select("states transitions");
 
     if (!workflow) {
       return res.status(404).json({ message: "Workflow not found for given context" });

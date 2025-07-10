@@ -130,56 +130,31 @@ export const getDocuments = async (req, res) => {
 //  Delete a document (soft delete + cloudinary)
 export const deleteDocument = async (req, res) => {
     try {
-        const { documentId } = req.params;
+        const documentId = req.params.id;
 
         if (!mongoose.Types.ObjectId.isValid(documentId)) {
             return res.status(400).json({ message: "Invalid document ID" });
         }
 
-        const document = await Document.findOneAndUpdate(
-            { _id: documentId, isDeleted: false },
-            { isDeleted: true },
-            { new: true }
-        );
+        const document = await Document.findOne({ _id: documentId });
 
         if (!document) {
             return res.status(404).json({ message: "Document not found" });
         }
 
-        // Optional: delete from cloud
-        await deleteCloudinaryAsset(document.file.public_id);
-
+        if (document.file.public_id !== null) {
+            await deleteCloudinaryAsset(document.file.public_id);
+        } else if (document.image.public_id !== null) {
+            await deleteCloudinaryAsset(document.image.public_id);
+        }
+        await Document.findByIdAndDelete(documentId);
         res.status(200).json({ message: "Document deleted successfully", documentId });
     } catch (err) {
         res.status(500).json({ message: "Failed to delete document", error: err.message });
     }
 };
 
-//  Update document name or metadata
-export const updateDocument = async (req, res) => {
-    try {
-        const { documentId } = req.params;
-        const { name } = req.body;
 
-        if (!name) {
-            return res.status(400).json({ message: "Name is required" });
-        }
-
-        const updatedDoc = await Document.findByIdAndUpdate(
-            documentId,
-            { "file.name": name },
-            { new: true }
-        );
-
-        if (!updatedDoc) {
-            return res.status(404).json({ message: "Document not found" });
-        }
-
-        res.status(200).json({ message: "Document updated", document: updatedDoc });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to update document", error: err.message });
-    }
-};
 
 export const getStorageUsage = async (req, res) => {
     try {
@@ -193,12 +168,11 @@ export const getStorageUsage = async (req, res) => {
         // First get total document count
         const totalDocs = await Document.countDocuments(filter);
         const toalbytes = await Document.find({}).select('file.size image.size')
-        const totalSize = toalbytes.reduce((acc, doc) => acc + doc.file.size + doc.image.size, 0);
-        console.log("totalSize", totalSize);
-
-
-
-
+        const totalSize = toalbytes.reduce((acc, doc) => {
+            const fileSize = doc?.file?.size || 0;
+            const imageSize = doc?.image?.size || 0;
+            return acc + fileSize + imageSize;
+        }, 0);
 
         res.status(200).json({
             success: true,

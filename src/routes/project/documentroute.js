@@ -5,7 +5,7 @@ import { authenticateOrgToken } from "../../middleweare/orgmiddleware.js";
 import {
     getDocuments,
     uploadDocument,
-    updateDocument,
+    // updateDocument,
     deleteDocument,
  getStorageUsage
 } from "../../controllers/project/document.controller.js";
@@ -22,7 +22,7 @@ DocumentRouter.route("/")
 
 // ✏️ Update document | 🗑️ Delete document by ID
 DocumentRouter.route("/:id")
-  .put(updateDocument)
+  // .put(updateDocument)
   .delete(deleteDocument);
 
 // 📦 Get storage usage

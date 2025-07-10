@@ -58,11 +58,7 @@ const documentSchema = mongoose.Schema(
       required: true,
     },
 
-    isDeleted: {
-      type: Boolean,
-      default: false,
-      select: false,
-    },
+ 
   },
   { timestamps: true }
 );
