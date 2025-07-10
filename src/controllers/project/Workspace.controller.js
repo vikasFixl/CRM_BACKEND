@@ -26,6 +26,11 @@ export const createWorkspace = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     const { name, description } = parsed.data;
+    // cheeck if workspace name exists
+    const exists=await Workspace.findOne({createdBy:userId,name})
+    if(exists){
+      return res.status(400).json({message:"name already taken "})
+    }
     const workspace = await Workspace.create({
       name,
       description,

@@ -23,7 +23,7 @@ export const createTask = async (req, res) => {
 
     const {
       projectId,
-      summary,
+      name,
       description,
       type,
       status,
@@ -46,6 +46,11 @@ export const createTask = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
+    // check task name 
+    const existingTask = await Task.findOne({ name, projectId });
+    if (existingTask) {
+      return res.status(400).json({ message: "Task name already exists" });
+    }
     // 3. Validate task type
     const allowedTypes = ["task", "bug", "story", "epic", "spike"];
     if (!allowedTypes.includes(type)) {
@@ -76,7 +81,7 @@ export const createTask = async (req, res) => {
     }
 
     // 6. Match status with column
-    const column = board.columns.find((col) => col.name === status);
+    const column = board.columns.find((col) => col.key === status);
     if (!column) {
       const allowedStatus = board.columns.map((c) => c.key);
       return res.status(400).json({
@@ -89,7 +94,7 @@ export const createTask = async (req, res) => {
     // 8. Create task
     const task = new Task({
       projectId,
-      summary,
+      name,
       description,
       type,
       status,
@@ -127,7 +132,19 @@ export const createTask = async (req, res) => {
 
 export const getAllTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ projectId: req.params.projectId, isDeleted: false });
+    const tasks = await Task.find({
+      projectId: req.params.projectId,
+      isDeleted: false
+    })
+      .populate({
+        path: "assigneeId",
+        populate: {
+          path: "userId",
+          select: "firstName email avatar"
+        }
+      });
+
+
     return res
       .status(200)
       .json({ tasks, message: "Tasks fetched successfully" });
@@ -207,7 +224,7 @@ export const GetAllSubTasks = async (req, res) => {
       .json({ message: "Task ID and Project ID are required" });
   }
   try {
-    const tasks = await Task.find({ parentId: taskId, projectId, isDeleted: false });
+    const tasks = await Task.find({ parentId: taskId, projectId, isDeleted: false }).populate("parentId", "name taskCode");
     if (!tasks) {
       return res.status(404).json({ message: "Subtasks not found", data: [] });
     }

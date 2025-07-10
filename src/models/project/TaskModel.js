@@ -14,11 +14,11 @@ const TaskSchema = new mongoose.Schema(
       required: true,
       default: generateTaskCode,
     },
-    summary: {
+    name: {
       type: String,
       required: true,
       trim: true,
-      maxlength: 300,
+      maxlength: 100,
     },
     description: {
       type: String,

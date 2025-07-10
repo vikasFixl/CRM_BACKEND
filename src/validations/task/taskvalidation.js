@@ -11,11 +11,11 @@ export const createTaskSchema = z.object({
 
   key: z.string().optional(), // Auto-generated server-side
 
-  summary: z
-    .string( {required_error: "Summary is required"})
+  name: z
+    .string( {required_error: "name is required"})
     .trim()
     .min(1)
-    .max(300, "Summary cannot exceed 300 characters"),
+    .max(100,"name cannot exceed 100 characters"),
 
   description: z
     .string()
@@ -94,12 +94,11 @@ export const createTaskSchema = z.object({
 export const updateTaskSchema = z.object({
   // ✅ Exclude projectId and key – these should never be updated
 
-  summary: z
-    .string()
+  name: z
+    .string({ required_error: "name is required" })
     .trim()
-    .min(1, "Summary cannot be empty")
-    .max(300, "Summary cannot exceed 300 characters")
-    .optional(),
+    .min(1, "name is required")
+    .max(100, "name cannot exceed 100 characters"),
 
   description: z
     .string()
