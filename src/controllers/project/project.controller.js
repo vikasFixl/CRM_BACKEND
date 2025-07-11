@@ -25,7 +25,7 @@ export const createProject = async (req, res) => {
     const orgId = req.orgUser.orgId;
     const { workspaceId } = req.params;
 
-console.log("req.body", req.body)
+    console.log("req.body", req.body)
     const parsed = createProjectSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({
@@ -320,50 +320,60 @@ export const getMyProjectsByWorkspace = async (req, res) => {
 
 export const getProjectById = async (req, res) => {
   try {
-    // ✅ Validate projectId and workspaceId
-    const projectId = projectIdSchema.parse(req.params.projectId);
-    const workspaceId = workspaceIdSchema.parse(req.params.workspaceId);
-    const orgId = req.orgUser.orgId;
+    // ✅ Validate projectId and workspaceId first (fail fast)
+    const { projectId, workspaceId } = req.params;
+    const { orgId } = req.orgUser;
 
-    // ✅ Fetch the project
-    const project = await Project.findOne({
-      _id: projectId,
-      workspace: workspaceId,
-      organization: orgId,
-    })
-      .populate("createdBy", "email _id firstName lastName")
-      .populate("workspace", "name _id")
-      .populate("organization", "name _id")
-      .populate("boardId", "_id columns")
-      .lean();
+    const validatedProjectId = projectIdSchema.parse(projectId);
+    const validatedWorkspaceId = workspaceIdSchema.parse(workspaceId);
+
+    // ✅ Use Promise.all for parallel operations
+    const [project] = await Promise.all([
+      Project.findOne({
+        _id: validatedProjectId,
+        workspace: validatedWorkspaceId,
+        organization: orgId,
+      })
+        .populate([
+          { path: "createdBy", select: "email _id firstName lastName" },
+          { path: "workspace", select: "name _id" },
+          { path: "organization", select: "name _id" },
+          { path: "boardId", select: "_id columns" }
+        ])
+        .lean(),
+
+      ProjectMember.find({ project: validatedProjectId })
+
+    ]);
 
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    // ✅ Get unique project members
-    const members = await ProjectMember.find({ project: projectId })
-      .populate("userId", "email _id firstName lastName")
-      .select("userId role")
-      .lean();
 
-    console.log("project member", members)
-    const uniqueMembersMap = new Map();
-    for (const member of members) {
-      uniqueMembersMap.set(member.userId?._id.toString(), member); // prevent duplicates
-    }
-    const uniqueMembers = Array.from(uniqueMembersMap.values());
 
-    project.projectMembers = uniqueMembers;
+    // ✅ Create new object to avoid modifying the lean result
+    const responseData = {
+      ...project
+    };
 
-    // ✅ Return the project
     return res.status(200).json({
       message: "Project fetched successfully",
-      project,
+      project: responseData
     });
+
   } catch (error) {
     console.error("❌ Error in getProjectById:", error);
-    return res.status(500).json({ message: "Internal server error" });
+
+    // ✅ Better error differentiation
+    if (error instanceof ZodError) {
+      return res.status(400).json({ message: "Invalid input data" });
+    }
+
+    return res.status(500).json({
+      message: "Internal server error",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

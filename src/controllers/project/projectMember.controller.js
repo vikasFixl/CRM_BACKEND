@@ -147,8 +147,8 @@ export const getAllProjectMembers = async (req, res) => {
       .populate("role", "role permissions")
       .skip(skip)
       .limit(limit);
-     
-console.log(membersRaw)
+
+    console.log(membersRaw)
     const totalMembers = await ProjectMember.countDocuments({ projectId });
 
     // Format each member
@@ -162,7 +162,7 @@ console.log(membersRaw)
         : defaultPermissions.flatMap((perm) => perm.actions);
 
       return {
-      m_id: member._id,
+        m_id: member._id,
         email: member.userId?.email,
         fullName: member.userId?.fullName,
         role: roleName,
