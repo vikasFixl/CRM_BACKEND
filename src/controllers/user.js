@@ -88,6 +88,7 @@ export const login = async (req, res) => {
         organizationId: user.currentOrganization._id,
         status: "active",
       }).populate("role");
+      console.log("member", member);
 
       if (member && member.role) {
         const orgPayload = {
