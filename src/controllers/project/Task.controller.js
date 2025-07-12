@@ -151,17 +151,18 @@ export const getAllTasks = async (req, res) => {
         ...task.toObject(),
         assigneeId: user
           ? {
-              firstName: user.firstName,
-              email: user.email,
-              avatar: user.avatar
-            }
+            firstName: user.firstName,
+            email: user.email,
+            avatar: user.avatar
+          }
           : null
       };
     });
 
     return res.status(200).json({
-      tasks: cleanedTasks,
-      message: "Tasks fetched successfully"
+      message: "Tasks fetched successfully",
+      totalTask: tasks.length,
+      tasks: cleanedTasks
     });
   } catch (error) {
     console.error("Error in getAllTasks:", error);
@@ -174,25 +175,20 @@ export const deleteTask = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { projectId, taskId } = req.params;
+    const { taskId } = req.params;
     const userId = req.user.userId;
 
-    if (!projectId || !taskId) {
-      return res.status(400).json({ message: "Project ID and Task ID are required" });
+    if (!taskId) {
+      return res.status(400).json({ message: " Task ID are required" });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(projectId) || !mongoose.Types.ObjectId.isValid(taskId)) {
-      return res.status(400).json({ message: "Invalid Project ID or Task ID" });
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+      return res.status(400).json({ message: "Invalid  Task ID" });
     }
 
-    const project = await Project.findOne({ _id: projectId, isDeleted: false }).session(session);
-    if (!project) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: "Project does not exist" });
-    }
 
-    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false }).session(session);
+
+    const task = await Task.findOne({ _id: taskId, isDeleted: false }).session(session);
     if (!task) {
       await session.abortTransaction();
       session.endSession();
@@ -232,15 +228,15 @@ export const deleteTask = async (req, res) => {
 
 export const GetAllSubTasks = async (req, res) => {
   const taskId = req.params.taskId;
-  const projectId = req.params.projectId;
 
-  if (!taskId || !projectId) {
+
+  if (!taskId) {
     return res
       .status(400)
-      .json({ message: "Task ID and Project ID are required" });
+      .json({ message: "Task ID  required" });
   }
   try {
-    const tasks = await Task.find({ parentId: taskId, projectId, isDeleted: false }).populate("parentId", "name taskCode");
+    const tasks = await Task.find({ parentId: taskId, isDeleted: false }).populate("parentId", "name taskCode");
     if (!tasks) {
       return res.status(404).json({ message: "Subtasks not found", data: [] });
     }
@@ -256,15 +252,15 @@ export const GetAllSubTasks = async (req, res) => {
 export const getTaskById = async (req, res) => {
   try {
     const taskId = req.params.taskId;
-    const projectId = req.params.projectId;
 
-    if (!taskId || !projectId) {
+
+    if (!taskId) {
       return res
         .status(400)
-        .json({ message: "Task ID and Project ID are required" });
+        .json({ message: "Task ID required" });
     }
-    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false })
-    console.log(task)
+    const task = await Task.findOne({ _id: taskId, isDeleted: false })
+    // console.log(task)
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
@@ -280,17 +276,17 @@ export const updateTask = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { taskId, projectId } = req.params;
+    const { taskId } = req.params;
     const userId = req.user.userId;
 
     // Validate IDs
-    if (!taskId || !projectId) {
+    if (!taskId) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ message: "Task ID and Project ID are required" });
+      return res.status(400).json({ message: "Task ID are required" });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(taskId) || !mongoose.Types.ObjectId.isValid(projectId)) {
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ message: "Invalid Task ID or Project ID" });
@@ -308,9 +304,10 @@ export const updateTask = async (req, res) => {
     }
 
     const { status, ...updateData } = parsed.data;
+    console.log("parseddata", parsed.data);
 
     // Fetch task with populated board and workflow (inside board) 
-    const task = await Task.findOne({ _id: taskId, projectId, isDeleted: false })
+    const task = await Task.findOne({ _id: taskId, isDeleted: false })
       .populate({
         path: 'boardId',
         populate: {
@@ -405,7 +402,7 @@ export const updateTask = async (req, res) => {
 
     // Perform the update
     const updatedTask = await Task.findOneAndUpdate(
-      { _id: taskId, projectId },
+      { _id: taskId },
       { $set: updateData },
       { new: true, session }
     );
@@ -465,8 +462,8 @@ export const reorderTasks = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { boardId } = req.params;
-    const { taskId, from, to } = req.body;
+    const { taskId } = req.params;
+    const { boardId, from, to } = req.body;
 
     // Validate IDs
     if (
@@ -588,32 +585,39 @@ export const reorderTasks = async (req, res) => {
 
 export const getTasksByBoardColumn = async (req, res) => {
   try {
-    const { boardId } = req.body;
-    const { projectId } = req.params;
+    const boardId = req.params.boardId;
 
     // Validate inputs
-    if (!projectId || !boardId) {
-      return res.status(400).json({
-        message: "Both projectId (params) and boardId (body) are required",
-      });
+    if (!boardId) {
+      return res.status(400).json({ message: "boardId required" });
     }
 
     // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(projectId) || !mongoose.Types.ObjectId.isValid(boardId)) {
-      return res.status(400).json({ message: "Invalid projectId or boardId format" });
+    if (!mongoose.Types.ObjectId.isValid(boardId)) {
+      return res.status(400).json({ message: "Invalid boardId format" });
     }
 
     // Fetch board and tasks in parallel
-    const [board, tasks] = await Promise.all([
-      Board.findOne({ _id: boardId, projectId }).lean(),
-      Task.find({ boardId, isDeleted: false }).select("columnOrder summary _id status priority").lean()
+    const [board, tasksRaw] = await Promise.all([
+      Board.findOne({ _id: boardId, isDeleted: false }).lean(),
+      Task.find({ boardId, isDeleted: false })
+        .select("columnOrder summary _id status priority name taskCode")
+        .populate({
+          path: "assigneeId",
+          select: "userId", // only fetch userId from assignee object
+          populate: {
+            path: "userId",
+            select: "firstName email avatar", // only these fields from user
+          }
+        })
+        .lean()
     ]);
 
     if (!board) {
-      return res.status(404).json({ message: "Board not found for the given project" });
+      return res.status(404).json({ message: "Board not found" });
     }
 
-    // Create column structure with empty task arrays
+    // Create column structure
     const columns = (board.columns || [])
       .sort((a, b) => a.order - b.order)
       .map(col => ({
@@ -624,11 +628,33 @@ export const getTasksByBoardColumn = async (req, res) => {
         tasks: [] // Initialize empty task array
       }));
 
-    // Create a lookup map for columns by order
+    // Create column lookup
     const columnMap = new Map();
     columns.forEach(col => columnMap.set(col.order, col));
 
-    // Group tasks by column
+
+    const tasks = tasksRaw.map(task => {
+      const user = task.assigneeId?.userId;
+
+      return {
+        _id: task._id,
+        name: task.name,
+        priority: task.priority,
+        status: task.status,
+        columnOrder: task.columnOrder,
+        taskCode: task.taskCode,
+        summary: task.summary,
+        assignee: user
+          ? {
+            name: user.firstName,
+            email: user.email,
+            avatar: user.avatar?.url,
+          }
+          : null
+      };
+    });
+
+    // Group tasks into columns
     tasks.forEach(task => {
       if (columnMap.has(task.columnOrder)) {
         columnMap.get(task.columnOrder).tasks.push(task);
@@ -649,3 +675,4 @@ export const getTasksByBoardColumn = async (req, res) => {
     });
   }
 };
+

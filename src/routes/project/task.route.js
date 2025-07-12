@@ -24,36 +24,36 @@ TaskRouter.route("/:projectId/all").get(
   authenticateOrgToken(),
   getAllTasks
 );
-TaskRouter.route("/projects/:projectId/tasks/:taskId").delete(
+TaskRouter.route("/:taskId/delete").delete(
   isAuthenticated,
   authenticateOrgToken(),
   // checkProjectPermission(PERMISSIONS.DELETE_TASK),
   deleteTask
 );
-TaskRouter.route("/projects/:projectId/tasks/:taskId/subtasks").get(
+TaskRouter.route("/:taskId/subtasks").get(
   isAuthenticated,
   authenticateOrgToken(),
   // checkProjectPermission(PERMISSIONS.DELETE_TASK),
   GetAllSubTasks
 );
-TaskRouter.route("/:projectId/task/:taskId").get(
+TaskRouter.route("/:taskId").get(
   isAuthenticated,
   authenticateOrgToken(),
   getTaskById
 );
-TaskRouter.route("/:projectId/task/:taskId").patch(
+TaskRouter.route("/:taskId/update").patch(
   isAuthenticated,
   authenticateOrgToken(),
   // checkProjectPermission(PERMISSIONS.DELETE_TASK),
   updateTask
 );
-TaskRouter.route("/:boardId/re-order").patch(
+TaskRouter.route("/:taskId/re-order").patch(
   isAuthenticated,
   authenticateOrgToken(),
   // checkProjectPermission(PERMISSIONS.DELETE_TASK),
   reorderTasks
 )
-TaskRouter.route("/:projectId/by-board").get(
+TaskRouter.route("/:boardId/by-board").get(
   isAuthenticated,
   authenticateOrgToken(),
   getTasksByBoardColumn

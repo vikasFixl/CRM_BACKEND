@@ -35,7 +35,7 @@ ProjectRouter.route("/workspace/:workspaceId/my-projects").get(
   getMyProjectsByWorkspace
 );
 // get project members
-ProjectRouter.route("/workspace/:workspaceId/project/:projectId").get(
+ProjectRouter.route("/:projectId").get(
   isAuthenticated,
   authenticateOrgToken(),
   getProjectById
@@ -67,6 +67,6 @@ ProjectRouter.route("/delete/:projectId").delete(
 // // 📁 Archive
 // ProjectRouter.route("/archive/:projectId").patch(isAuthenticated, authenticateOrgToken(), archiveProject);
 
-// member routes
+
 
 export default ProjectRouter;

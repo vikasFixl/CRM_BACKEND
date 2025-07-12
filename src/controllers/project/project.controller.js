@@ -315,23 +315,19 @@ export const getMyProjectsByWorkspace = async (req, res) => {
   }
 };
 
-
-
-
 export const getProjectById = async (req, res) => {
   try {
     // ✅ Validate projectId and workspaceId first (fail fast)
-    const { projectId, workspaceId } = req.params;
+    const { projectId} = req.params;
     const { orgId } = req.orgUser;
 
     const validatedProjectId = projectIdSchema.parse(projectId);
-    const validatedWorkspaceId = workspaceIdSchema.parse(workspaceId);
+    
 
     // ✅ Use Promise.all for parallel operations
     const [project] = await Promise.all([
       Project.findOne({
         _id: validatedProjectId,
-        workspace: validatedWorkspaceId,
         organization: orgId,
       })
         .populate([
@@ -341,8 +337,6 @@ export const getProjectById = async (req, res) => {
           { path: "boardId", select: "_id columns" }
         ])
         .lean(),
-
-      ProjectMember.find({ project: validatedProjectId })
 
     ]);
 

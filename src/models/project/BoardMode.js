@@ -68,7 +68,7 @@ const BoardSchema = new mongoose.Schema(
     // help to identify that we can delte bord or not 
     deletable: {
       type: Boolean,
-      default: true,
+      default:false,
     },
     deletedBy: {
       type: mongoose.Schema.Types.ObjectId,

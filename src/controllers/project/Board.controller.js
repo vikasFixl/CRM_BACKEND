@@ -94,31 +94,87 @@ export const createBoard = async (req, res) => {
   }
 };
 
-// 🔹 Get board details with workflow
-export const getBoard = async (req, res) => {
+
+// get all board by project will be used when we make team model 
+// export const getAllBoard = async (req, res) => {
+//   try {
+//     const boards = await Board.find(
+//       { projectId: req.params.projectId, isDeleted: false },
+//       "_id name isProjectDefault teamId type columns deletable"
+//     ).populate({
+//       path: 'teamId',
+//       select: '_id name' // Only include team _id and name
+//     }).lean(); // Convert to plain JS object
+
+//     // Simplify the boards data before sending
+//     const simplifiedBoards = boards.map(board => ({
+//       _id: board._id,
+//       name: board.name,
+//       type: board.type,
+//       projectId: req.params.projectId,
+//       teamId: board.teamId ? { 
+//         _id: board.teamId._id, 
+//         name: board.teamId.name 
+//       } : null,
+//       isProjectDefault: board.isProjectDefault,
+//       deletable: board.deletable,
+//       columns: board.columns.map(column => ({
+//         _id: column._id,
+//         name: column.name,
+//         order: column.order,
+//         key: column.key
+//       }))
+//     }));
+
+//     res.status(200).json({
+//       success: true,
+//       total: simplifiedBoards.length,
+//       boards: simplifiedBoards,
+//     });
+//   } catch (err) {
+//     res.status(400).json({
+//       success: false,
+//       error: err.message,
+//     });
+//   }
+// };
+
+export const getAllBoard = async (req, res) => {
   try {
-    const board = await Board.findById(req.params.boardId)
-      .populate('workflow')
-      .lean();
+    const boards = await Board.find(
+      { projectId: req.params.projectId, isDeleted: false },
+      "_id name isProjectDefault teamId type columns deletable"
+    ).lean();
 
-    if (!board) {
-      return res.status(404).json({ error: "Board not found" });
-    }
+    // Simplify the boards data before sending
+    const simplifiedBoards = boards.map(board => ({
+      _id: board._id,
+      name: board.name,
+      type: board.type,
+      projectId: req.params.projectId,
+      teamId: board.teamId, // keep as is since we can't populate
+      isProjectDefault: board.isProjectDefault,
+      deletable: board.deletable,
+      columns: board.columns.map(column => ({
+        _id: column._id,
+        name: column.name,
+        order: column.order,
+        key: column.key
+      }))
+    }));
 
-    // Enhance response with workflow details
-    const response = {
-      ...board,
-      workflowStates: board.workflow?.states || [],
-      workflowTransitions: board.workflow?.transitions || []
-    };
-
-    res.json({ success: true, board: response });
-
+    res.status(200).json({
+      success: true,
+      total: simplifiedBoards.length,
+      boards: simplifiedBoards,
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({
+      success: false,
+      error: err.message,
+    });
   }
 };
-
 
 
 export const deleteBoard = async (req, res) => {
@@ -134,14 +190,14 @@ export const deleteBoard = async (req, res) => {
     if (!board || board.isDeleted) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(404).json({ error: "Board not found or already deleted" });
+      return res.status(404).json({ message: "Board not found or already deleted" });
     }
 
     if (!board.teamId) {
       await session.abortTransaction();
       session.endSession();
       return res.status(403).json({
-        error: "Only team-assigned boards can be deleted"
+        message: "Only team-assigned boards can be deleted"
       });
     }
 
@@ -149,7 +205,7 @@ export const deleteBoard = async (req, res) => {
       await session.abortTransaction();
       session.endSession();
       return res.status(403).json({
-        error: "This board cannot be deleted (protected)"
+        message: "This board cannot be deleted (protected)"
       });
     }
 
@@ -169,7 +225,7 @@ export const deleteBoard = async (req, res) => {
     // Soft delete the board
     board.isDeleted = true;
     board.deletedBy = userId;
-    board.deletedAt = new Date();
+  
     await board.save({ session });
 
     await session.commitTransaction();
@@ -184,6 +240,98 @@ export const deleteBoard = async (req, res) => {
   }
 };
 
+export const getBoardById = async (req, res) => {
+  try {
+    const { boardId } = req.params;
+    const { teamId } = req.query; // Optional teamId passed as query parameter
+
+    // Validate boardId
+    if (!mongoose.Types.ObjectId.isValid(boardId)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid boardId format' 
+      });
+    }
+
+    // Build query condition
+    const queryConditions = {
+      _id: boardId,
+      isDeleted: false
+    };
+
+    // Add teamId to query if provided
+    if (teamId) {
+      if (!mongoose.Types.ObjectId.isValid(teamId)) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'Invalid teamId format' 
+        });
+      }
+      queryConditions.teamId = teamId;
+    }
+
+    // Fetch board with optional team validation
+    const board = await Board.findOne(queryConditions)
+      .select('_id name type columns teamId isProjectDefault deletable')
+      .populate({
+        path: 'projectId',
+        select: '_id name',
+        match: { isDeleted: false } // Only populate if team exists and not deleted
+      })
+      .lean();
+
+    if (!board) {
+      return res.status(404).json({
+        success: false,
+        error: teamId ? 'Board not found in specified team' : 'Board not found'
+      });
+    }
+
+    // Fetch tasks (common for both cases)
+    const tasks = await Task.find({ boardId, isDeleted: false })
+      .select('_id title description columnKey priority dueDate labels assignees createdAt')
+      .populate({
+        path: 'assigneeId',
+        select: '_id name avatar'
+      })
+      .populate({
+        path: 'labels',
+        select: '_id name color'
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Organize tasks by column
+    const tasksByColumn = tasks.reduce((acc, task) => {
+      acc[task.columnKey] = acc[task.columnKey] || [];
+      acc[task.columnKey].push(task);
+      return acc;
+    }, {});
+
+    const columnsWithTasks = board.columns.map(column => ({
+      _id: column._id,
+      name: column.name,
+      order: column.order,
+      key: column.key,
+      tasks: tasksByColumn[column.key] || []
+    }));
+
+    res.status(200).json({
+      success: true,
+      board: {
+        ...board,
+        columns: columnsWithTasks,
+        totalTasks: tasks.length
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+};
 
 
 // 🔹 Add column (with workflow state sync)
