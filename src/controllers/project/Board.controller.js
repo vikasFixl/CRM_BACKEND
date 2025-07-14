@@ -225,7 +225,7 @@ export const deleteBoard = async (req, res) => {
     // Soft delete the board
     board.isDeleted = true;
     board.deletedBy = userId;
-  
+
     await board.save({ session });
 
     await session.commitTransaction();
@@ -247,9 +247,9 @@ export const getBoardById = async (req, res) => {
 
     // Validate boardId
     if (!mongoose.Types.ObjectId.isValid(boardId)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'Invalid boardId format' 
+        error: 'Invalid boardId format'
       });
     }
 
@@ -262,9 +262,9 @@ export const getBoardById = async (req, res) => {
     // Add teamId to query if provided
     if (teamId) {
       if (!mongoose.Types.ObjectId.isValid(teamId)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          error: 'Invalid teamId format' 
+          error: 'Invalid teamId format'
         });
       }
       queryConditions.teamId = teamId;
@@ -370,7 +370,7 @@ export const addColumn = async (req, res) => {
     }
 
     // Generate key from name
-    const key = name.toLowerCase().replace(/\s+/g, '_');
+    const key = name.toLowerCase();
 
     // Check for duplicate column key
     if (board.columns.some(col => col.key === key)) {
@@ -471,7 +471,7 @@ export const updateColumn = async (req, res) => {
     const { boardId } = req.params;
     const { columnId, name, color } = req.body;
 
-    // Validate inputs
+    // Validate name
     if (!name || typeof name !== "string" || name.trim() === "") {
       await session.abortTransaction();
       session.endSession();
@@ -492,26 +492,25 @@ export const updateColumn = async (req, res) => {
       return res.status(404).json({ error: "Column not found" });
     }
 
-    // Generate new key from name
-    const newKey = name.toLowerCase().replace(/\s+/g, '_');
+    // Store oldKey BEFORE changing anything
+    const oldKey = column.key;
+    const newKey = name.toLowerCase().trim();
 
-    // Check for duplicate key (excluding current column)
-    if (board.columns.some(col =>
+    const isDuplicate = board.columns.some(col =>
       col._id.toString() !== columnId && col.key === newKey
-    )) {
+    );
+    if (isDuplicate) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ error: "Column with this key already exists" });
     }
 
-    const oldKey = column.key;
-
-    // Update column
+    // Update column details
     column.name = name;
     column.key = newKey;
     if (color) column.color = color;
 
-    // If board has workflow, update corresponding state
+    // Update matching workflow state if applicable
     if (board.workflow) {
       const workflow = await Workflow.findById(board.workflow).session(session);
       if (workflow) {
@@ -525,13 +524,20 @@ export const updateColumn = async (req, res) => {
       }
     }
 
+    // Update tasks that match the old column key
+    await Task.updateMany(
+      { boardId, status: oldKey },
+      { $set: { status: newKey } },
+      { session }
+    );
+
     await board.save({ session });
     await session.commitTransaction();
     session.endSession();
 
-    res.json({
+    return res.json({
       success: true,
-      message: "Column updated",
+      message: "Column updated successfully",
       column: {
         id: columnId,
         name,
@@ -543,12 +549,15 @@ export const updateColumn = async (req, res) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    res.status(500).json({
+    console.error("Error updating column:", err);
+    return res.status(500).json({
       error: "Internal server error",
       details: err.message
     });
   }
 };
+
+
 
 // 🔹 Delete column (with workflow state sync)
 export const deleteColumn = async (req, res) => {

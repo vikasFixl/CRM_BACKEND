@@ -46,8 +46,10 @@ export const createTask = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
+    console.log(project._id, "proejct id")
+    console.log(projectId)
     // check task name 
-    const existingTask = await Task.findOne({ name, projectId });
+    const existingTask = await Task.findOne({ name, projectId: project._id });
     if (existingTask) {
       return res.status(400).json({ message: "Task name already exists" });
     }
@@ -73,13 +75,15 @@ export const createTask = async (req, res) => {
     }
 
     // 5. Find board and validate status
-    const board = await Board.findOne({ projectId });
+    const board = await Board.findOne({ projectId: project._id });
     if (!board) {
       return res
         .status(404)
         .json({ message: "Board not found for the project" });
     }
-
+    console.log(board._id == project.boardId)
+    console.log(project.boardId)
+    console.log(board._id)
     // 6. Match status with column
     const column = board.columns.find((col) => col.key === status);
     if (!column) {
@@ -114,6 +118,7 @@ export const createTask = async (req, res) => {
       watchers,
       customFields,
     });
+    console.log("task", task)
 
     await task.save();
 
@@ -323,6 +328,7 @@ export const updateTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
+    console.log("task at ", task)
     // Handle status update if present in request
     if (status !== undefined) {
       if (!task.boardId) {
