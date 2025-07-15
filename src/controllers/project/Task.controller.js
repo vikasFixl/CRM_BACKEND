@@ -623,6 +623,9 @@ export const getTasksByBoardColumn = async (req, res) => {
       return res.status(404).json({ message: "Board not found" });
     }
 
+    console.log("boaard",board)
+    console.log("task raw",tasksRaw);
+    
     // Create column structure
     const columns = (board.columns || [])
       .sort((a, b) => a.order - b.order)

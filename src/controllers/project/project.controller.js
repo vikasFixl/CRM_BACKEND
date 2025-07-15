@@ -122,6 +122,7 @@ export const createProject = async (req, res) => {
       description: `Project '${name}' created with template '${template.name}'`,
     }], { session });
 
+  
     if (template.task?.length > 0) {
       const taskDocs = template.task.map((taskTemplate) => ({
         projectId: project._id,
@@ -130,6 +131,7 @@ export const createProject = async (req, res) => {
         type: taskTemplate.type,
         status: taskTemplate.status,
         columnOrder: taskTemplate.columnOrder,
+        boardId:board._id,
         priority: taskTemplate.priority,
         labels: taskTemplate.labels,
         createdBy: userId,
