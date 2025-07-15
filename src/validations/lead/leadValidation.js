@@ -46,7 +46,7 @@ export const leadSchema = z.object({
       .string()
       .email({ required_error: " email is required" })
       .nonempty("Email cannot be empty"), // email validation
-    phone: z.number({ required_error: " phone is required" }),
+    phone: z.string({ required_error: " phone is required" }),
     address: z
       .object({
         line1: z.string({ required_error: " address line 1 is required" }),
