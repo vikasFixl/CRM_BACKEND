@@ -65,7 +65,4 @@ export const updateClientSchema = z.object({
   tinNo: z.string().optional(),
   cinNo: z.string().optional(),
 
-  // ❌ These are blocked — should not be updated via client input
-  orgId: z.undefined().optional(),
-  firmId: z.undefined().optional(),
 });
