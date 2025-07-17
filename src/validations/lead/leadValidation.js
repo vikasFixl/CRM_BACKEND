@@ -35,7 +35,7 @@ export const leadSchema = z.object({
   // Client Info
   client: z.object({
     firstName: z
-      .string({ required_error: " first name is required" }) 
+      .string({ required_error: " first name is required" })
       .min(1)
       .nonempty("First name cannot be empty"),
     lastName: z
@@ -78,9 +78,8 @@ export const leadSchema = z.object({
   // Assignment
   leadManagerId: z.string().optional(), // ObjectId as string
   assignedToId: z.string().optional(), // ObjectId as string
-  orgId: z.string().min(1, "Org ID is required").optional(),
-  // Org/Firm
-  firmId: z.string().optional(),
+ 
+  firmId: z.string({required_error:"firm id required"}),
   // Pipeline Info
   pipeline: z
     .object({

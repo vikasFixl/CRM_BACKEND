@@ -68,6 +68,7 @@ import RolePermissionRouter from "./src/routes/rolepermissionroute.js";
 import BoardRouter from "./src/routes/project/boardroute.js";
 import WorkflowRouter from "./src/routes/project/workflowroute.js";
 import DocumentRouter from "./src/routes/project/documentroute.js";
+import TeamRouter from "./src/routes/project/teamroute.js";
 
 // PayPal config
 paypal.configure({
@@ -150,6 +151,7 @@ app.use("/api/board",BoardRouter)
 app.use("/api/role-permission", RolePermissionRouter);
 app.use("/api/workflow",WorkflowRouter)
 app.use("/api/documents", DocumentRouter);
+app.use("/api/teams", TeamRouter);
 
 /**
  * 

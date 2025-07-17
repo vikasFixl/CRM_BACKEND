@@ -1,3 +1,4 @@
+// models/Team.js
 import mongoose from "mongoose";
 
 const TeamSchema = new mongoose.Schema(
@@ -18,6 +19,11 @@ const TeamSchema = new mongoose.Schema(
       ref: "Workspace",
       required: true,
       index: true,
+    },
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+      required: true,
     },
     description: {
       type: String,
@@ -45,6 +51,11 @@ const TeamSchema = new mongoose.Schema(
     membersCount: {
       type: Number,
       default: 0,
+    },
+    /* NEW */
+    hasBoard: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

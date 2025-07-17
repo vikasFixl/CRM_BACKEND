@@ -14,10 +14,10 @@ const TeamMemberSchema = new mongoose.Schema(
     },
     // ref to proejct member
 
-   member:{
-    type:mongoose.Schema.Types.ObjectId,
-    ref:"ProjectMember"
-   },
+    member: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ProjectMember"
+    },
     role: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "RolePermission",
@@ -27,7 +27,7 @@ const TeamMemberSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-   
+
     hasCustomPermission: {
       type: Boolean,
       default: false,
@@ -38,10 +38,6 @@ const TeamMemberSchema = new mongoose.Schema(
         actions: [{ type: String }],
       },
     ],
-    isRemoved: {
-      type: Boolean,
-      default: false,
-    },
   },
   { timestamps: true }
 );

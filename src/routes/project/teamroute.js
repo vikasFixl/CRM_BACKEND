@@ -1,36 +1,36 @@
 // routes/teamRoutes.js
 import express from "express";
 import {
-  createTeam,
-  getTeamsByWorkspace,
   addTeamMember,
-  getTeamMembers,
-  removeTeamMember,
-  toggleArchiveTeam,
+  createTeam,
   deleteTeam,
-} from "../controllers/teamController.js";
+  getTeamMembers,
+  getTeamsByWorkspace,
+  removeTeamMember
+}
+  from "../../controllers/project/Teamcontroller.js";
+import { isAuthenticated } from "../../middleweare/middleware.js" // adjust path as needed
+import { authenticateOrgToken } from "../../middleweare/orgmiddleware.js"
 
+const TeamRouter = express.Router();
+// create team 
+TeamRouter.route("/")
+  .post(isAuthenticated, authenticateOrgToken(), createTeam);
+// get all team in workspace
+TeamRouter.route("/")
+  .get(getTeamsByWorkspace);
 
-const router = express.Router();
+TeamRouter.route("/:teamId/members")
+  .post(isAuthenticated,authenticateOrgToken(),addTeamMember)
+  .get(isAuthenticated,authenticateOrgToken(),getTeamMembers);
 
-// ✅ Team routes
-router.route("/")
-  .post(protect, createTeam);
+TeamRouter.route("/:teamId/member/:memberId")
+  .delete(isAuthenticated,authenticateOrgToken(),removeTeamMember);
 
-router.route("/workspace/:workspaceId")
-  .get(protect, getTeamsByWorkspace);
+// TeamRouter.route("/:teamId/archive")
+//   .patch(toggleArchiveTeam);
 
-router.route("/:teamId/members")
-  .post(protect, addTeamMember)
-  .get(protect, getTeamMembers);
+TeamRouter.route("/:teamId/delete")
+  .delete(isAuthenticated,authenticateOrgToken(),deleteTeam);
 
-router.route("/:teamId/members/:memberId")
-  .delete(protect, removeTeamMember);
-
-router.route("/:teamId/archive")
-  .patch(protect, toggleArchiveTeam);
-
-router.route("/:teamId")
-  .delete(protect, deleteTeam);
-
-export default router;
+export default TeamRouter;

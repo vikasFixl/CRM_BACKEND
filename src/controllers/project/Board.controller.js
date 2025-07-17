@@ -141,6 +141,7 @@ export const createBoard = async (req, res) => {
 
 export const getAllBoard = async (req, res) => {
   try {
+    // Team has its own board(s) const teamBoardIds = await Board.find({ teamId }).select('_id'); const teamTasks = await Task.find({ $or: [ { boardId: { $in: teamBoardIds } }, // team-specific boards { assignedTeamId: teamId }, // optionally tagged ] });
     const boards = await Board.find(
       { projectId: req.params.projectId, isDeleted: false },
       "_id name isProjectDefault teamId type columns deletable"
@@ -240,96 +241,45 @@ export const deleteBoard = async (req, res) => {
   }
 };
 
+
+
 export const getBoardById = async (req, res) => {
   try {
     const { boardId } = req.params;
-    const { teamId } = req.query; // Optional teamId passed as query parameter
+    const { teamId } = req.query;
 
-    // Validate boardId
-    if (!mongoose.Types.ObjectId.isValid(boardId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid boardId format'
-      });
-    }
+    // --- validation ---
+    if (!mongoose.Types.ObjectId.isValid(boardId))
+      return res.status(400).json({ success: false, error: "Invalid boardId format" });
 
-    // Build query condition
-    const queryConditions = {
-      _id: boardId,
-      isDeleted: false
-    };
-
-    // Add teamId to query if provided
+    const queryConditions = { _id: boardId, isDeleted: false };
     if (teamId) {
-      if (!mongoose.Types.ObjectId.isValid(teamId)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid teamId format'
-        });
-      }
+      if (!mongoose.Types.ObjectId.isValid(teamId))
+        return res.status(400).json({ success: false, error: "Invalid teamId format" });
       queryConditions.teamId = teamId;
     }
 
-    // Fetch board with optional team validation
+    // --- fetch board ---
     const board = await Board.findOne(queryConditions)
-      .select('_id name type columns teamId isProjectDefault deletable')
-      .populate({
-        path: 'projectId',
-        select: '_id name',
-        match: { isDeleted: false } // Only populate if team exists and not deleted
-      })
+      .select("_id name type columns teamId isProjectDefault deletable")
+      .populate({ path: "projectId", select: "_id name", match: { isDeleted: false } })
       .lean();
 
-    if (!board) {
+    if (!board)
       return res.status(404).json({
         success: false,
-        error: teamId ? 'Board not found in specified team' : 'Board not found'
+        error: teamId ? "Board not found in specified team" : "Board not found"
       });
-    }
 
-    // Fetch tasks (common for both cases)
-    const tasks = await Task.find({ boardId, isDeleted: false })
-      .select('_id title description columnKey priority dueDate labels assignees createdAt')
-      .populate({
-        path: 'assigneeId',
-        select: '_id name avatar'
-      })
-      .populate({
-        path: 'labels',
-        select: '_id name color'
-      })
-      .sort({ createdAt: -1 })
-      .lean();
 
-    // Organize tasks by column
-    const tasksByColumn = tasks.reduce((acc, task) => {
-      acc[task.columnKey] = acc[task.columnKey] || [];
-      acc[task.columnKey].push(task);
-      return acc;
-    }, {});
 
-    const columnsWithTasks = board.columns.map(column => ({
-      _id: column._id,
-      name: column.name,
-      order: column.order,
-      key: column.key,
-      tasks: tasksByColumn[column.key] || []
-    }));
 
     res.status(200).json({
       success: true,
-      board: {
-        ...board,
-        columns: columnsWithTasks,
-        totalTasks: tasks.length
-      }
+      board
     });
-
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
