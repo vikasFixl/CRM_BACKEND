@@ -8,13 +8,13 @@ import {
   updateTaskSchema,
 } from "../../validations/task/taskvalidation.js";
 import { AuditLog } from "../../models/project/auditLogModel.js";
+import { Team } from "../../models/project/TeamModel.js";
 
 export const createTask = async (req, res) => {
   try {
-    // 1. Validate request body
+    /* ---------- 1. Validate body ---------- */
     const parsed = createTaskSchema.safeParse(req.body);
     if (!parsed.success) {
-      console.log("Zod error", parsed.error.format());
       return res.status(400).json({
         message: "Validation error",
         errors: parsed.error.errors.map((e) => e.message),
@@ -22,7 +22,7 @@ export const createTask = async (req, res) => {
     }
 
     const {
-      projectId,
+      boardId,
       name,
       description,
       type,
@@ -40,63 +40,57 @@ export const createTask = async (req, res) => {
       customFields,
     } = parsed.data;
 
-    // 2. Check if project exists
-    const project = await Project.findById(projectId);
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
+    const { projectId } = req.params;
+    const userId = req.user.userId;
+
+    //  check if team exist or not 
+    const team = await Team.findById(assignedTeamId);
+    if (!team) {
+      return res.status(404).json({ message: "team not found " })
     }
 
-    console.log(project._id, "proejct id")
-    console.log(projectId)
-    // check task name 
-    const existingTask = await Task.findOne({ name, projectId: project._id });
-    if (existingTask) {
-      return res.status(400).json({ message: "Task name already exists" });
-    }
-    // 3. Validate task type
-    const allowedTypes = ["task", "bug", "story", "epic", "spike"];
-    if (!allowedTypes.includes(type)) {
-      return res.status(400).json({
-        message: `Invalid task type. Allowed: ${allowedTypes.join(", ")}`,
-      });
+    /* ---------- 2. Parallel fetch + checks ---------- */
+    const [project, board, member] = await Promise.all([
+      Project.findById(projectId),
+      Board.findOne({ _id: boardId, projectId }),
+      ProjectMember.findOne({ projectId, userId }),
+    ]);
+
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    if (!board) return res.status(404).json({ message: "Board not found" });
+    if (!member) return res.status(403).json({ message: "User not part of project" });
+
+    /* ---------- 3. Duplicate task name ---------- */
+    const dup = await Task.findOne({ name, projectId, boardId });
+    if (dup) return res.status(400).json({ message: "Task name already exists" });
+    /* ---------- 3a. Validate assigned team ---------- */
+    if (assignedTeamId) {
+      const team = await Team.findOne({ _id: assignedTeamId });
+      if (!team || team.projectId.toString() != projectId) {
+        return res.status(400).json({ message: "Invalid team for this project" });
+      }
     }
 
-    // 4. Handle parent task validation
+    /* ---------- 4. Column validation ---------- */
+    const column = board.columns.find((c) => c.key === status);
+    if (!column) {
+      const allowed = board.columns.map((c) => c.key).join(", ");
+      return res.status(400).json({ message: `Status must be one of: ${allowed}` });
+    }
+
+    /* ---------- 5. Optional parent task ---------- */
     if (parentId) {
-      if (!mongoose.Types.ObjectId.isValid(parentId)) {
+      if (!mongoose.isValidObjectId(parentId)) {
         return res.status(400).json({ message: "Invalid parentId" });
       }
-      const parentTask = await Task.findById(parentId);
-      if (!parentTask || String(parentTask.projectId) !== String(projectId)) {
-        return res
-          .status(400)
-          .json({ message: "Invalid or cross-project parent task" });
+      const parent = await Task.findById(parentId);
+      if (!parent || String(parent.projectId) !== projectId) {
+        return res.status(400).json({ message: "Invalid or cross-project parent" });
       }
     }
 
-    // 5. Find board and validate status
-    const board = await Board.findOne({ projectId: project._id });
-    if (!board) {
-      return res
-        .status(404)
-        .json({ message: "Board not found for the project" });
-    }
-    console.log(board._id == project.boardId)
-    console.log(project.boardId)
-    console.log(board._id)
-    // 6. Match status with column
-    const column = board.columns.find((col) => col.key === status);
-    if (!column) {
-      const allowedStatus = board.columns.map((c) => c.key);
-      return res.status(400).json({
-        message: `Invalid status. Must be one of: ${allowedStatus.join(", ")}`,
-      });
-    }
-
-
-
-    // 8. Create task
-    const task = new Task({
+    /* ---------- 6. Create task ---------- */
+    const task = await Task.create({
       projectId,
       name,
       description,
@@ -104,70 +98,70 @@ export const createTask = async (req, res) => {
       status,
       priority,
       assigneeId,
-      reporterId: req.user.Id,
+      reporterId: req.user.userId,
       assignedTeamId,
       sprintId: project.type === "scrum" ? sprintId : undefined,
       epicId,
       parentId,
-      columnOrder: column.order,
       columnId: column._id,
-      boardId: board._id,
+      columnOrder: column.order,
+      boardId,
       dueDate,
       storyPoints,
       labels,
       watchers,
       customFields,
     });
-    console.log("task", task)
 
-    await task.save();
-
-    return res.status(201).json({
-      message: "Task created successfully",
-      task,
-    });
-  } catch (error) {
-    console.error("Error in createTask:", error);
-    return res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    return res.status(201).json({ message: "Task created successfully", task });
+  } catch (err) {
+    console.error("createTask error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
 export const getAllTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({
-      projectId: req.params.projectId,
-      isDeleted: false
-    }).populate({
-      path: "assigneeId",
-      populate: {
-        path: "userId",
-        select: "firstName email avatar"
+    const { projectId } = req.params;
+    const { teamId, boardId } = req.query;          // optional filter
+
+    // Build base filter
+    const filter = { projectId, isDeleted: false, boardId };
+    if (teamId) {
+      if (!mongoose.isValidObjectId(teamId)) {
+        return res.status(400).json({ message: "Invalid teamId" });
       }
-    }).populate("parentId", "name taskCode");
+      filter.assignedTeamId = teamId;
+    }
+    // find the project 
+    const pexist = await Project.findOne({ _id: projectId })
+    if (!pexist) {
+      return res.status(404).json({ message: "project not found " })
+    }
+    // Fetch & populate
+    const tasks = await Task.find(filter)
+      .populate({
+        path: "assigneeId",
+        populate: { path: "userId", select: "firstName email avatar" },
+      })
+      .populate("assignedTeamId", "name description _id")
+      .populate("parentId", "name taskCode").sort({ createdAt: -1 });
 
-    const cleanedTasks = tasks.map((task) => {
-      const assignee = task.assigneeId;
-      const user = assignee?.userId;
-
+    // Flatten assignee
+    const cleanedTasks = tasks.map((t) => {
+      const user = t.assigneeId?.userId;
       return {
-        ...task.toObject(),
+        ...t.toObject(),
         assigneeId: user
-          ? {
-            firstName: user.firstName,
-            email: user.email,
-            avatar: user.avatar
-          }
-          : null
+          ? { firstName: user.firstName, email: user.email, avatar: user.avatar }
+          : null,
       };
     });
 
     return res.status(200).json({
       message: "Tasks fetched successfully",
-      totalTask: tasks.length,
-      tasks: cleanedTasks
+      totalTask: cleanedTasks.length,
+      tasks: cleanedTasks,
     });
   } catch (error) {
     console.error("Error in getAllTasks:", error);
@@ -180,34 +174,63 @@ export const deleteTask = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { taskId } = req.params;
+    const { taskId, projectId } = req.params;
+    const { teamId, boardId } = req.query;            // optional
     const userId = req.user.userId;
 
-    if (!taskId) {
-      return res.status(400).json({ message: " Task ID are required" });
+    /* ---------- basic param checks ---------- */
+    if (!taskId || !projectId || !boardId) {
+      return res.status(400).json({ message: "projectId, boardId and taskId are required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(taskId) ||
+      !mongoose.Types.ObjectId.isValid(projectId) ||
+      !mongoose.Types.ObjectId.isValid(boardId)) {
+      return res.status(400).json({ message: "Invalid ID(s)" });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(taskId)) {
-      return res.status(400).json({ message: "Invalid  Task ID" });
+    /* ---------- build task filter ---------- */
+    const taskFilter = {
+      _id: taskId,
+      projectId,
+      boardId,
+      isDeleted: false,
+    };
+    // check if proejct is present 
+    const pexit = await Project.findById(projectId);
+    if (!pexit) {
+      return res.status(404).json({ message: "proejct not found " })
+    }
+    /* ---------- optional team check ---------- */
+    if (teamId) {
+      if (!mongoose.Types.ObjectId.isValid(teamId)) {
+        return res.status(400).json({ message: "Invalid teamId" });
+      }
+      // make sure the team exists and belongs to the same project
+      const team = await Team.findOne({ _id: teamId, projectId }).session(session);
+      if (!team) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({ message: "Team not found or not in project" });
+      }
+      taskFilter.assignedTeamId = teamId;
     }
 
-
-
-    const task = await Task.findOne({ _id: taskId, isDeleted: false }).session(session);
+    /* ---------- fetch task ---------- */
+    const task = await Task.findOne(taskFilter).session(session);
     if (!task) {
       await session.abortTransaction();
       session.endSession();
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // 🔁 Soft delete all subtasks recursively
+    /* ---------- soft-delete sub-tasks ---------- */
     await Task.updateMany(
       { parentId: task._id, isDeleted: false },
       { $set: { isDeleted: true, deletedBy: userId, deletedAt: new Date() } },
       { session }
     );
 
-    // 🗑️ Soft delete the main task
+    /* ---------- soft-delete main task ---------- */
     task.isDeleted = true;
     task.deletedBy = userId;
     task.deletedAt = new Date();
@@ -221,7 +244,6 @@ export const deleteTask = async (req, res) => {
       success: true,
       code: 200,
     });
-
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -232,24 +254,43 @@ export const deleteTask = async (req, res) => {
 
 
 export const GetAllSubTasks = async (req, res) => {
-  const taskId = req.params.taskId;
-
-
-  if (!taskId) {
-    return res
-      .status(400)
-      .json({ message: "Task ID  required" });
-  }
   try {
-    const tasks = await Task.find({ parentId: taskId, isDeleted: false }).populate("parentId", "name taskCode");
-    if (!tasks) {
-      return res.status(404).json({ message: "Subtasks not found", data: [] });
+    const { projectId, taskId } = req.params;
+    const { boardId } = req.query;
+
+    /* ---------- 1. Basic param validation ---------- */
+    if (!taskId || !projectId) {
+      return res.status(400).json({ message: "taskId and projectId are required" });
     }
-    return res
-      .status(200)
-      .json({ tasks, message: "Subtasks fetched successfully" });
+    if (!mongoose.isValidObjectId(taskId) || !mongoose.isValidObjectId(projectId)) {
+      return res.status(400).json({ message: "Invalid ID(s)" });
+    }
+
+    /* ---------- 2. Build sub-task filter ---------- */
+    const filter = { parentId: taskId, projectId, isDeleted: false };
+
+    /* boardId is mandatory for sub-tasks on a board */
+    if (!boardId) {
+      return res.status(400).json({ message: "boardId is required" });
+    }
+    if (!mongoose.isValidObjectId(boardId)) {
+      return res.status(400).json({ message: "Invalid boardId" });
+    }
+    filter.boardId = boardId;
+
+    /* ---------- 3. Fetch & populate ---------- */
+    const subTasks = await Task.find(filter)
+      .select("-__v -isDeleted") // slim payload
+      .populate("parentId", "name taskCode")
+      .sort({ createdAt: -1 })
+
+    return res.status(200).json({
+      message: "Subtasks fetched successfully",
+      total: subTasks.length,
+      tasks: subTasks,
+    });
   } catch (error) {
-    console.error("Error in GetAllSubTasks:", error);
+    console.error("GetAllSubTasks error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -264,7 +305,7 @@ export const getTaskById = async (req, res) => {
         .status(400)
         .json({ message: "Task ID required" });
     }
-    const task = await Task.findOne({ _id: taskId, isDeleted: false })
+    const task = await Task.findOne({ _id: taskId, isDeleted: false }).populate("projectId", "name _id").populate("assignedTeamId", "name _id")
     // console.log(task)
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
@@ -281,7 +322,7 @@ export const updateTask = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { taskId } = req.params;
+    const { taskId, projectId } = req.params;
     const userId = req.user.userId;
 
     // Validate IDs
@@ -297,6 +338,14 @@ export const updateTask = async (req, res) => {
       return res.status(400).json({ message: "Invalid Task ID or Project ID" });
     }
 
+    const existproejct = await Project.findById(projectId)
+    if (!existproejct) {
+      return res.status(404).json({ message: "proejct not found " })
+    };
+    const existtask = await Task.findById(taskId)
+    if (!existtask) {
+      return res.status(404).json({ message: "task not found " })
+    };
     // Validate request body
     const parsed = updateTaskSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -312,7 +361,7 @@ export const updateTask = async (req, res) => {
     console.log("parseddata", parsed.data);
 
     // Fetch task with populated board and workflow (inside board) 
-    const task = await Task.findOne({ _id: taskId, isDeleted: false })
+    const task = await Task.findOne({ _id: taskId, isDeleted: false, projectId })
       .populate({
         path: 'boardId',
         populate: {
@@ -468,126 +517,141 @@ export const reorderTasks = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { taskId } = req.params;
+    const { taskId, projectId } = req.params;
     const { boardId, from, to } = req.body;
 
     // Validate IDs
     if (
       !mongoose.Types.ObjectId.isValid(boardId) ||
-      !mongoose.Types.ObjectId.isValid(taskId)
+      !mongoose.Types.ObjectId.isValid(taskId) ||
+      !mongoose.Types.ObjectId.isValid(projectId)
     ) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ message: "Invalid board or task ID" });
+      return res.status(400).json({ message: "Invalid board, task, or project ID" });
     }
 
-    // Fetch board with workflow
+    // Check if project exists
+    const project = await Project.findById(projectId).session(session);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Fetch board and its workflow
     const board = await Board.findById(boardId)
       .populate("workflow")
       .session(session);
 
     if (!board) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({ message: "Board not found" });
     }
 
-    // Validate columns
     const fromColumn = board.columns.find((col) => col.order === from);
     const toColumn = board.columns.find((col) => col.order === to);
 
     if (!fromColumn || !toColumn) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({
-        message: `Invalid column orders. from='${from}', to='${to}'`,
-        availableColumns: board.columns.map(c => ({ order: c.order, name: c.name }))
+        message: "Invalid source or destination column",
+        from,
+        to,
+        availableColumns: board.columns.map((col) => ({
+          order: col.order,
+          name: col.name,
+        })),
       });
     }
 
-    // Find matching transition
+    // Check if transition is allowed
     const transition = board.workflow.transitions.find(
       (t) => t.fromOrder === from && t.toOrder === to
     );
 
     if (!transition) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(403).json({
         message: `Transition from '${fromColumn.name}' to '${toColumn.name}' is not allowed`,
-        allowedTransitions: board.workflow.transitions.map(t => ({
+        allowedTransitions: board.workflow.transitions.map((t) => ({
           from: t.fromOrder,
           to: t.toOrder,
           name: t.name,
-          action: t.action
-        }))
+          action: t.action,
+        })),
       });
     }
 
-    // Find and update task
+    // Get task
     const task = await Task.findById(taskId).session(session);
     if (!task) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // Update task based on transition
+    if (task.columnOrder !== from) {
+      return res.status(409).json({
+        message: `Task is not currently in the '${fromColumn.name}' state`,
+        currentColumnOrder: task.columnOrder,
+      });
+    }
+
+    // Update task state
     task.columnOrder = to;
-    task.status = toColumn.key; // Using column key as status
+    task.status = toColumn.key;
     task.history = task.history || [];
+
     task.history.push({
       changedBy: req.user.userId,
       changedAt: new Date(),
       fromStatus: fromColumn.key,
       toStatus: toColumn.key,
-      transition: transition.name
+      transition: transition.name,
     });
 
     await task.save({ session });
 
-    // Create audit log
-    await AuditLog.create([{
-      taskId: task._id,
-      projectId: task.projectId,
-      userId: req.user.userId,
-      action: "TASK_MOVED",
-      description: `Task moved via transition '${transition.name}' from '${fromColumn.name}' to '${toColumn.name}'`,
-      metadata: {
-        fromColumn: fromColumn.name,
-        toColumn: toColumn.name,
-        transition: transition.name
-      }
-    }], { session });
+    // Log the transition
+    await AuditLog.create(
+      [
+        {
+          taskId: task._id,
+          projectId: task.projectId,
+          userId: req.user.userId,
+          action: "TASK_MOVED",
+          description: `Task moved via transition '${transition.name}' from '${fromColumn.name}' to '${toColumn.name}'`,
+          metadata: {
+            fromColumn: fromColumn.name,
+            toColumn: toColumn.name,
+            transition: transition.name,
+          },
+        },
+      ],
+      { session }
+    );
 
     await session.commitTransaction();
     session.endSession();
 
     return res.status(200).json({
-      message: `Task moved succesfully `,
+      message: "Task moved successfully",
       task: {
         id: task._id,
         status: task.status,
         columnOrder: task.columnOrder,
-        transition: transition.name
+        transition: transition.name,
       },
       transition: {
         name: transition.name,
         action: transition.action,
         fromState: fromColumn.name,
-        toState: toColumn.name
-      }
+        toState: toColumn.name,
+      },
     });
   } catch (error) {
     console.error("Error moving task:", error);
     await session.abortTransaction().catch(() => { });
     session.endSession().catch(() => { });
     return res.status(500).json({
-      message: "Failed to move task",
+      message: "Internal server error while moving task",
       error: error.message,
     });
   }
 };
+
 
 export const getTasksByBoardColumn = async (req, res) => {
   try {
@@ -623,9 +687,9 @@ export const getTasksByBoardColumn = async (req, res) => {
       return res.status(404).json({ message: "Board not found" });
     }
 
-    console.log("boaard",board)
-    console.log("task raw",tasksRaw);
-    
+    console.log("boaard", board)
+    console.log("task raw", tasksRaw);
+
     // Create column structure
     const columns = (board.columns || [])
       .sort((a, b) => a.order - b.order)
@@ -672,8 +736,8 @@ export const getTasksByBoardColumn = async (req, res) => {
 
     return res.status(200).json({
       message: "Tasks grouped by board columns",
-      columns,
-      totalTasks: tasks.length
+      totalTasks: tasks.length,
+      columns
     });
 
   } catch (error) {

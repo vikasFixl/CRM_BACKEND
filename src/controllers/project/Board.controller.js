@@ -246,22 +246,22 @@ export const deleteBoard = async (req, res) => {
 export const getBoardById = async (req, res) => {
   try {
     const { boardId } = req.params;
-    const { teamId } = req.query;
+    const { teamId,projectId } = req.query;
 
     // --- validation ---
     if (!mongoose.Types.ObjectId.isValid(boardId))
-      return res.status(400).json({ success: false, error: "Invalid boardId format" });
+      return res.status(400).json({ success: false, message: "Invalid boardId format" });
 
-    const queryConditions = { _id: boardId, isDeleted: false };
+    const queryConditions = { _id: boardId, isDeleted: false,projectId };
     if (teamId) {
       if (!mongoose.Types.ObjectId.isValid(teamId))
-        return res.status(400).json({ success: false, error: "Invalid teamId format" });
+        return res.status(400).json({ success: false, message: "Invalid teamId format" });
       queryConditions.teamId = teamId;
     }
 
-    // --- fetch board ---
+    // --- fetch board --- 
     const board = await Board.findOne(queryConditions)
-      .select("_id name type columns teamId isProjectDefault deletable")
+      .select("_id name type columns teamId isProjectDefault deletable workflow")
       .populate({ path: "projectId", select: "_id name", match: { isDeleted: false } })
       .lean();
 

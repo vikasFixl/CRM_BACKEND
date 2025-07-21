@@ -4,6 +4,7 @@ import {
   addTeamMember,
   createTeam,
   deleteTeam,
+  getMyTeamsByWorkspace,
   getTeamMembers,
   getTeamsByWorkspace,
   removeTeamMember
@@ -19,6 +20,8 @@ TeamRouter.route("/")
 // get all team in workspace
 TeamRouter.route("/")
   .get(getTeamsByWorkspace);
+TeamRouter.route("/:workspaceId/all")
+  .get(isAuthenticated,authenticateOrgToken(),getMyTeamsByWorkspace);
 
 TeamRouter.route("/:teamId/members")
   .post(isAuthenticated,authenticateOrgToken(),addTeamMember)

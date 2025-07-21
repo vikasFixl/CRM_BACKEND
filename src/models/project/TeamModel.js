@@ -51,9 +51,16 @@ const TeamSchema = new mongoose.Schema(
     membersCount: {
       type: Number,
       default: 0,
+      min: 0,
+    },
+    // boardId null is team use proejct board
+    boardId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Board",
+      default: null,
     },
     /* NEW */
-    hasBoard: {
+    hasTeamBoard: {
       type: Boolean,
       default: false,
     },
@@ -61,8 +68,11 @@ const TeamSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Indexes
-TeamSchema.index({ workspaceId: 1, name: 1 }, { unique: true });
+// One project cannot have two teams with the same name
+TeamSchema.index(
+  { projectId: 1, name: 1 },
+  { unique: true, partialFilterExpression: { isDeleted: { $ne: true } } }
+);
 TeamSchema.index({ slug: 1 }, { unique: true });
 TeamSchema.index({ isDeleted: 1 });
 

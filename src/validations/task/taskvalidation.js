@@ -4,9 +4,9 @@ import mongoose from "mongoose";
 // Helper to check for valid ObjectId
 const isValidObjectId = (val) => mongoose.Types.ObjectId.isValid(val);
 export const createTaskSchema = z.object({
-  projectId: z
-    .string({ required_error: "Project ID is required" })
-    .refine(isValidObjectId, { message: "Invalid project ID" }),
+  boardId: z
+    .string({ required_error: "board ID is required" })
+    .refine(isValidObjectId, { message: "Invalid board ID" }),
 
   key: z.string().optional(), // Assume key is generated server-side
 

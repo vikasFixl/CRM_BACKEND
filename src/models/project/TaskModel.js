@@ -56,16 +56,19 @@ const TaskSchema = new mongoose.Schema(
     assignedTeamId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Team",
+      default:null
     },
 
     // Planning
     sprintId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Sprint",
+        default:null
     },
     epicId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Epic",
+        default:null
     },
     parentId: {
       type: mongoose.Schema.Types.ObjectId,

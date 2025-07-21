@@ -2,6 +2,8 @@ import { Workflow } from "../../models/project/WorkflowModel.js";
 import { Board } from "../../models/project/BoardMode.js";
 import mongoose from "mongoose";
 import { updateWorkflowSchema } from "../../validations/project/workflow.js";
+// import { StatusCodes } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes';
 
 export const createWorkflow = async (req, res) => {
   try {
@@ -27,105 +29,117 @@ export const createWorkflow = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
-
-
-
 // get workflow baed on proejct id and team id for team specif workflow 
+
+
+
 export const getWorkflow = async (req, res) => {
   try {
-    const { projectId } = req.params
-    const { teamId } = req.body;
-    if (!projectId || !mongoose.isValidObjectId(projectId)) {
-      return res.status(400).json({ message: " project id invalid or empty ." });
+    const { projectId, workflowId } = req.params;
+
+    /* ---------- 1. Validate both IDs ---------- */
+    const ids = { projectId, workflowId };
+    for (const [key, id] of Object.entries(ids)) {
+      if (!id || !mongoose.isValidObjectId(id)) {
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ message: `${key} is invalid or missing` });
+      }
     }
 
-    const filter = {};
-
-    if (projectId) {
-      filter.projectId = projectId;
-    } else if (teamId) {
-      filter.teamId = teamId;
-    }
-
-    const workflow = await Workflow.findOne(filter).select("states transitions");
+    /* ---------- 2. Fetch workflow scoped to project ---------- */
+    const workflow = await Workflow.findOne({
+      _id: workflowId,
+      projectId,
+    }).select('states transitions');
 
     if (!workflow) {
-      return res.status(404).json({ message: "Workflow not found for given context" });
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json({ message: 'Workflow not found for the specified project' });
     }
 
-    return res.status(200).json({
-      message: "Workflow fetched successfully",
+    /* ---------- 3. Respond ---------- */
+    return res.status(StatusCodes.OK).json({
+      message: 'Workflow retrieved successfully',
       workflow,
     });
   } catch (error) {
-    console.error("Error in getWorkflowById:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error('Error in getWorkflow:', error);
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ message: 'Failed to retrieve workflow' });
   }
 };
 
+
+
 export const updateWorkflow = async (req, res) => {
   try {
-    const parsed = updateWorkflowSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ message: "Validation error", errors: parsed.error.errors.map((e) => e.message) });
+    /* ---------- 1. Validate payload ---------- */
+    const { data, error } = updateWorkflowSchema.safeParse(req.body);
+    if (error) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: 'Validation failed',
+        errors: error.errors.map(e => e.message),
+      });
     }
 
-    const { name, transitions } = parsed.data;
-    const workflowId = req.params.workflowId;
+    const { name, transitions } = data;
+    const { workflowId } = req.params;
 
-    if (!name) {
-      return res.status(400).json({ message: "name is required" });
+    /* ---------- 2. Validate workflowId ---------- */
+    if (!mongoose.isValidObjectId(workflowId)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid workflow ID' });
     }
 
-    if (!transitions || transitions.length === 0) {
-      return res.status(400).json({ message: "transitions are required" });
+    /* ---------- 3. Fetch workflow ---------- */
+    const workflow = await Workflow.findOne({ _id: workflowId, isDeleted: false });
+    if (!workflow) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Workflow not found' });
     }
 
-    // 1. Fetch the workflow by ID
-    const workflow = await Workflow.findById(workflowId);
-    if (!workflow || workflow.isDeleted) {
-      return res.status(404).json({ message: "Workflow not found" });
+    /* ---------- 4. Map states for fast lookup ---------- */
+    const stateMap = new Map(workflow.states.map(s => [s.key, s]));
+
+    /* ---------- 5. Validate transitions ---------- */
+    if (!transitions?.length) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'At least one transition is required' });
     }
 
-    // 2. Update name if provided
-    if (name) {
-      workflow.name = name;
-    }
+    for (const { fromKey, toKey, fromOrder, toOrder } of transitions) {
+      const fromState = stateMap.get(fromKey);
+      const toState   = stateMap.get(toKey);
 
-    // 3. Validate and update transitions
-    if (Array.isArray(transitions)) {
-      const validKeys = workflow.states.map((state) => state.key);
-
-      for (const { fromKey, toKey, fromOrder, toOrder } of transitions) {
-        const fromState = workflow.states.find((s) => s.key === fromKey);
-        const toState = workflow.states.find((s) => s.key === toKey);
-
-        // Validate keys
-        if (!fromState || !toState) {
-          return res.status(400).json({
-            message: `Invalid transition states.`,
-          });
-        }
-
-        // Validate order consistency
-        if (fromOrder !== fromState.order || toOrder !== toState.order) {
-          return res.status(400).json({
-            message: `Invalid order: fromOrder ${fromOrder} or toOrder ${toOrder} does not match the order in workflow states.".`,
-          });
-        }
+      if (!fromState || !toState) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: `Invalid transition: unknown state key "${fromKey}" or "${toKey}"`,
+        });
       }
 
-      workflow.transitions = transitions;
+      if (fromState.order !== fromOrder || toState.order !== toOrder) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: `Order mismatch for transition "${fromKey}"→"${toKey}"`,
+        });
+      }
     }
 
-    // 4. Save and return
-    await workflow.save();
-    return res.status(200).json({ success: true, data: workflow });
+    /* ---------- 6. Apply updates ---------- */
+    if (name) workflow.name = name.trim();
+    workflow.transitions = transitions;
 
-  } catch (error) {
-    console.error("Workflow update error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    await workflow.save();
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      data: workflow,
+    });
+  } catch (err) {
+    console.error('Workflow update error:', err);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Unable to update workflow',
+    });
   }
 };
 
@@ -144,14 +158,39 @@ export const deleteWorkflow = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-export const getWorkflowForBoard = async (boardId) => {
-  const board = await Board.findById(boardId).select("projectId teamId");
-  if (!board) throw new Error("Board not found");
+export const getWorkflowForBoard = async (req, res) => {
+  try {
+    const { boardId } = req.params;
 
-  const query = board.teamId
-    ? { teamId: board.teamId, isDeleted: false }
-    : { projectId: board.projectId, isDeleted: false };
+    // Validate boardId
+    if (!mongoose.Types.ObjectId.isValid(boardId)) {
+      return res.status(400).json({ message: "Invalid board ID" });
+    }
 
-  return Workflow.find(query);
+    // Fetch board
+    const board = await Board.findById(boardId).select("projectId teamId");
+    if (!board) {
+      return res.status(404).json({ message: "Board not found" });
+    }
+
+    // Build query based on board type
+    const query = board.teamId
+      ? { teamId: board.teamId, isDeleted: false }
+      : { projectId: board.projectId, isDeleted: false };
+
+    const workflows = await Workflow.find(query);
+
+    return res.status(200).json({
+      message: "Workflows fetched successfully",
+      workflows,
+    });
+  } catch (error) {
+    console.error("Error fetching workflows for board:", error);
+    return res.status(500).json({
+      message: "Internal server error while fetching workflows",
+      error: error.message,
+    });
+  }
 };
+
 

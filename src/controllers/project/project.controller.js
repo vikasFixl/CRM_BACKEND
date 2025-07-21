@@ -16,6 +16,8 @@ import {
 } from "../../validations/project/project.js";
 import { workspaceIdSchema } from "../../validations/project/workspace.js";
 import User from "../../models/userModel.js";
+import { Team } from "../../models/project/TeamModel.js";
+import { TeamMember } from "../../models/project/TeamMemberModel.js";
 
 export const createProject = async (req, res) => {
   const session = await mongoose.startSession();
@@ -58,11 +60,11 @@ export const createProject = async (req, res) => {
       return res.status(400).json({ message: "Each workflow state must have a `key`" });
     }
 
-    const boardColumns = template.workflow.states.map((state, index) => ({
-      name: state.name,
-      order: index,
-      key: state.key.toLowerCase().trim(),
-    }));
+    // const boardColumns = template.workflow.states.map((state, index) => ({
+    //   name: state.name,
+    //   order: index,
+    //   key: state.key.toLowerCase().trim(),
+    // }));
 
     const ownerRole = await RolePermission.findOne({ role: "ProjectAdmin" }).session(session);
     if (!ownerRole) return res.status(404).json({ message: "Owner role not found" });
@@ -92,7 +94,7 @@ export const createProject = async (req, res) => {
       name: `${name} Board`,
       type: template.boardType,
       isProjectDefault: true,
-      columns: boardColumns,
+      columns: template.boardColumns,
       workflow: workflow._id,
       createdBy: req.user.userId
     }], { session });
@@ -122,7 +124,7 @@ export const createProject = async (req, res) => {
       description: `Project '${name}' created with template '${template.name}'`,
     }], { session });
 
-  
+
     if (template.task?.length > 0) {
       const taskDocs = template.task.map((taskTemplate) => ({
         projectId: project._id,
@@ -131,7 +133,7 @@ export const createProject = async (req, res) => {
         type: taskTemplate.type,
         status: taskTemplate.status,
         columnOrder: taskTemplate.columnOrder,
-        boardId:board._id,
+        boardId: board._id,
         priority: taskTemplate.priority,
         labels: taskTemplate.labels,
         createdBy: userId,
@@ -161,11 +163,9 @@ export const createProject = async (req, res) => {
   }
 };
 
-
-
 export const updateProject = async (req, res) => {
   try {
-    // TODO: Implement logic to update project details
+
     res.status(200).json({ message: "updateProject route hit" });
   } catch (error) {
     console.error("Error in updateProject:", error);
@@ -195,17 +195,18 @@ export const deleteProject = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
     console.log(project);
-
+    const team = Team.find({ projectId: projectId }).session(session)
+    const teamIds = team.map(t => t._id);
     await ProjectMember.deleteMany({ projectId }).session(session);
     await Task.deleteMany({ projectId }).session(session);
     await Board.deleteMany({ projectId }).session(session);
     await Workflow.deleteMany({ projectId }).session(session);
     await AuditLog.deleteMany({ projectId }).session(session);
     await Project.deleteOne({ _id: projectId, workspaceId }).session(session);
-
+    await TeamMember.deleteMany({ teamId: { $in: teamIds } }).session(session)
+    await Team.deleteMany({ projectId }).session(session)
     await session.commitTransaction();
     session.endSession();
-
     return res.status(200).json({ message: "Project deleted successfully" });
   } catch (error) {
     await session.abortTransaction();
@@ -320,11 +321,11 @@ export const getMyProjectsByWorkspace = async (req, res) => {
 export const getProjectById = async (req, res) => {
   try {
     // ✅ Validate projectId and workspaceId first (fail fast)
-    const { projectId} = req.params;
+    const { projectId } = req.params;
     const { orgId } = req.orgUser;
 
     const validatedProjectId = projectIdSchema.parse(projectId);
-    
+
 
     // ✅ Use Promise.all for parallel operations
     const [project] = await Promise.all([
