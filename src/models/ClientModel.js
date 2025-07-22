@@ -46,6 +46,7 @@ const ClientSchema = new mongoose.Schema(
   }
 );
 
-ClientSchema.index({ orgId: 1, email: 1, firmId: 1 });
+ClientSchema.index({ orgId: 1, firmId: 1, email: 1 },   // compound unique
+{ unique: true, partialFilterExpression: { deleted: false } });
 const ClientModel = mongoose.model("ClientModel", ClientSchema);
 export default ClientModel;
