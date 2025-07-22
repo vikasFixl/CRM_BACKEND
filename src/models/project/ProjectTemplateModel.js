@@ -115,7 +115,7 @@ const ProjectTemplateSchema = new mongoose.Schema(
       ref: 'organization',
       default: null,
     }, previewImage: {
-      publicId: { type: String, default:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGCBpUau9PufuLsma_mv9vG5J1j4kIy7nfFQ&s" },
+      publicId: { type: String, default: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGCBpUau9PufuLsma_mv9vG5J1j4kIy7nfFQ&s" },
       url: { type: String, default: null },
     },
 

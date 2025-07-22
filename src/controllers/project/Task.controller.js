@@ -88,6 +88,10 @@ export const createTask = async (req, res) => {
         return res.status(400).json({ message: "Invalid or cross-project parent" });
       }
     }
+    //  check if task type is allowed or not 
+    if (type !== "task" && type !== "bug") {
+      return res.status(400).json({ message: "Invalid task type" });
+    }
 
     /* ---------- 6. Create task ---------- */
     const task = await Task.create({
