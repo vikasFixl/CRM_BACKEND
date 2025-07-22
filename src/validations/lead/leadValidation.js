@@ -98,6 +98,7 @@ firm:z.string({required_error:"frim id is required"}).min(1).nonempty(),
 /* ------------------------------------------------------------------ */
 export const updateLeadSchema = createLeadSchema.partial().extend({
   isActive: z.boolean().optional(),
+   createClient: z.boolean().default(false),
   deletedAt: z.coerce.date().optional()
 });
 

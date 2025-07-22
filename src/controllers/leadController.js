@@ -269,8 +269,8 @@ export const updateLead = async (req, res, next) => {
     orgUser: { orgId, employeeId },
   } = req;
 
-  /* ---------- guards ---------- */
-  if (!id) return res.status(400).json({ message: "Lead id is required" });
+  /* ---------- basic guards ---------- */
+  if (!id) return res.status(400).json({ message: "Lead id required" });
   if (!mongoose.isValidObjectId(id))
     return res.status(400).json({ message: "Invalid id" });
 
@@ -282,54 +282,99 @@ export const updateLead = async (req, res, next) => {
     });
 
   const update = parsed.data;
+  
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    /* ---------- atomic update ---------- */
-    const lead = await Lead.findOneAndUpdate(
+    /* ---------- fetch lead (with session lock) ---------- */
+    const lead = await Lead.findOne(
       { _id: id, organization: orgId, isActive: true },
-      update,
-      {
-        new: true,
-        runValidators: true,
-        lean: true,
-      }
+      null,
+      { session }
     );
+    if (!lead) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Lead not found" });
+    }
 
-    if (!lead) return res.status(404).json({ message: "Lead not found" });
+    /* ---------- build atomic update ---------- */
+    const $set = { ...update };
 
-    /* ---------- stage change side-effect ---------- */
+    /* stage change side-effects */
     if (update.stage && update.stage !== lead.stage) {
       const last = lead.stageHistory[lead.stageHistory.length - 1];
       if (last && !last.exitedAt) last.exitedAt = new Date();
-      lead.stageHistory.push({ stage: update.stage, enteredAt: new Date() });
-      lead.probability = lead.calculateProbability();
-      await Lead.updateOne(
-        { _id: lead._id },
-        {
-          stageHistory: lead.stageHistory,
-          probability: lead.probability,
-        }
-      );
+      $set.probability = lead.calculateProbability();
+      $set.stageHistory = [
+        ...lead.stageHistory,
+        { stage: update.stage, enteredAt: new Date() },
+      ];
     }
 
-    /* ---------- audit ---------- */
-    await ActivityModel.create({
-      orgId,
-      userId,
-      activity: "update",
-      module: "lead",
-      entityId: id,
-      activityDesc: `Lead updated by ${loggedInEmail} (empId: ${employeeId})`,
-    });
+    /* ---------- auto-create client on Closed-Won (inside transaction) ---------- */
+    if (update.stage === "Closed-Won" && update.createClient && !lead.clientId) {
+      const exists = await ClientModel.exists(
+        { orgId, firmId: lead.firm, email: lead.contact.email, deleted: false },
+        { session }
+      );
+      if (exists) {
+        await session.abortTransaction();
+        return res.status(409).json({ message: "Client already exists for this email" });
+      }
 
+      const client = await ClientModel.create(
+        [
+          {
+            clientFirmName: lead.contact.company || lead.contact.name,
+            firstName: lead.contact.name?.split(" ")[0] || "",
+            lastName: lead.contact.name?.split(" ").slice(1).join(" ") || "",
+            email: lead.contact.email,
+            phone: lead.contact.phone,
+            orgId,
+            firmId: lead.firm,
+          },
+        ],
+        { session }
+      );
+      $set.clientId = client[0]._id;
+    }
+
+    /* ---------- atomic update ---------- */
+    const updatedLead = await Lead.findOneAndUpdate(
+      { _id: id, organization: orgId },
+      { $set },
+      { new: true, runValidators: true, lean: true, session }
+    );
+
+    /* ---------- audit log ---------- */
+    await ActivityModel.create(
+      [
+        {
+          orgId,
+          userId,
+          activity: "update",
+          module: "lead",
+          entityId: id,
+          activityDesc: `Lead updated by ${loggedInEmail} (empId: ${employeeId})`,
+        },
+      ],
+      { session }
+    );
+
+    await session.commitTransaction();
     res.status(200).json({
       message: "Lead updated successfully",
       code: 200,
       success: true,
-      data: lead,
+      data: updatedLead,
     });
   } catch (err) {
+    await session.abortTransaction();
     next(err);
+  } finally {
+    session.endSession();
   }
 };
 
@@ -479,34 +524,52 @@ export const bulkDeleteLeads = async (req, res, next) => {
     if (objectIds.length !== leadIds.length)
       return res.status(400).json({ message: "One or more leadIds are invalid" });
 
-    /* ---------- 3. Bulk write ---------- */
-    const bulkOps = objectIds.map(id => ({
-      updateOne: {
-        filter: { _id: id, organization: orgId, isActive: true },
-        update: { $set: { isActive: false, deletedAt: new Date() } },
-      },
-    }));
+    /* ---------- 3. Transaction ---------- */
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const result = await Lead.bulkWrite(bulkOps);
+    try {
+      const result = await Lead.bulkWrite(
+        objectIds.map(id => ({
+          updateOne: {
+            filter: { _id: id, organization: orgId, isActive: true },
+            update: { $set: { isActive: false, deletedAt: new Date() } },
+            session,
+          },
+        })),
+        { session }
+      );
 
-    if (result.modifiedCount === 0)
-      return res.status(404).json({ message: "No matching leads found" });
+      if (result.modifiedCount === 0) {
+        await session.abortTransaction();
+        return res.status(404).json({ message: "No matching leads found" });
+      }
 
-    /* ---------- 4. Single audit record ---------- */
-    await ActivityModel.create({
-      orgId,
-      userId,
-      activity: "delete",
-      module: "lead",
-      activityDesc: `${result.modifiedCount} lead(s) soft-deleted by ${loggedInEmail} (empId: ${employeeId})`,
-    });
+      await ActivityModel.create(
+        [
+          {
+            orgId,
+            userId,
+            activity: "delete",
+            module: "lead",
+            activityDesc: `${result.modifiedCount} lead(s) soft-deleted by ${loggedInEmail} (empId: ${employeeId})`,
+          },
+        ],
+        { session }
+      );
 
-    /* ---------- 5. Response ---------- */
-    return res.status(200).json({
-      message: "Leads deleted successfully",
-      success: true,
-      modifiedCount: result.modifiedCount,
-    });
+      await session.commitTransaction();
+      res.status(200).json({
+        message: "Leads deleted successfully",
+        success: true,
+        modifiedCount: result.modifiedCount,
+      });
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
   } catch (err) {
     next(err);
   }
@@ -584,31 +647,40 @@ export const restoreLead = async (req, res, next) => {
   } = req;
 
   /* ---------- guards ---------- */
-  if (!id) return res.status(400).json({ message: "Lead id is required" });
+  if (!id) return res.status(400).json({ message: "Lead id required" });
   if (!mongoose.isValidObjectId(id))
     return res.status(400).json({ message: "Invalid id", code: 400, success: false });
 
-  /* ---------- atomic restore ---------- */
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const lead = await Lead.findOneAndUpdate(
-      { _id: id, organization: orgId, isActive: false }, // only soft-deleted
+      { _id: id, organization: orgId, isActive: false },
       { isActive: true, deletedAt: null },
-      { new: true, lean: true }
+      { new: true, lean: true, session }
     );
 
-    if (!lead)
+    if (!lead) {
+      await session.abortTransaction();
       return res.status(404).json({ message: "Lead not found or already active", code: 404 });
+    }
 
-    /* ---------- audit ---------- */
-    await ActivityModel.create({
-      orgId,
-      userId,
-      activity: "restore",
-      module: "lead",
-      entityId: lead._id,
-      activityDesc: `Lead restored by ${loggedInEmail} (empId: ${employeeId})`,
-    });
+    await ActivityModel.create(
+      [
+        {
+          orgId,
+          userId,
+          activity: "restore",
+          module: "lead",
+          entityId: lead._id,
+          activityDesc: `Lead restored by ${loggedInEmail} (empId: ${employeeId})`,
+        },
+      ],
+      { session }
+    );
 
+    await session.commitTransaction();
     res.status(200).json({
       message: "Lead restored successfully",
       code: 200,
@@ -616,7 +688,10 @@ export const restoreLead = async (req, res, next) => {
       data: { id: lead._id, isActive: lead.isActive },
     });
   } catch (err) {
+    await session.abortTransaction();
     next(err);
+  } finally {
+    session.endSession();
   }
 };
 
