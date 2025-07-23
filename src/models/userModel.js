@@ -52,6 +52,14 @@ const UserSchema = new Schema(
     lockUntil: { type: Date },
     deletedAt: { type: Date, select: false },
     isDeleted: { type: Boolean, default: false, select: false },
+     // Fields for 2FA
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecret: { type: String, select: false },
+    // Fields for OTP login
+    otp: { type: String, select: false },
+    otpExpires: { type: Date, select: false },
+    // Fields for multi-device management
+    primaryDevice: { type: String, select: false },
   },
   { timestamps: true }
 );

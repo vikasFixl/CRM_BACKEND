@@ -1,6 +1,7 @@
 // server.js
 
 import express from "express";
+import geoip from 'geoip-lite';
 import bodyParser from "body-parser";
 import path, { dirname } from "path";
 import paypal from "paypal-rest-sdk";
@@ -42,7 +43,25 @@ import TeamRouter from "./src/routes/project/teamroute.js";
 import ProjectTemplateRouter from "./src/routes/project/projecttemplate.route.js";
 import { sendToUser } from "./config/socket.handler.js";
 import { initSocket } from "./config/socket.js";
+import otplib from "otplib"
+import qrcode from "qrcode"
+// Generate a secret key
+// Generate a secret key
+const secret = otplib.authenticator.generateSecret();
 
+// Create provisioning URI
+const provisioningUri = otplib.authenticator.keyuri('vikasbaplawat1@gmail.com', 'Cubicle-Crm', secret);
+
+// Generate and display QR code in the terminal
+qrcode.toString(provisioningUri, { type: 'terminal', small: true }, (err, url) => {
+  if (err) {
+    console.error('Error generating QR code:', err);
+    return;
+  }
+
+  console.log('Scan the following QR code with your authenticator app:');
+  // console.log(url);
+});
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "./.env") });
@@ -126,6 +145,30 @@ app.get('/notify/:userId', (req, res) => {
 
 // Health check & 404
 app.get("/", (req, res) => res.send("Server running"));
+app.post("/verify", (req, res) => {
+  const token = req.body.token;
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.connection.remoteAddress;
+  const userAgent = req.get('User-Agent');
+  const geo = geoip.lookup(ip);
+
+  console.log("📥 Incoming Session Request:");
+  console.log("Token (from body):", token);
+  console.log("User-Agent:", userAgent);
+  console.log("IP Address:", ip);
+  console.log("Geo Location:", geo ? `${geo.city}, ${geo.country}` : "Unknown");
+  console.log("Device Type (Raw):", userAgent);
+  console.log("Headers:", req.headers);
+  console.log("Cookies:", req.cookies); // if you're using cookie-parser
+  console.log("URL:", req.originalUrl);
+  console.log("Method:", req.method);
+  console.log("Protocol:", req.protocol);
+  console.log("Host:", req.get("host"));
+  console.log("Content-Type:", req.get("Content-Type"));
+  console.log("Body:", req.body);
+  console.log("Query Params:", req.query);
+  console.log("Params:", req.params);
+  console.log("Timestamp:", new Date().toISOString());
+});
 app.all("*", (req, res) => res.status(404).json({ success: false, message: "Route not found" }));
 
 // Global error handlers

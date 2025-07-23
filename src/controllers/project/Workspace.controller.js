@@ -8,7 +8,7 @@ import User from "../../models/userModel.js";
 import { RolePermission } from "../../models/RolePermission.js";
 import { Task } from "../../models/project/TaskModel.js";
 import mongoose from "mongoose";
-
+import { Team } from "../../models/project/TeamModel.js";
 export const createWorkspace = async (req, res, next) => {
   const { userId } = req.user;
   const { orgId } = req.orgUser;
@@ -234,18 +234,23 @@ export const getWorkspaceAnalytics = async (req, res, next) => {
   }
 
   try {
+    // Count total projects in the workspace
     const projectsCount = await Project.countDocuments({ workspace: workspaceId });
 
+    // Count total members in the workspace
     const membersCount = await Member.countDocuments({ workspaceId });
 
+    // Get project IDs in the workspace
     const projectIds = await Project.find({ workspace: workspaceId }, { _id: 1 }).lean();
     const projectIdList = projectIds.map(p => p._id);
 
+    // Count active and completed tasks
     const [activeTasks, completedTasks] = await Promise.all([
       Task.countDocuments({ projectId: { $in: projectIdList }, status: { $ne: "Done" } }),
       Task.countDocuments({ projectId: { $in: projectIdList }, status: "Done" }),
     ]);
 
+    // Get workload per member
     const workloadPerMember = await Task.aggregate([
       {
         $match: {
@@ -290,6 +295,151 @@ export const getWorkspaceAnalytics = async (req, res, next) => {
       },
     ]);
 
+    // Get total teams under the workspace
+    const totalTeams = await Team.countDocuments({ workspaceId });
+
+    // Get teams per project
+    const teamsPerProject = await Team.aggregate([
+      {
+        $match: {
+          projectId: { $in: projectIdList },
+          isDeleted: false,
+        },
+      },
+      {
+        $group: {
+          _id: "$projectId",
+          teamCount: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "projects",
+          localField: "_id",
+          foreignField: "_id",
+          as: "project",
+        },
+      },
+      { $unwind: "$project" },
+      {
+        $project: {
+          _id: 0,
+          projectId: "$_id",
+          projectName: "$project.name",
+          teamCount: 1,
+        },
+      },
+    ]);
+
+    // Get project-wise task distribution
+    const projectWiseTaskDistribution = await Task.aggregate([
+      {
+        $match: {
+          projectId: { $in: projectIdList },
+        },
+      },
+      {
+        $group: {
+          _id: "$projectId",
+          totalTasks: { $sum: 1 },
+          activeTasks: { $sum: { $cond: [{ $ne: ["$status", "Done"] }, 1, 0] } },
+          completedTasks: { $sum: { $cond: [{ $eq: ["$status", "Done"] }, 1, 0] } },
+        },
+      },
+      {
+        $lookup: {
+          from: "projects",
+          localField: "_id",
+          foreignField: "_id",
+          as: "project",
+        },
+      },
+      { $unwind: "$project" },
+      {
+        $project: {
+          _id: 0,
+          projectId: "$_id",
+          projectName: "$project.name",
+          totalTasks: 1,
+          activeTasks: 1,
+          completedTasks: 1,
+        },
+      },
+    ]);
+
+    // Get team-wise task distribution
+    const teamIds = await Team.find({ workspaceId }, { _id: 1 }).lean();
+    const teamIdList = teamIds.map(t => t._id);
+
+    const teamWiseTaskDistribution = await Task.aggregate([
+      {
+        $match: {
+          projectId: { $in: projectIdList },
+          teamId: { $in: teamIdList },
+        },
+      },
+      {
+        $group: {
+          _id: "$teamId",
+          totalTasks: { $sum: 1 },
+          activeTasks: { $sum: { $cond: [{ $ne: ["$status", "Done"] }, 1, 0] } },
+          completedTasks: { $sum: { $cond: [{ $eq: ["$status", "Done"] }, 1, 0] } },
+        },
+      },
+      {
+        $lookup: {
+          from: "teams",
+          localField: "_id",
+          foreignField: "_id",
+          as: "team",
+        },
+      },
+      { $unwind: "$team" },
+      {
+        $project: {
+          _id: 0,
+          teamId: "$_id",
+          teamName: "$team.name",
+          totalTasks: 1,
+          activeTasks: 1,
+          completedTasks: 1,
+        },
+      },
+    ]);
+
+    // Get tasks per team
+    const tasksPerTeam = await Task.aggregate([
+      {
+        $match: {
+          projectId: { $in: projectIdList },
+          teamId: { $in: teamIdList },
+        },
+      },
+      {
+        $group: {
+          _id: "$teamId",
+          taskCount: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "teams",
+          localField: "_id",
+          foreignField: "_id",
+          as: "team",
+        },
+      },
+      { $unwind: "$team" },
+      {
+        $project: {
+          _id: 0,
+          teamId: "$_id",
+          teamName: "$team.name",
+          taskCount: 1,
+        },
+      },
+    ]);
+
     res.status(200).json({
       success: true,
       message: "Workspace analytics fetched successfully",
@@ -299,6 +449,11 @@ export const getWorkspaceAnalytics = async (req, res, next) => {
         activeTasks,
         completedTasks,
         workloadPerMember,
+        totalTeams,
+        teamsPerProject,
+        projectWiseTaskDistribution,
+        teamWiseTaskDistribution,
+        tasksPerTeam,
       },
     });
   } catch (err) {

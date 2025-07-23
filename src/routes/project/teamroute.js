@@ -5,6 +5,7 @@ import {
   createTeam,
   deleteTeam,
   getMyTeamsByWorkspace,
+  getTeamById,
   getTeamMembers,
   getTeamsByWorkspace,
   removeTeamMember
@@ -12,6 +13,7 @@ import {
   from "../../controllers/project/Teamcontroller.js";
 import { isAuthenticated } from "../../middleweare/middleware.js" // adjust path as needed
 import { authenticateOrgToken } from "../../middleweare/orgmiddleware.js"
+import { Team } from "../../models/project/TeamModel.js";
 
 const TeamRouter = express.Router();
 // create team 
@@ -19,7 +21,9 @@ TeamRouter.route("/")
   .post(isAuthenticated, authenticateOrgToken(), createTeam);
 // get all team in workspace
 TeamRouter.route("/")
-  .get(getTeamsByWorkspace);
+  .get(getTeamsByWorkspace); // admin route to view all teams
+  TeamRouter.route("/:teamId")
+  .get(isAuthenticated,authenticateOrgToken(),getTeamById);
 TeamRouter.route("/:workspaceId/all")
   .get(isAuthenticated,authenticateOrgToken(),getMyTeamsByWorkspace);
 

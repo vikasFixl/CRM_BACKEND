@@ -582,16 +582,28 @@ export const getMyTeamsByWorkspace = async (req, res) => {
     const teams = await Team.find({
       _id: { $in: teamIds },
       workspace: workspaceId,
-    })
-      .populate('createdBy', 'email _id firstName lastName')
+    }).select('_id name workspcaeId projectId boardId hasTeamBoard slug')
       .lean();
 
     return res.status(StatusCodes.OK).json({
-      message: 'User teams in workspace fetched successfully',
+      message: ' teams  fetched successfully',
       teams,
     });
   } catch (error) {
     console.error('getMyTeamsByWorkspace:', error);
+    return sendErr(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Internal server error');
+  }
+};
+
+
+export const getTeamById = async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const team = await Team.findById(teamId).populate('createdBy', 'email _id firstName lastName');
+    if (!team) return notFound(res, teamId);
+    return res.status(StatusCodes.OK).json({ success: true, team });
+  } catch (error) {
+    console.error('getTeamById:', error);
     return sendErr(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Internal server error');
   }
 };

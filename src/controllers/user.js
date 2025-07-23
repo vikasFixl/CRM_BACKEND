@@ -19,6 +19,7 @@ import User from "../models/userModel.js";
 
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
+import { Session } from "../models/sessionModel.js";
 
 dotenv.config();
 
@@ -104,7 +105,19 @@ export const login = async (req, res) => {
 
     const accessToken = generateGlobalToken(user);
     const { exp } = jwt.decode(accessToken);
+// 2. Count active sessions
+const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
 
+// 3. If limit exceeded, delete oldest session(s)
+if (activeSessions.length > 5) {
+return res.status(409).json({ message: "Too many active sessions. Please log out of other devices." });
+}
+await Session.create({
+  user: user._id,
+  token: accessToken,
+  isActive: true,
+
+})
     const responseData = {
       id: user._id,
       uuid: user.uuid,
