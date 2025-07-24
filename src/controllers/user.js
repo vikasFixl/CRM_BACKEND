@@ -9,6 +9,7 @@ import {
   generateGlobalToken,
   generateOrgToken,
 } from "../utils/generatetoken.js";
+import { UAParser } from 'ua-parser-js';
 import geoip from 'geoip-lite';
 import { resetPasswordTemplate } from "../utils/helperfuntions/emailtemplate.js";
 import {
@@ -23,26 +24,37 @@ import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js"
 import { Session } from "../models/sessionModel.js";
 
 dotenv.config();
-function detectDeviceType(userAgent = '') {
-  if (/mobile/i.test(userAgent)) return 'Mobile';
-  if (/tablet/i.test(userAgent)) return 'Tablet';
-  if (/Mac|Windows|Linux/.test(userAgent)) {
-    if (/Chrome/.test(userAgent)) return 'Chrome on Desktop';
-    if (/Firefox/.test(userAgent)) return 'Firefox on Desktop';
-    return 'Desktop';
-  }
-  return 'Unknown';
+// Helper to extract device info and location
+function getDeviceAndLocation(req) {
+  const userAgent = req.headers['user-agent'];
+  const parser = new UAParser(userAgent);
+  const result = parser.getResult();
+
+  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const geo = geoip.lookup(ip);
+
+  return {
+    userAgent,
+    ip,
+    location: geo
+      ? `${geo.city || 'Unknown City'}, ${geo.country || 'Unknown Country'}`
+      : 'Unknown Location',
+    deviceId: uuidv4(), // should come from frontend as UUID
+    deviceType: `${result.browser.name} on ${result.os.name}`,
+  };
 }
-// global use variables
-const isProd = process.env.NODE_ENV === "production";
+
+
 
 const frontendUrl = process.env.FRONTEND_URL;
-
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isProd = process.env.NODE_ENV === 'production';
 
 export const login = async (req, res) => {
   const { email, password } = req.body || {};
+  const { userAgent, ip, location, deviceId, deviceType } = getDeviceAndLocation(req);
 
+  // Validate input
   if (!email?.trim() || !password?.trim()) {
     return res.status(400).json({ message: "Please enter email and password" });
   }
@@ -58,16 +70,12 @@ export const login = async (req, res) => {
       .select("+isSuspended")
       .populate("currentOrganization", "_id name contactEmail");
 
-    console.log("user", user);
-
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
     }
 
     if (user.isSuspended) {
-      return res
-        .status(400)
-        .json({ message: "This account is suspended. Contact admin." });
+      return res.status(400).json({ message: "This account is suspended. Contact admin." });
     }
 
     if (user.loginAttempts >= 5) {
@@ -89,8 +97,10 @@ export const login = async (req, res) => {
     user.isDeleted = false;
     user.isActive = true;
     user.deletedAt = null;
-
     await user.save();
+    if(user.twoFAEnabled){
+      return res.status(200).json({ message: "2FA enabled" ,uid:user._id });
+    }
 
     let orgToken = null;
     if (user.currentOrganization) {
@@ -99,7 +109,6 @@ export const login = async (req, res) => {
         organizationId: user.currentOrganization._id,
         status: "active",
       }).populate("role");
-      console.log("member", member);
 
       if (member && member.role) {
         const orgPayload = {
@@ -114,32 +123,44 @@ export const login = async (req, res) => {
     }
 
     const accessToken = generateGlobalToken(user);
-    const { exp } = jwt.decode(accessToken);
+    const decoded = jwt.decode(accessToken);
+    const expiresAt = new Date(decoded.exp * 1000);
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    const expiresInDays = (decoded.exp - nowInSeconds) / (60 * 60 * 24); // seconds → days
+
     res.cookie("oid", orgToken, {
-      httpOnly: isProd,        // Prevents JS access — secure against XSS
-      secure: isProd,          // Only send over HTTPS
-      sameSite: "lax",    // Prevents CSRF
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      httpOnly: isProd,
+      secure: isProd,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+
     res.cookie("sid", accessToken, {
-      httpOnly: isProd,        // Prevents JS access — secure against XSS
-      secure: isProd,          // Only send over HTTPS
-      sameSite: "lax",    // Prevents CSRF
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      httpOnly: isProd,
+      secure: isProd,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    // // 2. Count active sessions
-    // const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
 
-    // // 3. If limit exceeded, delete oldest session(s)
-    // if (activeSessions.length > 5) {
-    // return res.status(409).json({ message: "Too many active sessions. Please log out of other devices." });
-    // }
-    // await Session.create({
-    //   user: user._id,
-    //   token: accessToken,
-    //   isActive: true,
+    // Session management
+    const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
 
-    // })
+    if (activeSessions.length >= 5) {
+      return res.status(409).json({ message: "Too many active sessions. Please log out from another device." });
+    }
+
+    await Session.create({
+      user: user._id,
+      jwtToken: accessToken,
+      deviceId,
+      deviceType,
+      ip,
+      location,
+      userAgent,
+      expiresAt,
+      expiresIn: expiresInDays
+    });
+
     const responseData = {
       id: user._id,
       uuid: user.uuid,
@@ -156,31 +177,12 @@ export const login = async (req, res) => {
       currentWorkspace: user?.currentWorkspace || null,
     };
 
-    const userAgent = req.get('User-Agent') || '';
-    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
-
-    const geo = geoip.lookup(ip);
-    const location = geo ? `${geo.city || ''}, ${geo.region || ''}, ${geo.country || ''}` : 'Unknown';
-
-    const deviceType = detectDeviceType(userAgent);
-
-    const deviceInfo = {
-      // deviceId,
-      deviceType,
-      ip,
-      location,
-      userAgent,
-    };
-
-    console.log('Device Info:', deviceInfo);
     res.status(200).json({
       message: `Welcome back ${user.firstName}`,
       success: true,
       code: 200,
       data: responseData,
-      orgtoken: orgToken, // returns null if no org
-      token: accessToken,
-      exp: exp * 1000,
+      exp: expiresAt.getTime(),
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -258,7 +260,6 @@ export const signup = async (req, res) => {
         Globalrole: user.Globalrole,
         phone: user.phone,
         avatar: user.avatar?.url,
-        exp: exp * 1000, // milliseconds
       },
     });
   } catch (error) {
@@ -271,9 +272,11 @@ export const signup = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    // 🔍 Debug: show cookies before clearing
-    console.log("Before logout — sid:", req.cookies.sid);
-    console.log("Before logout — oid:", req.cookies.oid);
+
+    // 🚫 Delete the session associated with the sid token
+    if (req.cookies.sid) {
+      await Session.deleteOne({ jwtToken: req.cookies.sid });
+    }
 
     // 🧹 Clear the sid (user token) cookie
     res.cookie("sid", "", {
@@ -308,7 +311,7 @@ export const logout = async (req, res) => {
       path: "/",
     });
 
- 
+
     return res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -398,7 +401,7 @@ export const getUser = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const user = await User.findById(userId).select("-password");
+    const user = await User.findById(userId).select("-password").select("+twoFAEnabled")
 
     if (!user) {
       return res.status(404).json({
@@ -417,11 +420,11 @@ export const getUser = async (req, res) => {
       role: user.role,
       isActive: user.isActive,
       avatar: user.avatar.url,
+      twoFAEnabled: user.twoFAEnabled,
       currentworkspace: user.currentWorkspace || null,
       currentOrganization: user.currentOrganization || null,
       hasReceivedWelcomeEmail: user.hasReceivedWelcomeEmail,
     };
-
     res.status(200).json({
       user: sanitizedUser,
       success: true,

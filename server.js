@@ -90,7 +90,7 @@ app.use(fileUpload({
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors({
   // origin: "https://cubicle-crm.vercel.app",
-  origin: "http://localhost:5173",
+  origin: "http://localhost:51",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 }));
@@ -146,30 +146,7 @@ app.get('/notify/:userId', (req, res) => {
 
 // Health check & 404
 app.get("/", (req, res) => res.send("Server running"));
-app.post("/verify", (req, res) => {
-  const token = req.body.token;
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.connection.remoteAddress;
-  const userAgent = req.get('User-Agent');
-  const geo = geoip.lookup(ip);
 
-  console.log("📥 Incoming Session Request:");
-  console.log("Token (from body):", token);
-  console.log("User-Agent:", userAgent);
-  console.log("IP Address:", ip);
-  console.log("Geo Location:", geo ? `${geo.city}, ${geo.country}` : "Unknown");
-  console.log("Device Type (Raw):", userAgent);
-  console.log("Headers:", req.headers);
-  console.log("Cookies:", req.cookies); // if you're using cookie-parser
-  console.log("URL:", req.originalUrl);
-  console.log("Method:", req.method);
-  console.log("Protocol:", req.protocol);
-  console.log("Host:", req.get("host"));
-  console.log("Content-Type:", req.get("Content-Type"));
-  console.log("Body:", req.body);
-  console.log("Query Params:", req.query);
-  console.log("Params:", req.params);
-  console.log("Timestamp:", new Date().toISOString());
-});
 app.all("*", (req, res) => res.status(404).json({ success: false, message: "Route not found" }));
 
 // Global error handlers
