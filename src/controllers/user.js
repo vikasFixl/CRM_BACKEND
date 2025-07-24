@@ -9,6 +9,7 @@ import {
   generateGlobalToken,
   generateOrgToken,
 } from "../utils/generatetoken.js";
+import geoip from 'geoip-lite';
 import { resetPasswordTemplate } from "../utils/helperfuntions/emailtemplate.js";
 import {
   signupSchema,
@@ -22,7 +23,16 @@ import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js"
 import { Session } from "../models/sessionModel.js";
 
 dotenv.config();
-
+function detectDeviceType(userAgent = '') {
+  if (/mobile/i.test(userAgent)) return 'Mobile';
+  if (/tablet/i.test(userAgent)) return 'Tablet';
+  if (/Mac|Windows|Linux/.test(userAgent)) {
+    if (/Chrome/.test(userAgent)) return 'Chrome on Desktop';
+    if (/Firefox/.test(userAgent)) return 'Firefox on Desktop';
+    return 'Desktop';
+  }
+  return 'Unknown';
+}
 // global use variables
 const isProd = process.env.NODE_ENV === "production";
 
@@ -105,19 +115,31 @@ export const login = async (req, res) => {
 
     const accessToken = generateGlobalToken(user);
     const { exp } = jwt.decode(accessToken);
-// 2. Count active sessions
-const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
+     res.cookie("orgtoken", orgToken, {
+  httpOnly:isProd,        // Prevents JS access — secure against XSS
+  secure:isProd,          // Only send over HTTPS
+  sameSite: "lax",    // Prevents CSRF
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+});
+    res.cookie("token", accessToken, {
+  httpOnly:isProd,        // Prevents JS access — secure against XSS
+  secure:isProd,          // Only send over HTTPS
+  sameSite: "lax",    // Prevents CSRF
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+});
+// // 2. Count active sessions
+// const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
 
-// 3. If limit exceeded, delete oldest session(s)
-if (activeSessions.length > 5) {
-return res.status(409).json({ message: "Too many active sessions. Please log out of other devices." });
-}
-await Session.create({
-  user: user._id,
-  token: accessToken,
-  isActive: true,
+// // 3. If limit exceeded, delete oldest session(s)
+// if (activeSessions.length > 5) {
+// return res.status(409).json({ message: "Too many active sessions. Please log out of other devices." });
+// }
+// await Session.create({
+//   user: user._id,
+//   token: accessToken,
+//   isActive: true,
 
-})
+// })
     const responseData = {
       id: user._id,
       uuid: user.uuid,
@@ -134,6 +156,23 @@ await Session.create({
       currentWorkspace: user?.currentWorkspace || null,
     };
 
+     const userAgent = req.get('User-Agent') || '';
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
+
+  const geo = geoip.lookup(ip);
+  const location = geo ? `${geo.city || ''}, ${geo.region || ''}, ${geo.country || ''}` : 'Unknown';
+
+  const deviceType = detectDeviceType(userAgent);
+
+  const deviceInfo = {
+    // deviceId,
+    deviceType,
+    ip,
+    location,
+    userAgent,
+  };
+
+  console.log('Device Info:', deviceInfo);
     res.status(200).json({
       message: `Welcome back ${user.firstName}`,
       success: true,

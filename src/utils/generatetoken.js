@@ -49,6 +49,6 @@ export const generateOrgToken = (
       permissions,
     },
     ORGSECRET,
-    { ...jwtOptions, expiresIn: "2d" }
+    { ...jwtOptions, expiresIn: "7d" }
   );
 };

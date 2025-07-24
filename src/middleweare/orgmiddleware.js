@@ -6,16 +6,18 @@ dotenv.config({ path: "../../.env" });
 
 const ORGSECRET = process.env.ORG_SECRET;
 
+
+
 export const authenticateOrgToken = () => {
   return (req, res, next) => {
-    const token = req.headers["x-org-token"]; // Read from custom header
+    const token = req.cookies?.orgtoken;
 
     if (!token) {
-      return res.status(401).json({ message: "Missing or invalid org token" });
+      return res.status(401).json({ message: "Missing org token in cookie" });
     }
 
     try {
-      const decoded = jwt.verify(token, ORGSECRET);
+      const decoded = jwt.verify(token, process.env.ORGSECRET); // Use your ORG secret
 
       req.orgUser = {
         userId: decoded.userId,
@@ -31,6 +33,7 @@ export const authenticateOrgToken = () => {
     }
   };
 };
+
 
 export const checkPermission = (moduleName, actionName) => {
   return async (req, res, next) => {
