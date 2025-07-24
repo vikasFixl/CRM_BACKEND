@@ -115,31 +115,31 @@ export const login = async (req, res) => {
 
     const accessToken = generateGlobalToken(user);
     const { exp } = jwt.decode(accessToken);
-     res.cookie("orgtoken", orgToken, {
-  httpOnly:isProd,        // Prevents JS access — secure against XSS
-  secure:isProd,          // Only send over HTTPS
-  sameSite: "lax",    // Prevents CSRF
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-});
-    res.cookie("token", accessToken, {
-  httpOnly:isProd,        // Prevents JS access — secure against XSS
-  secure:isProd,          // Only send over HTTPS
-  sameSite: "lax",    // Prevents CSRF
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-});
-// // 2. Count active sessions
-// const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
+    res.cookie("oid", orgToken, {
+      httpOnly: isProd,        // Prevents JS access — secure against XSS
+      secure: isProd,          // Only send over HTTPS
+      sameSite: "lax",    // Prevents CSRF
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    res.cookie("sid", accessToken, {
+      httpOnly: isProd,        // Prevents JS access — secure against XSS
+      secure: isProd,          // Only send over HTTPS
+      sameSite: "lax",    // Prevents CSRF
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    // // 2. Count active sessions
+    // const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
 
-// // 3. If limit exceeded, delete oldest session(s)
-// if (activeSessions.length > 5) {
-// return res.status(409).json({ message: "Too many active sessions. Please log out of other devices." });
-// }
-// await Session.create({
-//   user: user._id,
-//   token: accessToken,
-//   isActive: true,
+    // // 3. If limit exceeded, delete oldest session(s)
+    // if (activeSessions.length > 5) {
+    // return res.status(409).json({ message: "Too many active sessions. Please log out of other devices." });
+    // }
+    // await Session.create({
+    //   user: user._id,
+    //   token: accessToken,
+    //   isActive: true,
 
-// })
+    // })
     const responseData = {
       id: user._id,
       uuid: user.uuid,
@@ -156,23 +156,23 @@ export const login = async (req, res) => {
       currentWorkspace: user?.currentWorkspace || null,
     };
 
-     const userAgent = req.get('User-Agent') || '';
-  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent') || '';
+    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
 
-  const geo = geoip.lookup(ip);
-  const location = geo ? `${geo.city || ''}, ${geo.region || ''}, ${geo.country || ''}` : 'Unknown';
+    const geo = geoip.lookup(ip);
+    const location = geo ? `${geo.city || ''}, ${geo.region || ''}, ${geo.country || ''}` : 'Unknown';
 
-  const deviceType = detectDeviceType(userAgent);
+    const deviceType = detectDeviceType(userAgent);
 
-  const deviceInfo = {
-    // deviceId,
-    deviceType,
-    ip,
-    location,
-    userAgent,
-  };
+    const deviceInfo = {
+      // deviceId,
+      deviceType,
+      ip,
+      location,
+      userAgent,
+    };
 
-  console.log('Device Info:', deviceInfo);
+    console.log('Device Info:', deviceInfo);
     res.status(200).json({
       message: `Welcome back ${user.firstName}`,
       success: true,
@@ -241,6 +241,12 @@ export const signup = async (req, res) => {
     const accessToken = generateGlobalToken(user);
     const { exp } = jwt.decode(accessToken);
 
+    res.cookie("sid", accessToken, {
+      httpOnly: isProd,        // Prevents JS access — secure against XSS
+      secure: isProd,          // Only send over HTTPS
+      sameSite: "lax",    // Prevents CSRF
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
     return res.status(201).json({
       message: "You have signed up successfully",
       success: true,
@@ -252,7 +258,6 @@ export const signup = async (req, res) => {
         Globalrole: user.Globalrole,
         phone: user.phone,
         avatar: user.avatar?.url,
-        token: accessToken,
         exp: exp * 1000, // milliseconds
       },
     });
@@ -266,69 +271,50 @@ export const signup = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    // 🔍 Check the current token before clearing
-    console.log("Token before clearing:", req.cookies.Token);
-    console.log("AccessToken before clearing:", req.cookies.accessToken);
+    // 🔍 Debug: show cookies before clearing
+    console.log("Before logout — sid:", req.cookies.sid);
+    console.log("Before logout — oid:", req.cookies.oid);
 
-    // 🧹 Optionally: Explicitly overwrite the cookie with empty string
-    res.cookie("token", "", {
+    // 🧹 Clear the sid (user token) cookie
+    res.cookie("sid", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "none",
-
+      sameSite: "lax",
       maxAge: 0,
+      path: "/", // Important for consistency
     });
-    res.cookie("orgtoken", "", {
+
+    // 🧹 Clear the oid (org token) cookie
+    res.cookie("oid", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "none",
-
+      sameSite: "lax",
       maxAge: 0,
+      path: "/",
     });
-
-    res.cookie("Token", "", {
+    // ✅ Clear sid (user token) cookie
+    res.clearCookie("sid", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "none",
-
-      maxAge: 0,
+      sameSite: "lax",
+      path: "/", // Must match the path used when setting
     });
 
-    // ✅ Clear cookies as well
-    res.clearCookie("Token", "", {
+    // ✅ Clear oid (org token) cookie
+    res.clearCookie("oid", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "none",
-
-      maxAge: 0,
-    });
-    res.clearCookie("orgToken", "", {
-      httpOnly: isProd,
-      secure: isProd,
-      sameSite: "none",
-
-      maxAge: 0,
-    });
-    res.clearCookie("token", "", {
-      httpOnly: isProd,
-      secure: isProd,
-      sameSite: "none",
-
-      maxAge: 0,
+      sameSite: "lax",
+      path: "/",
     });
 
-    // ⚠️ req.cookies still shows the old token, it won’t change until the next request
-    console.log(
-      "Token after clearing (still in req.cookies):",
-      req.cookies.Token
-    );
-    console.log(req.cookies.token);
-
-    res.status(200).json({ message: "Logged out successfully" });
+ 
+    return res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 export const forgotPassword = async (req, res) => {
   const { email } = req.body || {};

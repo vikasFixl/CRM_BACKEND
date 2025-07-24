@@ -218,11 +218,13 @@ export const switchOrg = async (req, res) => {
     await user.save();
 
     const { exp } = jwt.decode(orgtoken);
-
-    return res.status(200).json({
-      orgtoken,
-      expat: exp * 1000, // optional: expiration in ms
-    });
+  res.cookie("oid", orgtoken, {
+  httpOnly:isProd,        // Prevents JS access — secure against XSS
+  secure:isProd,          // Only send over HTTPS
+  sameSite: "lax",    // Prevents CSRF
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+});
+    return res.status(200)
   } catch (err) {
     console.error("Switch Org Error:", err);
     res.status(500).json({ message: "Internal server error" });

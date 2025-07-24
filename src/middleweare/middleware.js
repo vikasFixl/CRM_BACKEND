@@ -4,7 +4,7 @@ import jwtDecode from "jwt-decode";
 // import ActivityModel from "../models/activityModel.js";
 import jwt from "jsonwebtoken";
 export const isAuthenticated = (req, res, next) => {
-  const token = req.cookies?.token;
+  const token = req.cookies?.uid;
   
 
   if (!token) {

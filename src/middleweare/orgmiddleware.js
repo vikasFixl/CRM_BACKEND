@@ -10,7 +10,7 @@ const ORGSECRET = process.env.ORG_SECRET;
 
 export const authenticateOrgToken = () => {
   return (req, res, next) => {
-    const token = req.cookies?.orgtoken;
+    const token = req.cookies?.oid;
 
     if (!token) {
       return res.status(401).json({ message: "Missing org token in cookie" });
