@@ -62,15 +62,14 @@ const stageHistorySchema = z.object({
 export const createLeadSchema = z.object({
   title:       z.string({required_error:"tilte is required"}).min(1, "Title is required"),
   description: z.string().optional(),
-<<<<<<< HEAD
+
 firm:z.string({required_error:"frim id is required"}).min(1).nonempty(),
   contact: z.object({
     name:    z.string({required_error:"contact name required"}).min(1, "Contact name is required"),
     email:   z.string({required_error:"email required"}).email("Invalid email"),
     phone:   z.string().optional(),
     company: z.string().optional(),
-    position:z.string().optional()
-=======
+    position:z.string().optional(),
 
   // Client Info
   client: z.object({
@@ -97,8 +96,7 @@ firm:z.string({required_error:"frim id is required"}).min(1).nonempty(),
         postalCode: z.string({ required_error: " postal code is required" }),
       })
       .optional(),
->>>>>>> project
-  }),
+}),
 
   source:        z.enum(SOURCE_ENUM),
   sourceDetails: z.string().optional(),
@@ -108,10 +106,9 @@ firm:z.string({required_error:"frim id is required"}).min(1).nonempty(),
   estimatedValue: z.number().min(0).optional(),
   currency:       z.string().default("INR"),
 
-<<<<<<< HEAD
   assignedTo:   z.string().optional(),       
   assignedAt:   z.coerce.date().optional(),
-=======
+
   // Assignment
   leadManagerId: z.string().optional(), // ObjectId as string
   assignedToId: z.string().optional(), // ObjectId as string
@@ -124,7 +121,6 @@ firm:z.string({required_error:"frim id is required"}).min(1).nonempty(),
       userType: z.string().optional(),
     })
     .optional(),
->>>>>>> project
 
 
   nextAction:     z.enum(NEXT_ACTION_ENUM).optional(),
@@ -135,7 +131,8 @@ firm:z.string({required_error:"frim id is required"}).min(1).nonempty(),
   notes:        z.array(z.string()).optional(),
   tags:         z.array(z.string()).optional(),
   customFields: z.record(z.unknown()).optional()
-});
+})
+})
 
 /* ------------------------------------------------------------------ */
 /* 4.  Update  (PATCH /leads/:id)                                     */
@@ -144,7 +141,7 @@ export const updateLeadSchema = createLeadSchema.partial().extend({
   isActive: z.boolean().optional(),
    createClient: z.boolean().default(false),
   deletedAt: z.coerce.date().optional()
-});
+})
 
 /* ------------------------------------------------------------------ */
 /* 5.  Update stage only (PATCH /leads/:id/stage)                     */
@@ -153,4 +150,4 @@ export const updateLeadStageSchema = z.object({
   stage:   z.enum(STAGE_ENUM),
   reason:  z.string().optional(),
   createClient: z.boolean().default(false),   // <-- NEW
-});
+})
