@@ -1,53 +1,26 @@
+// server.js
+
 import express from "express";
-
+import geoip from 'geoip-lite';
 import bodyParser from "body-parser";
-import path from "path";
-
+import path, { dirname } from "path";
 import paypal from "paypal-rest-sdk";
 import cors from "cors";
-
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
-import { dirname } from "path";
 import helmet from "helmet";
 import fileUpload from "express-fileupload";
-import { rateLimit } from "./src/middleweare/ratelimitter.js";
+import { rateLimit, globalLimiter } from "./src/middleweare/ratelimitter.js";
+import { createServer } from "http";
+import { Server } from "socket.io";
 import { connectDB } from "./config/db.config.js";
 import { startUserCleanupCron } from "./src/automation/UserDeleteAutomation.js";
-import { globalLimiter } from "./src/middleweare/ratelimitter.js";
+import jwt from "jsonwebtoken";
+import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
+import { errorHandler } from "./src/middleweare/errorhandler.js";
 
-// const invoiceRoutes = require("./src/routes/invoiceRoute");
-// const clientRoutes = require("./src/routes/clientRoute");
-// const profileRoutes = require("./src/routes/profileRoute");
-// const firmRoutes = require("./src/routes/firmRoute");
-// const taxRoutes = require("./src/routes/taxRoutes");
-// const orgRoutes = require("./src/routes/orgRoute");
-// const productRoutes = require("./src/routes/productRoutes.js");
-// const leadRoutes = require("./src/routes/leadRoute");
-// const leadActivityRoutes = require("./src/routes/leadActivityRoute");
-// const activitRoutes = require("./src/routes/activityRoute.js");
-
-// const searchRoutes = require("./src/routes/searchRoute");
-// const roleRoutes = require("./src/routes/roleNpermissionRoute");
-// const attendenceRoutes = require("./src/routes/empAttendenceRoute");
-// const dedRoutes = require("./src/routes/dedRoute");
-// const salRoutes = require("./src/routes/salRoute");
-// const employeeRoutes = require("./src/routes/empRoute");
-// const vendorRoutes = require("./src/routes/vendorRoutes");
-// const purchesRoutes = require("./src/routes/purchesRoute.js");
-// const Subscription = require("./src/routes/subscriptionRoute.js");
-// const Reminder = require("./src/routes/reminderRoute.js");
-// const appRouter = require("./src/routes/HRM/mainRoutes.js");
-
-// ES Module replacements for __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load env variables
-dotenv.config({ path: path.join(__dirname, "./.env") });
-
-// ✅ Import only user route
+// Routes
 import userRoutes from "./src/routes/userRoute.js";
 import orgRoutes from "./src/routes/orgRoute.js";
 import BillingRoutes from "./src/routes/HRM/BillingRoute.js";
@@ -55,8 +28,6 @@ import RoleRoutes from "./src/routes/rolepermissionroute.js";
 import firmRoutes from "./src/routes/firmRoute.js";
 import LeadRouter from "./src/routes/leadRoute.js";
 import InvoiceRouter from "./src/routes/invoiceRoute.js";
-import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
-import { errorHandler } from "./src/middleweare/errorhandler.js";
 import ClientRouter from "./src/routes/clientRoute.js";
 import ActivityRouter from "./src/routes/activityRoute.js";
 import TaxRouter from "./src/routes/taxRoutes.js";
@@ -66,70 +37,78 @@ import TaskRouter from "./src/routes/project/task.route.js";
 import ProjectMemberRouter from "./src/routes/project/projectMembe.js";
 import RolePermissionRouter from "./src/routes/rolepermissionroute.js";
 import BoardRouter from "./src/routes/project/boardroute.js";
+import WorkflowRouter from "./src/routes/project/workflowroute.js";
+import DocumentRouter from "./src/routes/project/documentroute.js";
+import router from "./src/routes/sessionroute.js";
+import TeamRouter from "./src/routes/project/teamroute.js";
+import ProjectTemplateRouter from "./src/routes/project/projecttemplate.route.js";
+import { sendToUser } from "./config/socket.handler.js";
+import { initSocket } from "./config/socket.js";
+import otplib from "otplib"
+import qrcode from "qrcode"
+// Generate a secret key
+// Generate a secret key
+const secret = otplib.authenticator.generateSecret();
+
+// Create provisioning URI
+const provisioningUri = otplib.authenticator.keyuri('vikasbaplawat1@gmail.com', 'Cubicle-Crm', secret);
+
+// Generate and display QR code in the terminal
+qrcode.toString(provisioningUri, { type: 'terminal', small: true }, (err, url) => {
+  if (err) {
+    console.error('Error generating QR code:', err);
+    return;
+  }
+
+  console.log('Scan the following QR code with your authenticator app:');
+  // console.log(url);
+});
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: path.join(__dirname, "./.env") });
 
 // PayPal config
 paypal.configure({
   mode: "sandbox",
-  client_id:
-    "AaWQSsw8-Pf15jr3lZZ2gcGjn3XZHk9_OdJgDI5AKODcy18_Gw-3pOVHOxVTNwfWLj5jFOLzmeHiDSf7",
-  client_secret:
-    "EFl7mXSY6pm8Z-cWHdJaEGKkZspJl7kOLDmixxyvaylsSrrunpdC8u9YZWO0bHKBWfLwOdNhtld-0L0w",
+  client_id: process.env.PAYPAL_CLIENT_ID,
+  client_secret: process.env.PAYPAL_CLIENT_SECRET,
 });
-const isprod = process.env.NODE_ENV === "production";
 
+const isProd = process.env.NODE_ENV === "production";
 const app = express();
-const PORT = process.env.PORT || 5001;
-app.set("trust proxy", isprod); // or true
+const httpServer = createServer(app);
+initSocket(httpServer)
 
-// File upload configuration
-app.use(
-  fileUpload({
-    limits: { fileSize: 50 * 1024 * 1024 }, // Max file size: 50MB
-    useTempFiles: true,
-    tempFileDir: "/tmp/",
-  })
-);
-// Parse application/x-www-form-urlencoded
+const PORT = process.env.PORT || 5001;
+app.set("trust proxy", isProd);
+
+// Middlewares
+app.use(fileUpload({
+  limits: { fileSize: 50 * 1024 * 1024 },
+  useTempFiles: true,
+  tempFileDir: "/tmp/",
+}));
 app.use(bodyParser.urlencoded({ extended: true }));
-// cors configuration
-app.use(
-  cors({
-    origin: "https://cubicle-crm.vercel.app",
-    // origin: "http://localhost:5173",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  })
-);
-// parse cookies
+app.use(cors({
+  // origin: "https://cubicle-crm.vercel.app",
+  origin: "http://localhost:51",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
-// request logger middleware
+
+// Request logger
 app.use((req, res, next) => {
   console.log(`Request hit: ${req.method} ${req.originalUrl}`);
-
-  if (Object.keys(req.params).length > 0) {
-    console.log("Request params:", req.params);
-  }
-
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log("Request body:", req.body);
-  }
-
-  next();
-});
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: err.message || "Something went wrong",
-  });
-});
-app.use((req, res, next) => {
+  if (Object.keys(req.params).length) console.log("Params:", req.params);
+  if (req.body && Object.keys(req.body).length) console.log("Body:", req.body);
   console.log("Client IP:", req.ip);
   next();
 });
-// ✅ Active route
+
+// Routes
 app.use("/api/auth", globalLimiter, userRoutes);
 app.use("/api/organization", globalLimiter, orgRoutes);
 app.use("/api/billingplan", BillingRoutes);
@@ -144,68 +123,44 @@ app.use("/api/workspace", WorkspaceRouter);
 app.use("/api/project", ProjectRouter);
 app.use("/api/task", TaskRouter);
 app.use("/api/projects", ProjectMemberRouter);
-app.use("/api/board",BoardRouter)
+app.use("/api/board", BoardRouter);
 app.use("/api/role-permission", RolePermissionRouter);
+app.use("/api/workflow", WorkflowRouter);
+app.use("/api/documents", DocumentRouter);
+app.use("/api/teams", TeamRouter);
+app.use("/api/project-templates", ProjectTemplateRouter);
+app.use("/api/session", router);
 
-/**
- * 
-app.use("/api/purchase", purchesRoutes);
-app.use("/api/product", productRoutes);
-app.use("/api/lead", leadRoutes);
-app.use("/api/leadActivity", leadActivityRoutes);
-app.use("/api/vendor", vendorRoutes);
-app.use("/api/attendence", attendenceRoutes);
-app.use("/api/ded", dedRoutes);
-app.use("/api/sal", salRoutes);
-app.use("/api/employee", employeeRoutes);
-app.use("/api/profile", profileRoutes);
-app.use("/api/search", searchRoutes);
-app.use("/api/role", roleRoutes);
-app.use("/api/subscription", Subscription);
-app.use("/api/Reminder", Reminder);
-app.use("/api/hrm", appRouter);
-*/
+app.get('/notify/:userId', (req, res) => {
+  const userId = req.params.userId;
 
-app.use(errorHandler);
-// Start the server
-const startserver = async () => {
-  try {
-    app.listen(PORT, async () => {
-      console.log(`✅ Server started on port ${PORT}`);
-      await connectDB();
-    });
-    await connectDB();
-  } catch (error) {
-    console.error("Error connecting to the database:", error);
-  }
-};
-
-startserver();
-startUserCleanupCron(); //background task/cron job
-runWelcomeEmail();
-
-// health check route
-app.get("/", (req, res) => {
-  res.send("server running");
-});
-// global 404 handler
-app.all("*", (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: "Route not found",
+  sendToUser(userId, {
+    title: 'New Alert',
+    body: 'Hello from /notify!',
   });
+
+  res.send(`Notification sent to user_${userId}`);
 });
-// global error handler
+
+
+
+
+
+// Health check & 404
+app.get("/", (req, res) => res.send("Server running"));
+
+app.all("*", (req, res) => res.status(404).json({ success: false, message: "Route not found" }));
 
 // Global error handlers
-process.on("unhandledRejection", (reason, p) => {
-  console.log("Unhandled Rejection at:", p, "reason:", reason);
-});
+app.use(errorHandler);
+process.on("unhandledRejection", (reason, p) => console.log("Unhandled Rejection:", reason));
+process.on("uncaughtException", (err) => console.log("Uncaught Exception:", err));
+process.on("uncaughtExceptionMonitor", (err) => console.log("Uncaught Exception Monitor:", err));
 
-process.on("uncaughtException", (err, origin) => {
-  console.log("Uncaught Exception at:", origin, "error:", err);
-});
-
-process.on("uncaughtExceptionMonitor", (err, origin) => {
-  console.log("Uncaught Exception Monitor at:", origin, "error:", err);
+// Start server
+httpServer.listen(PORT, async () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  await connectDB();
+  startUserCleanupCron();
+  runWelcomeEmail();
 });

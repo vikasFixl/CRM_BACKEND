@@ -12,10 +12,10 @@ const ProjectMemberSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    teamId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Team", // Optional: if user is part of a team assigned to the project
-    },
+    // teamId: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Team", // Optional: if user is part of a team assigned to the project
+    // },
     role: {
      type:mongoose.Schema.Types.ObjectId,
       ref: "RolePermission",

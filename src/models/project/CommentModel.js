@@ -1,6 +1,7 @@
+// models/Comment.ts
 import mongoose from "mongoose";
 
-const commentSchema = mongoose.Schema(
+const commentSchema = new mongoose.Schema(
   {
     content: {
       type: String,
@@ -33,23 +34,32 @@ const commentSchema = mongoose.Schema(
       ref: "User",
       required: true,
     },
-
-    // 🔁 For nested replies
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Comment",
       default: null,
     },
-
     isDeleted: {
       type: Boolean,
       default: false,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
-// Useful indexes
+// ✅ Virtual for nested replies
+commentSchema.virtual("replies", {
+  ref: "Comment",           // The model to populate from
+  localField: "_id",        // The field in the current model
+  foreignField: "parentId", // The field in the other model that matches
+});
+
+
+// Indexes
 commentSchema.index({ taskId: 1 });
 commentSchema.index({ parentId: 1 });
 

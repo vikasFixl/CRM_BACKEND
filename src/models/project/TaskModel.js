@@ -14,11 +14,11 @@ const TaskSchema = new mongoose.Schema(
       required: true,
       default: generateTaskCode,
     },
-    summary: {
+    name: {
       type: String,
       required: true,
       trim: true,
-      maxlength: 300,
+      maxlength: 100,
     },
     description: {
       type: String,
@@ -56,16 +56,19 @@ const TaskSchema = new mongoose.Schema(
     assignedTeamId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Team",
+      default:null
     },
 
     // Planning
     sprintId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Sprint",
+        default:null
     },
     epicId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Epic",
+        default:null
     },
     parentId: {
       type: mongoose.Schema.Types.ObjectId,

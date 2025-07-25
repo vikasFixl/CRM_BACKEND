@@ -21,9 +21,10 @@ export const generateGlobalToken = (user) => {
     {
       userId: user._id,
       uuid: user.uuid,
-      role: user.role,
+      role: user.Globalrole,
       email: user.email,
       firstName: user.firstName,
+      
       
     },
     SECRET,
@@ -48,6 +49,6 @@ export const generateOrgToken = (
       permissions,
     },
     ORGSECRET,
-    { ...jwtOptions, expiresIn: "2d" }
+    { ...jwtOptions, expiresIn: "7d" }
   );
 };

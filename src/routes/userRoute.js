@@ -10,12 +10,7 @@ import {
   signup,
   forgotPassword,
   resetPassword,
-
-  // getUsersByDept,
-  // getUserList,
-  
   getUser,
-  // getAllusers,
   deleteUser,
   updateUser,
   logout,
@@ -23,8 +18,9 @@ import {
 } from "../controllers/user.js";
 
 import { isAuthenticated, isAdminOrSelf } from "../middleweare/middleware.js";
-import {authenticateOrgToken} from "../middleweare/orgmiddleware.js"
-import { loginEmailRateLimiter, signupEmailRateLimiter,resetEmailRateLimiter,forgotEmailRateLimiter } from "../middleweare/ratelimitter.js";
+import { authenticateOrgToken } from "../middleweare/orgmiddleware.js"
+import { loginEmailRateLimiter, signupEmailRateLimiter, resetEmailRateLimiter, forgotEmailRateLimiter } from "../middleweare/ratelimitter.js";
+import { generate2FAQr, sendLoginOTP, verify2FALogin, verify2FASetup, verifyLoginOTP } from "../controllers/authcontroller.js";
 
 
 
@@ -57,14 +53,19 @@ Router.route("/logout").post(logout); // logout
 // GET routes
 
 Router.route("/getprofile").get(isAuthenticated, getUser); // user profile
-// Router.route("/getAllusers/:orgId").get(isAuthenticated,authenticateOrgToken(["OrgAdmin"]),getAllusers); // get all org users
-// Router.route("/getUserList").get(getUserList); // admin route to view all users
+
 
 // DELETE route
-Router.route("/delete/:id").delete(isAuthenticated,isAdminOrSelf,deleteUser); // delete user(admin or self) and soft delete for 30 days then automaticallydelete
+Router.route("/delete/:id").delete(isAuthenticated, isAdminOrSelf, deleteUser); // delete user(admin or self) and soft delete for 30 days then automaticallydelete
 
 // PATCH routes
-Router.route("/updateUser/:id").patch(isAuthenticated,isAdminOrSelf,updateUser); // update user (admin or self)
-Router.route("/updateProfilephoto/:id").patch(isAuthenticated,updateProfileImage); // update user profile photo
-
+Router.route("/updateUser/:id").patch(isAuthenticated, isAdminOrSelf, updateUser); // update user (admin or self)
+Router.route("/updateProfilephoto/:id").patch(isAuthenticated, updateProfileImage); // update user profile photo
+//
+// Auth Routes
+Router.route("/generate-2fa-qr").post(isAuthenticated, generate2FAQr); // generate 2fa qr code
+Router.route("/verify-2fa-setup").post(isAuthenticated, verify2FASetup); // verify the 2fa setup
+Router.route("/verify-2fa-login").post(verify2FALogin); // verify the 2fa login
+Router.route("/send-login-otp").post(sendLoginOTP); // generate otp code for password less login
+Router.route("/verify-login-otp").post(verifyLoginOTP); // verify login otp
 export default Router;

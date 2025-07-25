@@ -1,6 +1,8 @@
 import { RolePermission } from "../models/RolePermission.js";
 import { MODULES, PERMISSIONS } from "../enums/role.enums.js";
-import { rolepermission } from "../utils/role-permission.js";
+import { encryptData } from "../utils/encryptdata.js";
+import dotenv from "dotenv"
+dotenv.config({ path: "../../.env" });
 
 export const createCustomRolePermission = async (req, res) => {
   try {
@@ -77,36 +79,46 @@ export const createCustomRolePermission = async (req, res) => {
 // used to fetch all custom role permissions
 export const getAllRolePermissions = async (req, res) => {
   try {
-    const orgId = req.orgUser.orgId;
-    const { workspaceId } = req.query;
+    const { scope, orgId, workspaceId } = req.query;
 
-    let rolePermissions = [];
+    // Always fetch system (global) roles for this scope
+    const systemFilter = {
+      scope,
+      isCustom: false,
+      role: { $ne: "SuperAdmin" },
+    };
 
-    if (workspaceId) {
-      // Fetch only roles for this workspace
-      rolePermissions = await RolePermission.find({
-        orgId,
-        workspaceId,
+    const systemRoles = await RolePermission.find(systemFilter).select("name permissions isCustom");
+
+
+    let customRoles = [];
+
+    // If org or workspace specified, fetch custom roles too
+    if (orgId || workspaceId) {
+      const customFilter = {
+        scope,
         isCustom: true,
-        name: { $ne: "SuperAdmin" },
-      });
-    } else {
-      // Fetch org-level custom roles + global default roles
-      rolePermissions = await RolePermission.find({
-        $or: [
-          {
-            orgId,
-            workspaceId: { $exists: false },
-            name: { $ne: "SuperAdmin" },
-          }, // org-level custom roles
-          { isDefault: true, name: { $ne: "SuperAdmin" } }, // DB-wide global roles
-        ],
-      });
+      };
+
+      if (orgId) customFilter.orgId = orgId;
+      if (workspaceId) customFilter.workspaceId = workspaceId;
+
+      customRoles = await RolePermission.find(customFilter).select("name permissions isCustom createdAt");
     }
+
+
+    // Save these to your database/config file
+    // console.log("Store these IVs securely:", ivs);
+    const allRoles = [...systemRoles, ...customRoles];
+
+    // 🔐 Encrypt the data
+    const encrypted = encryptData(allRoles, process.env.All_Roles_IV);
 
     return res.status(200).json({
       message: "Role permissions fetched successfully",
-      permissions: rolePermissions,
+      total: systemRoles.length + customRoles.length,
+      permissions: encrypted.data,
+      iv: encrypted.iv,
     });
   } catch (error) {
     console.error("Error fetching role permissions:", error);
@@ -115,38 +127,51 @@ export const getAllRolePermissions = async (req, res) => {
       .json({ message: "Server error", error: error.message });
   }
 };
+
+
+
 export const getRoleNamesList = async (req, res) => {
   try {
-    const orgId = req.orgUser.orgId;
-    const { workspaceId } = req.query;
+    
+    const { workspaceId, scope, orgId } = req.query;
 
-    const queries = [];
+    // 🔹 Fetch system (global) roles excluding SuperAdmin
+    const systemFilter = {
+      scope,
+      isCustom: false,
+      name: { $ne: "SuperAdmin" },
+    };
 
-    // ✅ 1. Add DB-defined (global) roles
-    queries.push({ orgId: { $exists: false } }); // Global predefined roles
+    const systemRoles = await RolePermission.find(systemFilter).select("name isCustom");
 
-    // ✅ 2. Add custom roles based on orgId and (optionally) workspaceId
-    if (workspaceId) {
-      queries.push({
-        orgId,
-        workspaceId,
+    let customRoles = [];
+
+    // 🔹 Fetch custom roles based on org + optional workspace
+    if (orgId || workspaceId) {
+      const customFilter = {
+        scope,
         isCustom: true,
-        name: { $ne: "SuperAdmin" },
-      });
-    } else {
-      queries.push({
+        name: { $ne: "SuperAdmin" }, // Ensure custom SuperAdmin is excluded too
         orgId,
-        workspaceId: null,
-      });
+      };
+
+      if (workspaceId) {
+        customFilter.workspaceId = workspaceId;
+      }
+
+      customRoles = await RolePermission.find(customFilter).select("name isCustom createdAt");
     }
 
-    const roles = await RolePermission.find({ $or: queries }).select("name");
+    const allRoles = [...systemRoles, ...customRoles];
 
-    const roleNames = roles.map((r) => r.name);
+    // 🔐 Encrypt role names
+    const encrypted = encryptData(allRoles, process.env.Role_List_IV);
 
     return res.status(200).json({
       message: "Role names fetched successfully",
-      roles: roleNames,
+      total: allRoles.length,
+      roles: encrypted.data,
+      iv: encrypted.iv,
     });
   } catch (error) {
     console.error("Error fetching role names:", error);
@@ -156,6 +181,7 @@ export const getRoleNamesList = async (req, res) => {
     });
   }
 };
+
 
 export const deleteRole = async (req, res) => {
   try {

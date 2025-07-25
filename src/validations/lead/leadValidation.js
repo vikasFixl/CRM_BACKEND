@@ -62,6 +62,7 @@ const stageHistorySchema = z.object({
 export const createLeadSchema = z.object({
   title:       z.string({required_error:"tilte is required"}).min(1, "Title is required"),
   description: z.string().optional(),
+  
 firm:z.string({required_error:"frim id is required"}).min(1).nonempty(),
   contact: z.object({
     name:    z.string({required_error:"contact name required"}).min(1, "Contact name is required"),
@@ -69,6 +70,32 @@ firm:z.string({required_error:"frim id is required"}).min(1).nonempty(),
     phone:   z.string().optional(),
     company: z.string().optional(),
     position:z.string().optional()
+
+  // Client Info
+  client: z.object({
+    firstName: z
+      .string({ required_error: " first name is required" })
+      .min(1)
+      .nonempty("First name cannot be empty"),
+    lastName: z
+      .string({ required_error: "last name is required" })
+      .min(1)
+      .nonempty("Last name cannot be empty"),
+    email: z
+      .string()
+      .email({ required_error: " email is required" })
+      .nonempty("Email cannot be empty"), // email validation
+    phone: z.string({ required_error: " phone is required" }),
+    address: z
+      .object({
+        line1: z.string({ required_error: " address line 1 is required" }),
+        line2: z.string({ required_error: " address line 2 is required" }),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        country: z.string({ required_error: " country is required" }),
+        postalCode: z.string({ required_error: " postal code is required" }),
+      })
+      .optional(),
   }),
 
   source:        z.enum(SOURCE_ENUM),
@@ -81,6 +108,18 @@ firm:z.string({required_error:"frim id is required"}).min(1).nonempty(),
 
   assignedTo:   z.string().optional(),       
   assignedAt:   z.coerce.date().optional(),
+  // Assignment
+  leadManagerId: z.string().optional(), // ObjectId as string
+  assignedToId: z.string().optional(), // ObjectId as string
+ 
+  firmId: z.string({required_error:"firm id required"}),
+  // Pipeline Info
+  pipeline: z
+    .object({
+      department: z.string().optional(),
+      userType: z.string().optional(),
+    })
+    .optional(),
 
 
   nextAction:     z.enum(NEXT_ACTION_ENUM).optional(),

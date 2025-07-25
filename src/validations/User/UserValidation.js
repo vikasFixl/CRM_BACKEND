@@ -33,17 +33,20 @@ export const signupSchema = z.object({
   // You may choose to exclude timestamps (createdAt, updatedAt) since they are automatic
 });
 
+
+
+
+
 export const updateUserSchema = z.object({
   firstName: z
     .string({ required_error: "First name is required" })
-    .min(1)
-    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z).")
-    .nonempty("First name cannot be empty"),
+    .min(1, "First name cannot be empty")
+    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z)"),
 
   lastName: z
     .string()
-
     .optional(),
+
   email: z
     .string()
     .email("Invalid email address")
@@ -57,6 +60,7 @@ export const updateUserSchema = z.object({
   phone: z
     .string({ required_error: "Phone number is required" })
     .length(10, "Phone number must be exactly 10 digits"),
+
   avatar: z
     .object({
       url: z.string().url("Invalid avatar URL"),
@@ -64,6 +68,7 @@ export const updateUserSchema = z.object({
     })
     .optional(),
 
+  twoFAEnabled: z.boolean(),
+
   isActive: z.boolean().optional(),
-  lastLogin: z.coerce.date().optional(),
 });
