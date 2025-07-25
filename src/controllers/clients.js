@@ -7,169 +7,169 @@ import {
 import ActivityModel from "../models/activityModel.js";
 import { paginateQuery } from "../utils/pagination.js";
 
-export const createClient = async (req, res) => {
+/**
+ * POST /clients
+ * Create a new client inside a transaction.
+ * – scopes uniqueness to (orgId, firmId, email)
+ * – single round-trip with bulkWrite
+ * – single audit entry
+ */
+
+
+export const createClient = async (req, res, next) => {
+  const { orgId, employeeId } = req.orgUser;
+  const { userId, email: loggedInEmail } = req.user;
+
+  /* ---------- validation ---------- */
+  const parsed = clientSchema.safeParse(req.body);
+  if (!parsed.success)
+    return res.status(400).json({
+      message: "Validation failed",
+      errors: parsed.error.errors.map((e) => e.message),
+    });
+
+  const clientData = parsed.data;
+
+  /* ---------- transaction ---------- */
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    // Extract required data from request
-    const { orgId, employeeId: empid } = req.orgUser;
-    const { userId, email: loggedinuserEmail } = req.user;
-
-    // Validate client data
-    const clientValidation = clientSchema.safeParse(req.body);
-    if (!clientValidation.success) {
-      return res.status(400).json({
-        message: "Validation error",
-        errors: clientValidation.error.errors.map((e) => e.message),
-        code: 400,
-        success: false
-      });
+    /* ---------- duplicate check scoped to org+firm+email ---------- */
+    const exists = await ClientModel.exists(
+      {
+        orgId,
+        firmId: clientData.firmId,
+        email: clientData.email,
+        deleted: false,
+      },
+      { session }
+    );
+    if (exists) {
+      await session.abortTransaction();
+      return res.status(409).json({ message: "Client already exists for this email in the firm" });
     }
 
-    const clientData = clientValidation.data;
-    const { 
-      clientFirmName,
-      firstName,
-      lastName,
-      website,
-      email,
-      phone,
-      address,
-      contactPerson,
-      taxId,
-      tinNo,
-      cinNo,
-      firmId
-    } = clientData;
+    /* ---------- create ---------- */
+    const [client] = await ClientModel.create([{ ...clientData, orgId }], { session });
 
+    await ActivityModel.create(
+      [
+        {
+          orgId,
+          userId,
+          activity: "create",
+          module: "client",
+          entityId: client._id,
+          activityDesc: `Client created by ${loggedInEmail} (empId: ${employeeId})`,
+        },
+      ],
+      { session }
+    );
 
-    // Check for existing client with same identifiers
-    const queryConditions = [];
-    if (taxId) queryConditions.push({ taxId });
-    if (tinNo) queryConditions.push({ tinNo });
-    if (cinNo) queryConditions.push({ cinNo });
-
-    if (queryConditions.length > 0) {
-      const existingClient = await ClientModel.findOne({ $or: queryConditions });
-      
-      if (existingClient) {
-        const duplicateFields = [];
-        if (existingClient.taxId === taxId) duplicateFields.push("Tax ID");
-        if (existingClient.tinNo === tinNo) duplicateFields.push("TIN number");
-        if (existingClient.cinNo === cinNo) duplicateFields.push("CIN number");
-
-        return res.status(400).json({
-          message: `${duplicateFields.join(", ")} already exist${duplicateFields.length > 1 ? "" : "s"}.`,
-          code: 400,
-          success: false
-        });
-      }
-    }
-
-    // Check for existing email
-    const existingEmailClient = await ClientModel.findOne({ email });
-    if (existingEmailClient) {
-      return res.status(400).json({
-        message: `Client already registered with ${email}.`,
-        code: 400,
-        success: false
-      });
-    }
-
-    // Create new client
-    const newClient = await ClientModel.create({
-      clientFirmName,
-      firstName,
-      lastName,
-      website,
-      email,
-      phone,
-      address,
-      contactPerson,
-      taxId,
-      tinNo,
-      cinNo,
-      orgId,
-      firmId
-    });
-
-    // Log activity
-    await ActivityModel.create({
-      activityDesc: `Client created by ${loggedinuserEmail} with empid ${empid}`,
-      userId,
-      orgId,
-      activity: "create",
-      module: "client",
-      entityId: newClient._id
-    });
-
-    return res.status(201).json({
-      code: 201,
-      success: true,
+    await session.commitTransaction();
+    res.status(201).json({
       message: "Client created successfully!",
-      data: newClient
+      success: true,
+      code: 200,
+       client,
     });
-
-  } catch (error) {
-    console.error("Error creating client:", error);
-    return res.status(500).json({
-      message: "Internal server error",
-      code: 500,
-      success: false,
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+  } catch (err) {
+    await session.abortTransaction();
+    next(err);
+  } finally {
+    session.endSession();
   }
 };
 
-export const getClientById = async (req, res) => {
+export const getClientById = async (req, res, next) => {
   const { id } = req.params;
+  const { orgId } = req.orgUser;
+
+  /* ---------- guards ---------- */
+  if (!id) return res.status(400).json({ message: "Client ID required" });
+  if (!mongoose.isValidObjectId(id))
+    return res.status(400).json({ message: "Invalid client ID" });
+
   try {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(404).json({ message: "Invalid id" });
-    }
-    const client = await ClientModel.find({ _id: id, deleted: false });
+    /* ---------- fetch client (scoped to org) ---------- */
+    const client = await ClientModel.findOne({ _id: id, orgId, deleted: false }).populate("firmId","firmName email FirmLogo").populate("orgId","name contactEmail OrgLogo")
     if (!client) {
-      return res.status(404).json({ message: "Client not found" });
+      return res.status(404).json({ message: "Client not found or deleted" });
     }
+
     res.status(200).json({
-      data: client,
+      message: "Client fetched successfully",
       success: true,
       code: 200,
-      message: "fetch client by id successfully!!",
+       client,
     });
-  } catch (error) {
-    res.status(404).json({ message: error.message });
+  } catch (err) {
+    next(err);
   }
 };
+/**
+ * GET /clients/deleted
+ * Paginated list of SOFT-DELETED clients scoped to the logged-in org.
+ * Same optional filters as /clients: ?name & ?email
+ */
 
-export const getClients = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-  const orgId = req.orgUser.orgId;
+
+export const getClients = async (req, res, next) => {
   try {
-    const query = {
-      orgId,
-      deleted: false,
-    };
+    const orgId = req.orgUser?.orgId;
+    if (!orgId) return res.status(400).json({ message: "Org id required" });
 
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      sort: { _id: -1 },
-    };
-    const result = await paginateQuery(ClientModel, query, options);
+    /* ---------- query params ---------- */
+    const page  = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit ) || 10, 1), 100);
+    const skip  = (page - 1) * limit;
 
-    res.json({
-      message: "Clients fetched successfully",
+    const { name, email,deleted=false} = req.query;
+
+    /* ---------- build filter ---------- */
+    const filter = { orgId};
+
+    if (name) {
+      filter.$or = [
+        { firstName:   { $regex: name, $options: "i" } },
+        { lastName:    { $regex: name, $options: "i" } },
+        { clientFirmName: { $regex: name, $options: "i" } },
+      ];
+    }
+    if (email) filter.email = { $regex: email, $options: "i" };
+
+    if(deleted){
+      filter.deleted = deleted
+    }
+    /* ---------- counts & slice ---------- */
+    const total      = await ClientModel.countDocuments(filter);
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    const clients = await ClientModel
+      .find(filter)
+      .populate("firmId","firmName email FirmLogo").populate("orgId","name contactEmail OrgLogo")
+      .sort({ _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    res.status(200).json({
+      message: ` clients fetched successfully`,
       success: true,
       code: 200,
-      client: result.data,
+      data: clients,
       pagination: {
-        totalDocs: result.total,
-        limit: result.limit,
-        page: result.page,
-        totalPages: result.totalPages,
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
       },
     });
-  } catch (error) {
-    res.status(404).json({ message: error.message });
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -317,106 +317,64 @@ export const getClientsByUser = async (req, res) => {
   }
 };
 
-export const getALLdeletedClient = async (req, res) => {
-  try {
-    const orgId = req.orgUser.orgId;
-    const { page = 1, limit = 10 } = req.query;
 
-    if (!orgId) {
-      return res.status(400).json({
-        message: "Organization ID is required",
-        success: false,
-        code: 400,
-      });
+
+export const restoreClient = async (req, res, next) => {
+  const { id } = req.params;
+  const {
+    user: { userId, email: loggedInEmail },
+    orgUser: { orgId, employeeId },
+  } = req;
+
+  /* ---------- guards ---------- */
+  if (!id) return res.status(400).json({ message: "Client ID required" });
+  if (!mongoose.isValidObjectId(id))
+    return res.status(400).json({ message: "Invalid client ID" });
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    /* ---------- fetch client (scoped to org) ---------- */
+    const client = await ClientModel.findOne(
+      { _id: id, orgId, deleted: true },
+      null,
+      { session }
+    );
+    if (!client) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Client not found or already active" });
     }
 
-    const query = {
-      orgId,
-      deleted: true,
-    };
+    /* ---------- restore ---------- */
+    client.deleted = false;
+    await client.save({ session });
 
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      sort: { createdAt: -1 },
-    };
-
-    const clients = await paginateQuery(ClientModel, query, options);
-
-    return res.status(200).json({
-      message: "Deleted clients fetched successfully",
-      code: 200,
-      success: true,
-      client: clients.data,
-      pagination: {
-        totalDocs: clients.total,
-        limit: clients.limit,
-        page: clients.page,
-        totalPages: clients.totalPages,
-      },
-    });
-  } catch (error) {
-    console.error("Error in getALLdeletedClient:", error);
-    res.status(500).json({
-      message: "Failed to fetch deleted clients",
-      success: false,
-      code: 500,
-      error: error.message,
-    });
-  }
-};
-
-export const RestoreClient = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const orgId = req.orgUser.orgId;
-    const userId = req.user.userId;
-    const empid = req.orgUser.employeeId;
-    const loggedinuserEmail = req.user.email;
-
-    // ✅ Validate Mongo ID
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res
-        .status(400)
-        .json({ message: "Invalid client ID", success: false });
-    }
-
-    // ✅ Correct usage: only 3 arguments
-    const updatedClient = await ClientModel.findByIdAndUpdate(
-      id,
-      { deleted: false }, // or whatever your field is — delete or deleted
-      { new: true }
+    /* ---------- audit log ---------- */
+    await ActivityModel.create(
+      [
+        {
+          orgId,
+          userId,
+          activity: "restore",
+          module: "client",
+          entityId: client._id,
+          activityDesc: `Client restored by ${loggedInEmail} (empId: ${employeeId})`,
+        },
+      ],
+      { session }
     );
 
-    if (!updatedClient) {
-      return res
-        .status(404)
-        .json({ message: "Client not found", success: false });
-    }
-
-    // ✅ Optional: log restore activity
-    const activity = new ActivityModel({
-      activityDesc: `Client restored by ${loggedinuserEmail} with empid ${empid}`,
-      userId,
-      orgId,
-      activity: "restore",
-      module: "client",
-      entityId: updatedClient._id,
-    });
-
-    await activity.save();
-
+    await session.commitTransaction();
     res.status(200).json({
       message: "Client restored successfully",
-      code: 200,
       success: true,
-      data: updatedClient,
+      data: client,
     });
-  } catch (error) {
-    console.error("RestoreClient error:", error.message);
-    res.status(500).json({
-      message: "Internal server error",
-      success: false,
-    });
+  } catch (err) {
+    await session.abortTransaction();
+    next(err);
+  } finally {
+    session.endSession();
   }
 };

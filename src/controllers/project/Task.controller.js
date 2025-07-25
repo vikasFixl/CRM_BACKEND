@@ -378,7 +378,7 @@ export const updateTask = async (req, res) => {
     if (!task) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ message: "Task not found or task not part of project" });
     }
 
     console.log("task at ", task)

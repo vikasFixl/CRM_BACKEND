@@ -2,15 +2,15 @@ import express from "express";
 import {
   bulkDeleteLeads,
   createLead,
-  getAllDeletedLead,
+  // getAllDeletedLead,
   getAllLeads,
   getLeadById,
-  getLeadsByStatusAndFirm,
+  getLeadsByStageAndFirm,
   getLeadStageHistory,
   restoreLead,
   updateLead,
   updateLeadStage,
-  updateLeadStatus,
+  // updateLeadStatus,
 } from "../controllers/leadController.js";
 import {
   checkPermission,
@@ -49,13 +49,13 @@ LeadRouter.route("/:id/stage-history").get(
 //   .post(uploadLeadsByExcel);
 
 // Get single lead | Update lead
-LeadRouter.route("/filter/status").post(isAuthenticated,authenticateOrgToken(),getLeadsByStatusAndFirm)
+LeadRouter.route("/by-stage-and-firm").get(isAuthenticated,authenticateOrgToken(),getLeadsByStageAndFirm)
 LeadRouter.route("/:id").get(isAuthenticated,authenticateOrgToken(),checkPermission("lead", "VIEW_ONLY"),getLeadById);
 LeadRouter.route("/update/:id").patch(isAuthenticated,authenticateOrgToken(),checkPermission("lead", "EDIT_LEAD"),updateLead);
 
 // Update stage of a lead
 LeadRouter.route("/:id/stage").patch(isAuthenticated,authenticateOrgToken(),checkPermission("lead", "EDIT_LEAD"),updateLeadStage);
-LeadRouter.route("/update/status/:id").patch(isAuthenticated,authenticateOrgToken(),checkPermission("lead", "EDIT_LEAD"),updateLeadStatus);
+// LeadRouter.route("/update/status/:id").patch(isAuthenticated,authenticateOrgToken(),checkPermission("lead", "EDIT_LEAD"),updateLeadStatus);
 
 // Bulk delete leads
 LeadRouter.route("/bulk-delete").delete(
@@ -65,12 +65,12 @@ LeadRouter.route("/bulk-delete").delete(
   bulkDeleteLeads
 );
 // to get all deleted leads
-LeadRouter.route("/deleted/all").get(
-  isAuthenticated,
-  authenticateOrgToken(),
-  checkPermission("lead", "VIEW_TRASH"),
-  getAllDeletedLead
-);
+// LeadRouter.route("/deleted/all").get(
+//   isAuthenticated,
+//   authenticateOrgToken(),
+//   checkPermission("lead", "VIEW_TRASH"),
+//   getAllDeletedLead
+// // );
 LeadRouter.route("/restore/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),

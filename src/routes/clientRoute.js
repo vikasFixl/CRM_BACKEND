@@ -2,12 +2,12 @@ import express from "express";
 const ClientRouter = express.Router();
 import {
   createClient,
-  getALLdeletedClient,
+  // getALLdeletedClient,
   getClientById,
   getClients,
   getClientsByUser,
   MoveClientToTrash,
-  RestoreClient,
+ restoreClient,
   updateClient,
 } from "../controllers/clients.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
@@ -37,12 +37,7 @@ ClientRouter.route("/singleUser/:id").get(
   checkPermission("client", "VIEW_ONLY"),
   getClientById
 );
-ClientRouter.route("/deleted/all").get(
-  isAuthenticated,
-  authenticateOrgToken(),
-  checkPermission("client", "VIEW_TRASH"),
-  getALLdeletedClient
-);
+
 // router.get("/users", clientController.getClientsByUser);
 // router.get("/singleUser/:id", authorize('Read', 'client', ['Admin', 'subAdmin', 'Custom']), clientController.getClientById);
 
@@ -56,7 +51,7 @@ ClientRouter.route("/restore/:id").patch(
   isAuthenticated,
   authenticateOrgToken(),
   checkPermission("client", "RESTORE_CLIENT"),
-  RestoreClient
+ restoreClient
 );
 ClientRouter.route("/update/:id").patch(
   isAuthenticated,

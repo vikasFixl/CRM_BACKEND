@@ -1,36 +1,54 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
+
+
+// Enums
 const STAGE_ENUM = [
-  "New",
-  "Contacted",
-  "Qualified",
-  "Demo",
-  "ProposalSent",
-  "Negotiation",
-  "Won",
-  "Lost",
-  "Converted",
+  "New",           // Just entered the system
+  "Contacted",     // Initial contact made
+  "Qualified",     // Verified as a good fit
+  "Proposal",      // Proposal sent
+  "Negotiation",   // Discussing terms
+  "Closed-Won",    // Successfully converted
+  "Closed-Lost"    // Not converted
 ];
+
+const PRIORITY_ENUM = ["Low", "Medium", "High", "Critical"];
+const SOURCE_ENUM = [
+  "Website",
+  "Referral",
+  "Social Media",
+  "Advertisement",
+  "Event",
+  "Cold Call",
+  "Other"
+];
+
 // Sub-schemas
 const interactionSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["call", "email", "meeting", "note", "other"],
-      required: true,
+      enum: ["call", "email", "meeting", "note"],
+      required: true
     },
-    description: String,
+    summary: String,
+    details: String,
     date: { type: Date, default: Date.now },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    participants: [{
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      role: String
+    }]
   },
   { _id: false }
 );
 
 const stageHistorySchema = new mongoose.Schema(
   {
-    stageName: { type: String, required: true, enum: STAGE_ENUM },
-    startedAt: { type: Date, default: Date.now },
-    endedAt: Date,
+    stage: { type: String, required: true, enum: STAGE_ENUM },
+    enteredAt: { type: Date, default: Date.now },
+    exitedAt: Date,
+    reason: String  // Why stage changed (especially useful for Closed-Lost)
   },
   { _id: false }
 );
@@ -38,157 +56,152 @@ const stageHistorySchema = new mongoose.Schema(
 const leadSchema = new mongoose.Schema(
   {
     // Basic Info
-    title: { type: String, required: true, unique: true },
+    title: { type: String, required: true },
     description: String,
+    leadId: { type: String, unique: true },
 
     // Client Info
-    client: {
-      firstName: String,
-      lastName: String,
+    contact: {
+      name: { type: String, required: true },
       email: {
         type: String,
-        unique: true,
+        lowercase: true,
+        match: [/\S+@\S+\.\S+/, 'is invalid']
       },
       phone: {
         type: String,
-        unique: true,
       },
-      address: {
-        line1: String,
-
-        city: String,
-        state: String,
-        country: String,
-        postalCode: String,
-      },
+      company: String,
+      position: String
     },
 
-    // Financial Info
-    estimatedWorth: { type: Number },
-    currency: { type: String, default: "INR" },
-
-    // Stage & Status
-    stage: { type: String, required: true, enum: STAGE_ENUM },
-    stageHistory: [stageHistorySchema],
-    status: {
+    // Lead Source & Details
+    source: {
       type: String,
-      enum: ["New", "Won", "Lost", "Hold"],
-      default: "New",
-      index: true,
+      enum: SOURCE_ENUM,
+      required: true
     },
+    sourceDetails: String, // e.g., which event, which referral, etc.
 
-    // Assignment
-    leadManagerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    assignedToId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-
-    // Pipeline Info
-    pipeline: {
-      department: String,
-      userType: String,
-    },
-    tags: [String],
-
-    // Org/Firm
-    orgId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Organization",
+    // Sales Process
+    stage: {
+      type: String,
       required: true,
-      index: true,
+      enum: STAGE_ENUM,
+      default: "New"
     },
-    firmId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Firm",
-    },
-
-    // Tracking
-    timezone: String,
-
-    // Interactions/Notes
-    interactions: [interactionSchema],
-    notes: String,
-
-    closureDate: { type: Date },
-    followUpDate: { type: Date },
-    // Lead Intelligence
-    priority: {
-      type: String,
-      enum: ["Low", "Medium", "High", "Critical"],
-      default: "Medium",
-    },
-    leadScore: {
+    stageHistory: [stageHistorySchema],
+    probability: {
       type: Number,
       min: 0,
       max: 100,
-      default: 0,
+      default: 0
     },
+
+    // Financial Info
+    estimatedValue: { type: Number },
+    currency: { type: String, default: "INR" },
+
+    // Assignment
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    // team: { 
+    //   type: mongoose.Schema.Types.ObjectId, 
+    //   ref: "Team" 
+    // },
+
+    // Organization
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true
+    },
+    firm: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Firm",
+      required: true
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false, // The person currently handling the lead
+    },
+    assignedAt: {
+      type: Date
+    },
+
+    // Tracking
     nextAction: {
       type: String,
       enum: [
-        "Call Lead",
-        "Send Email",
-        "Schedule Meeting",
-        "Demo",
+        "Call",
+        "Email",
+        "Meeting",
         "Send Proposal",
-        "Negotiate",
-        "Close Deal",
-        "Follow Up Later",
-        "Collect Documents",
-        "Other",
-      ],
-      default: "Follow Up Later",
+        "Follow Up",
+        "Close"
+      ]
     },
-    customNextAction: {
+    nextActionDate: Date,
+    priority: {
       type: String,
-      default: "",
-      trim: true,
+      enum: PRIORITY_ENUM,
+      default: "Medium"
     },
 
-    // Soft Delete
-    deleted: {
-      type: Boolean,
-      default: false,
-    },
-    deletedAt: { type: Date },
-    // Auto ID
-    LeadId: { type: String, unique: true },
+    // Interactions
+    interactions: [interactionSchema],
+    notes: [String],
+
+    // Metadata
+    tags: [String],
+    customFields: mongoose.Schema.Types.Mixed,
+
+    // System
+    isActive: { type: Boolean, default: true },
+    deletedAt: Date,
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
 
-// Auto-index for common queries
-leadSchema.index({ "client.email": 1, orgId: 1 }, { unique: false });
+// Indexes
+leadSchema.index({ title: "text", "contact.name": "text", "contact.company": "text" });
+leadSchema.index({ organization: 1, stage: 1 });
+leadSchema.index({ owner: 1, nextActionDate: 1 });
 
-/**
- * Auto Score Logic (can be in controller or pre('save'))
- */
-function calculateLeadScore(lead) {
-  let score = 0;
-  if (lead.estimatedWorth > 100000) score += 20;
-  if (lead.status === "Contacted") score += 10;
-  if (lead.source === "Referral") score += 15;
-  if (["High", "Critical"].includes(lead.priority)) score += 10;
-  if (lead.followUpDate) {
-    const diff =
-      (new Date(lead.followUpDate) - new Date()) / (1000 * 60 * 60 * 24);
-    if (diff <= 3 && diff >= 0) score += 10;
+// Helper Methods
+leadSchema.methods.calculateProbability = function () {
+  // Simple probability based on stage
+  const stageProbabilities = {
+    "New": 10,
+    "Contacted": 20,
+    "Qualified": 40,
+    "Proposal": 60,
+    "Negotiation": 80,
+    "Closed-Won": 100,
+    "Closed-Lost": 0
+  };
+  return stageProbabilities[this.stage] || 0;
+};
+
+// Pre-save hooks
+leadSchema.pre("save", function (next) {
+  if (!this.leadId) {
+    this.leadId = `LD-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
   }
-  return Math.min(score, 100);
-}
-export function generateUniqueLeadId() {
-  const randomBytes = crypto.randomBytes(4); // 4 bytes = 32 bits
-  const randomPart = parseInt(randomBytes.toString("hex"), 16)
-    .toString(36)
-    .substring(0, 6)
-    .toUpperCase();
-  return `LEAD-${randomPart}`;
-}
 
-// Auto leadScore hook
-leadSchema.pre("save", async function (next) {
-  this.LeadId = generateUniqueLeadId();
+  // Update probability if stage changed
+  if (this.isModified('stage')) {
+    this.probability = this.calculateProbability();
+  }
 
-  // Lead score calculation if needed
-  this.leadScore = calculateLeadScore(this);
   next();
 });
 

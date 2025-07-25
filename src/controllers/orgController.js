@@ -667,8 +667,8 @@ export const DeleteOrganizationUser = async (req, res) => {
     const { memberId } = req.params; // User ID to be removed
     const orgId = req.orgUser.orgId; // From authenticated org user
 
-    if (!id) {
-      return res.status(400).json({ message: "User ID is required" });
+    if (!memberId) {
+      return res.status(400).json({ message: " ID is required" });
     }
 
     // Find membership document for user and org
