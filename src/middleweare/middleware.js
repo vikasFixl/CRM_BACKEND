@@ -2,25 +2,22 @@
 
 import jwtDecode from "jwt-decode";
 // import ActivityModel from "../models/activityModel.js";
-
+import jwt from "jsonwebtoken";
 export const isAuthenticated = (req, res, next) => {
-  // console.log("req.cookies", req.cookies);
-  const authHeader = req.headers.authorization;
+  const token = req.cookies?.sid;
+  
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
-      .status(401)
-      .json({ message: "Unauthorized: No Bearer token provided" });
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized: No token in cookie" });
   }
 
-  const token = authHeader.split(" ")[1];
-
   try {
-    const decoded = jwtDecode(token);
-    req.user = decoded; // Attach user info for later
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Use your JWT secret
+   
+    req.user = decoded; // Attach decoded info to req
     next();
   } catch (err) {
-    return res.status(401).json({ msg: "Invalid token" });
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
 

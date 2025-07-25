@@ -9,6 +9,8 @@ import {
   generateGlobalToken,
   generateOrgToken,
 } from "../utils/generatetoken.js";
+import { UAParser } from 'ua-parser-js';
+import geoip from 'geoip-lite';
 import { resetPasswordTemplate } from "../utils/helperfuntions/emailtemplate.js";
 import {
   signupSchema,
@@ -19,19 +21,40 @@ import User from "../models/userModel.js";
 
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
+import { Session } from "../models/sessionModel.js";
 
 dotenv.config();
+// Helper to extract device info and location
+function getDeviceAndLocation(req) {
+  const userAgent = req.headers['user-agent'];
+  const parser = new UAParser(userAgent);
+  const result = parser.getResult();
 
-// global use variables
-const isProd = process.env.NODE_ENV === "production";
+  const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  const geo = geoip.lookup(ip);
+
+  return {
+    userAgent,
+    ip,
+    location: geo
+      ? `${geo.city || 'Unknown City'}, ${geo.country || 'Unknown Country'}`
+      : 'Unknown Location',
+    deviceId: uuidv4(), // should come from frontend as UUID
+    deviceType: `${result.browser.name} on ${result.os.name}`,
+  };
+}
+
+
 
 const frontendUrl = process.env.FRONTEND_URL;
-
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isProd = process.env.NODE_ENV === 'production';
 
 export const login = async (req, res) => {
   const { email, password } = req.body || {};
+  const { userAgent, ip, location, deviceId, deviceType } = getDeviceAndLocation(req);
 
+  // Validate input
   if (!email?.trim() || !password?.trim()) {
     return res.status(400).json({ message: "Please enter email and password" });
   }
@@ -47,16 +70,12 @@ export const login = async (req, res) => {
       .select("+isSuspended")
       .populate("currentOrganization", "_id name contactEmail");
 
-    console.log("user", user);
-
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist" });
     }
 
     if (user.isSuspended) {
-      return res
-        .status(400)
-        .json({ message: "This account is suspended. Contact admin." });
+      return res.status(400).json({ message: "This account is suspended. Contact admin." });
     }
 
     if (user.loginAttempts >= 5) {
@@ -78,8 +97,10 @@ export const login = async (req, res) => {
     user.isDeleted = false;
     user.isActive = true;
     user.deletedAt = null;
-
     await user.save();
+    if(user.twoFAEnabled){
+      return res.status(200).json({ message: "2FA enabled" ,uid:user._id });
+    }
 
     let orgToken = null;
     if (user.currentOrganization) {
@@ -102,7 +123,43 @@ export const login = async (req, res) => {
     }
 
     const accessToken = generateGlobalToken(user);
-    const { exp } = jwt.decode(accessToken);
+    const decoded = jwt.decode(accessToken);
+    const expiresAt = new Date(decoded.exp * 1000);
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    const expiresInDays = (decoded.exp - nowInSeconds) / (60 * 60 * 24); // seconds → days
+
+    res.cookie("oid", orgToken, {
+      httpOnly: isProd,
+      secure: isProd,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.cookie("sid", accessToken, {
+      httpOnly: isProd,
+      secure: isProd,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // Session management
+    const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
+
+    if (activeSessions.length >= 5) {
+      return res.status(409).json({ message: "Too many active sessions. Please log out from another device." });
+    }
+
+    await Session.create({
+      user: user._id,
+      jwtToken: accessToken,
+      deviceId,
+      deviceType,
+      ip,
+      location,
+      userAgent,
+      expiresAt,
+      expiresIn: expiresInDays
+    });
 
     const responseData = {
       id: user._id,
@@ -125,9 +182,7 @@ export const login = async (req, res) => {
       success: true,
       code: 200,
       data: responseData,
-      orgtoken: orgToken, // returns null if no org
-      token: accessToken,
-      exp: exp * 1000,
+      exp: expiresAt.getTime(),
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -188,6 +243,12 @@ export const signup = async (req, res) => {
     const accessToken = generateGlobalToken(user);
     const { exp } = jwt.decode(accessToken);
 
+    res.cookie("sid", accessToken, {
+      httpOnly: isProd,        // Prevents JS access — secure against XSS
+      secure: isProd,          // Only send over HTTPS
+      sameSite: "lax",    // Prevents CSRF
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
     return res.status(201).json({
       message: "You have signed up successfully",
       success: true,
@@ -199,8 +260,6 @@ export const signup = async (req, res) => {
         Globalrole: user.Globalrole,
         phone: user.phone,
         avatar: user.avatar?.url,
-        token: accessToken,
-        exp: exp * 1000, // milliseconds
       },
     });
   } catch (error) {
@@ -213,69 +272,52 @@ export const signup = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    // 🔍 Check the current token before clearing
-    console.log("Token before clearing:", req.cookies.Token);
-    console.log("AccessToken before clearing:", req.cookies.accessToken);
 
-    // 🧹 Optionally: Explicitly overwrite the cookie with empty string
-    res.cookie("token", "", {
+    // 🚫 Delete the session associated with the sid token
+    if (req.cookies.sid) {
+      await Session.deleteOne({ jwtToken: req.cookies.sid });
+    }
+
+    // 🧹 Clear the sid (user token) cookie
+    res.cookie("sid", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "none",
-
+      sameSite: "lax",
       maxAge: 0,
+      path: "/", // Important for consistency
     });
-    res.cookie("orgtoken", "", {
+
+    // 🧹 Clear the oid (org token) cookie
+    res.cookie("oid", "", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "none",
-
+      sameSite: "lax",
       maxAge: 0,
+      path: "/",
     });
-
-    res.cookie("Token", "", {
+    // ✅ Clear sid (user token) cookie
+    res.clearCookie("sid", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "none",
-
-      maxAge: 0,
+      sameSite: "lax",
+      path: "/", // Must match the path used when setting
     });
 
-    // ✅ Clear cookies as well
-    res.clearCookie("Token", "", {
+    // ✅ Clear oid (org token) cookie
+    res.clearCookie("oid", {
       httpOnly: isProd,
       secure: isProd,
-      sameSite: "none",
-
-      maxAge: 0,
-    });
-    res.clearCookie("orgToken", "", {
-      httpOnly: isProd,
-      secure: isProd,
-      sameSite: "none",
-
-      maxAge: 0,
-    });
-    res.clearCookie("token", "", {
-      httpOnly: isProd,
-      secure: isProd,
-      sameSite: "none",
-
-      maxAge: 0,
+      sameSite: "lax",
+      path: "/",
     });
 
-    // ⚠️ req.cookies still shows the old token, it won’t change until the next request
-    console.log(
-      "Token after clearing (still in req.cookies):",
-      req.cookies.Token
-    );
-    console.log(req.cookies.token);
 
-    res.status(200).json({ message: "Logged out successfully" });
+    return res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 export const forgotPassword = async (req, res) => {
   const { email } = req.body || {};
@@ -359,7 +401,7 @@ export const getUser = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const user = await User.findById(userId).select("-password");
+    const user = await User.findById(userId).select("-password").select("+twoFAEnabled")
 
     if (!user) {
       return res.status(404).json({
@@ -378,11 +420,11 @@ export const getUser = async (req, res) => {
       role: user.role,
       isActive: user.isActive,
       avatar: user.avatar.url,
+      twoFAEnabled: user.twoFAEnabled,
       currentworkspace: user.currentWorkspace || null,
       currentOrganization: user.currentOrganization || null,
       hasReceivedWelcomeEmail: user.hasReceivedWelcomeEmail,
     };
-
     res.status(200).json({
       user: sanitizedUser,
       success: true,

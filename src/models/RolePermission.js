@@ -1,50 +1,72 @@
-import { Schema, model } from "mongoose";
-import { ROLES, MODULES, PERMISSIONS } from "../enums/role.enums.js";
 import mongoose from "mongoose";
-const RolePermissionSchema = new Schema({
-  orgId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Organization",
-    required: true,
-  },
-  workspaceId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Workspace",
-    default: null, // Null → org-level role
-  },
-  role: {
-    type: String,
-    required: true,
-    enum: Object.values(ROLES),
-  },
-  name: {
-    type: String,
-    required: true,
-    trim: true, // e.g. "Custom Sales Manager"
-  },
-  isCustom: {
-    type: Boolean,
-    required: true,
-    default: false,
-  },
-  permissions: [
-    {
-      module: {
-        type: String,
-        required: true,
-        enum: Object.values(MODULES),
-      },
-      actions: [
-        {
-          type: String,
-          required: true,
-          enum: Object.values(PERMISSIONS),
-        },
-      ],
+import { ROLES, MODULES, PERMISSIONS, ROLE_SCOPE } from "../enums/role.enums.js";
+
+const rolePermissionSchema = new mongoose.Schema(
+  {
+    orgId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      index: true,
     },
-  ],
-});
 
-RolePermissionSchema.index({ orgId: 1, workspaceId: 1, role: 1 }, { unique: true });
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Workspace",
+      default: null,
+    },
 
-export const RolePermission = model("RolePermission", RolePermissionSchema);
+    // projectId: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Project",
+    //   default: null,
+    // },
+
+    // teamId: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Team",
+    //   default: null,
+    // },
+
+    role: {
+      type: String,
+      enum: Object.values(ROLES),
+      required: true,
+    },
+
+    name: {
+      type: String,
+      required: true,
+    },
+
+    scope: {
+      type: String,
+      enum: Object.values(ROLE_SCOPE),
+      required: true,
+    },
+
+    isCustom: {
+      type: Boolean,
+      default: true,
+    },
+
+    permissions: [
+      {
+        module: {
+          type: String,
+          enum: Object.values(MODULES),
+          required: true,
+        },
+        actions: [
+          {
+            type: String,
+            enum: Object.values(PERMISSIONS),
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+  { timestamps: true }
+);
+
+export const RolePermission = mongoose.model("RolePermission", rolePermissionSchema);

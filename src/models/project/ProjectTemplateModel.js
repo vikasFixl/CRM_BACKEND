@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 // 💠 Column schema (board)
@@ -77,8 +78,6 @@ const TaskTemplateSchema = new mongoose.Schema(
     description: { type: String },
     type: {
       type: String,
-      enum: ["task", "bug", "story", "epic"],
-      default: "task",
     },
     status: { type: String, required: true },
     columnOrder: { type: Number, required: true },
@@ -110,6 +109,15 @@ const ProjectTemplateSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, unique: true },
     description: String,
+    // inside ProjectTemplateSchema
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'organization',
+      default: null,
+    }, previewImage: {
+      publicId: { type: String, default: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGCBpUau9PufuLsma_mv9vG5J1j4kIy7nfFQ&s" },
+      url: { type: String, default: null },
+    },
 
     boardType: {
       type: String,
@@ -137,7 +145,6 @@ const ProjectTemplateSchema = new mongoose.Schema(
     },
     task: [TaskTemplateSchema],
 
-    previewImage: { type: String }, // Optional preview image
     category: { type: String }, // e.g., "engineering", "qa"
     recommended: { type: Boolean, default: false },
 
@@ -147,18 +154,13 @@ const ProjectTemplateSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
-    baseTemplateId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ProjectTemplate",
-      default: null,
-    },
     version: { type: Number, default: 1 },
     isDraft: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
-ProjectTemplateSchema.index({ name: 1 }, { unique: true });
+ProjectTemplateSchema.index({ name: 1, organization: 1 }, { unique: true });
 
 export const ProjectTemplate = mongoose.model(
   "ProjectTemplate",

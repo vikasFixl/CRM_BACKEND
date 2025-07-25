@@ -38,7 +38,7 @@ export const addMemberSchema = z.object({
     })
     .email("Invalid email address"),
 
-  level: z.enum(["workspace", "project"], {
+  level: z.enum(["workspace", "project",], {
     required_error: "Level must be either 'workspace' or 'project'",
   }),
 

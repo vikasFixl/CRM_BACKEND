@@ -9,28 +9,22 @@ const ProjectSettingSchema = new mongoose.Schema(
       unique: true,
     },
 
-    // 🧩 ISSUE CONFIGURATION
-    issuePrefix: { type: String, default: "ISSUE" }, // like "PROJ-123"
+    // 🔢 ISSUE CONFIGURATION
+    issuePrefix: { type: String, default: "ISSUE" },
     issueStartNumber: { type: Number, default: 1 },
-    defaultIssueType: { type: String, default: "Task" }, // Task, Bug, Story
+    issueTypes: { type: [String], default: ["Task", "Bug", "Story"] },
 
     // 🎯 ESTIMATION SETTINGS
     estimation: {
       enabled: { type: Boolean, default: true },
       method: {
         type: String,
-        enum: ["storyPoints", "time"], // "storyPoints" or "originalEstimate"
+        enum: ["storyPoints", "time"],
         default: "storyPoints",
       },
     },
 
-    // 🛠️ WORKFLOW
-    defaultWorkflowId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Workflow",
-    },
-
-    // 📋 BOARD CONFIGURATION
+    // 🧾 BOARD CONFIGURATION
     boardConfig: {
       swimlanes: {
         type: String,
@@ -42,29 +36,9 @@ const ProjectSettingSchema = new mongoose.Schema(
         enum: ["status", "priority", "assignee"],
         default: "status",
       },
-      filters: {
-        type: Map,
-        of: [String], // e.g., { status: ["To Do", "In Progress"], priority: ["High"] }
-        default: {},
-      },
     },
 
-    // 📬 NOTIFICATION SETTINGS
-    notificationSettings: {
-      onTaskCreated: { type: Boolean, default: true },
-      onStatusChanged: { type: Boolean, default: true },
-      onCommentAdded: { type: Boolean, default: true },
-      onAssigned: { type: Boolean, default: true },
-    },
-
-    // 👤 DEFAULT ASSIGNEES
-    defaultAssignee: {
-      type: String,
-      enum: ["projectLead", "unassigned", "componentLead"],
-      default: "unassigned",
-    },
-
-    // ⏱️ TIME TRACKING
+    // ⏱️ TIME TRACKING SETTINGS
     timeTracking: {
       enabled: { type: Boolean, default: true },
       workingHoursPerDay: { type: Number, default: 8 },
@@ -75,35 +49,6 @@ const ProjectSettingSchema = new mongoose.Schema(
         default: "hours",
       },
     },
-
-    // 🔐 PERMISSION TOGGLES
-    restrictions: {
-      restrictEditingDoneTasks: { type: Boolean, default: true },
-      restrictTaskDeletion: { type: Boolean, default: false },
-    },
-
-    // 🤖 AUTOMATION RULES
-    automationEnabled: { type: Boolean, default: true },
-
-    // 🧾 TEMPLATES
-    taskTemplates: [
-      {
-        name: String,
-        fields: mongoose.Schema.Types.Mixed, // includes default summary, description, etc.
-        isDefault: { type: Boolean, default: false },
-      },
-    ],
-
-    // 🚨 SLA & ESCALATION (for support workflows)
-    sla: {
-      enabled: { type: Boolean, default: false },
-      defaultResponseTime: Number, // in hours
-      defaultResolutionTime: Number, // in hours
-    },
-
-    // 🏷️ LABELS & COMPONENTS (managed at project level)
-    components: [{ name: String, description: String }],
-    labels: [String],
   },
   {
     timestamps: true,

@@ -35,18 +35,18 @@ const WorkflowSchema = new mongoose.Schema(
         order: { type: Number, default: 0 },
       },
     ],
-   transitions: [
-  {
-    fromKey: { type: String, required: true },           // system key (e.g., "todo")
-    toKey: { type: String, required: true },             // system key (e.g., "inprogress")
+    transitions: [
+      {
+        fromKey: { type: String, required: true },           // system key (e.g., "todo")
+        toKey: { type: String, required: true },             // system key (e.g., "inprogress")
 
-    fromOrder: { type: Number },                         // optional: index of source column
-    toOrder: { type: Number },                           // optional: index of target column
+        fromOrder: { type: Number, required: true },                         // optional: index of source column
+        toOrder: { type: Number, required: true },                           // optional: index of target column
 
-    label: { type: String },                             // transition name (e.g., "Start Progress")
-    requiresApproval: { type: Boolean, default: false }, // manual approval before transitioning
-  },
-],
+        label: { type: String },                             // transition name (e.g., "Start Progress")
+        requiresApproval: { type: Boolean, default: false }, // manual approval before transitioning
+      },
+    ],
 
     isDefaultWorkflow: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },

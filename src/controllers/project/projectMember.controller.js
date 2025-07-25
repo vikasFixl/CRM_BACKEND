@@ -78,7 +78,8 @@ export const assignMember = async (req, res) => {
         invitedBy: req.user.userId,
       });
     }
-
+    user.currentWorkspace = workspaceId;
+    await user.save();
     // ✅ If only adding to workspace
     if (level === "workspace") {
       if (existingWorkspaceMember) {
@@ -143,10 +144,11 @@ export const getAllProjectMembers = async (req, res) => {
     // Populate user and role fields
     const membersRaw = await ProjectMember.find({ projectId })
       .populate("userId", "email fullName")
-      .populate("role") // includes role name and permissions
+      .populate("role", "role permissions")
       .skip(skip)
       .limit(limit);
 
+    console.log(membersRaw)
     const totalMembers = await ProjectMember.countDocuments({ projectId });
 
     // Format each member
@@ -160,8 +162,7 @@ export const getAllProjectMembers = async (req, res) => {
         : defaultPermissions.flatMap((perm) => perm.actions);
 
       return {
-        _id: member._id,
-        userId: member.userId?._id,
+        m_id: member._id,
         email: member.userId?.email,
         fullName: member.userId?.fullName,
         role: roleName,
@@ -232,9 +233,8 @@ export const UpdateProjectMember = async (req, res) => {
     await member.save();
 
     res.status(200).json({
-      message: `Project member role updated successfully${
-        isRoleChanged ? " and permissions" : ""
-      }`,
+      message: `Project member role updated successfully${isRoleChanged ? " and permissions" : ""
+        }`,
       member,
     });
   } catch (error) {

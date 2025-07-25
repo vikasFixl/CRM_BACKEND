@@ -94,31 +94,88 @@ export const createBoard = async (req, res) => {
   }
 };
 
-// 🔹 Get board details with workflow
-export const getBoard = async (req, res) => {
+
+// get all board by project will be used when we make team model 
+// export const getAllBoard = async (req, res) => {
+//   try {
+//     const boards = await Board.find(
+//       { projectId: req.params.projectId, isDeleted: false },
+//       "_id name isProjectDefault teamId type columns deletable"
+//     ).populate({
+//       path: 'teamId',
+//       select: '_id name' // Only include team _id and name
+//     }).lean(); // Convert to plain JS object
+
+//     // Simplify the boards data before sending
+//     const simplifiedBoards = boards.map(board => ({
+//       _id: board._id,
+//       name: board.name,
+//       type: board.type,
+//       projectId: req.params.projectId,
+//       teamId: board.teamId ? { 
+//         _id: board.teamId._id, 
+//         name: board.teamId.name 
+//       } : null,
+//       isProjectDefault: board.isProjectDefault,
+//       deletable: board.deletable,
+//       columns: board.columns.map(column => ({
+//         _id: column._id,
+//         name: column.name,
+//         order: column.order,
+//         key: column.key
+//       }))
+//     }));
+
+//     res.status(200).json({
+//       success: true,
+//       total: simplifiedBoards.length,
+//       boards: simplifiedBoards,
+//     });
+//   } catch (err) {
+//     res.status(400).json({
+//       success: false,
+//       error: err.message,
+//     });
+//   }
+// };
+
+export const getAllBoard = async (req, res) => {
   try {
-    const board = await Board.findById(req.params.boardId)
-      .populate('workflow')
-      .lean();
+    // Team has its own board(s) const teamBoardIds = await Board.find({ teamId }).select('_id'); const teamTasks = await Task.find({ $or: [ { boardId: { $in: teamBoardIds } }, // team-specific boards { assignedTeamId: teamId }, // optionally tagged ] });
+    const boards = await Board.find(
+      { projectId: req.params.projectId, isDeleted: false },
+      "_id name isProjectDefault teamId type columns deletable"
+    ).lean();
 
-    if (!board) {
-      return res.status(404).json({ error: "Board not found" });
-    }
+    // Simplify the boards data before sending
+    const simplifiedBoards = boards.map(board => ({
+      _id: board._id,
+      name: board.name,
+      type: board.type,
+      projectId: req.params.projectId,
+      teamId: board.teamId, // keep as is since we can't populate
+      isProjectDefault: board.isProjectDefault,
+      deletable: board.deletable,
+      columns: board.columns.map(column => ({
+        _id: column._id,
+        name: column.name,
+        order: column.order,
+        key: column.key
+      }))
+    }));
 
-    // Enhance response with workflow details
-    const response = {
-      ...board,
-      workflowStates: board.workflow?.states || [],
-      workflowTransitions: board.workflow?.transitions || []
-    };
-
-    res.json({ success: true, board: response });
-
+    res.status(200).json({
+      success: true,
+      total: simplifiedBoards.length,
+      boards: simplifiedBoards,
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({
+      success: false,
+      error: err.message,
+    });
   }
 };
-
 
 
 export const deleteBoard = async (req, res) => {
@@ -134,14 +191,14 @@ export const deleteBoard = async (req, res) => {
     if (!board || board.isDeleted) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(404).json({ error: "Board not found or already deleted" });
+      return res.status(404).json({ message: "Board not found or already deleted" });
     }
 
     if (!board.teamId) {
       await session.abortTransaction();
       session.endSession();
       return res.status(403).json({
-        error: "Only team-assigned boards can be deleted"
+        message: "Only team-assigned boards can be deleted"
       });
     }
 
@@ -149,7 +206,7 @@ export const deleteBoard = async (req, res) => {
       await session.abortTransaction();
       session.endSession();
       return res.status(403).json({
-        error: "This board cannot be deleted (protected)"
+        message: "This board cannot be deleted (protected)"
       });
     }
 
@@ -169,7 +226,7 @@ export const deleteBoard = async (req, res) => {
     // Soft delete the board
     board.isDeleted = true;
     board.deletedBy = userId;
-    board.deletedAt = new Date();
+
     await board.save({ session });
 
     await session.commitTransaction();
@@ -184,6 +241,47 @@ export const deleteBoard = async (req, res) => {
   }
 };
 
+
+
+export const getBoardById = async (req, res) => {
+  try {
+    const { boardId } = req.params;
+    const { teamId,projectId } = req.query;
+
+    // --- validation ---
+    if (!mongoose.Types.ObjectId.isValid(boardId))
+      return res.status(400).json({ success: false, message: "Invalid boardId format" });
+
+    const queryConditions = { _id: boardId, isDeleted: false,projectId };
+    if (teamId) {
+      if (!mongoose.Types.ObjectId.isValid(teamId))
+        return res.status(400).json({ success: false, message: "Invalid teamId format" });
+      queryConditions.teamId = teamId;
+    }
+
+    // --- fetch board --- 
+    const board = await Board.findOne(queryConditions)
+      .select("_id name type columns teamId isProjectDefault deletable workflow")
+      .populate({ path: "projectId", select: "_id name", match: { isDeleted: false } })
+      .lean();
+
+    if (!board)
+      return res.status(404).json({
+        success: false,
+        error: teamId ? "Board not found in specified team" : "Board not found"
+      });
+
+
+
+
+    res.status(200).json({
+      success: true,
+      board
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
 
 
 // 🔹 Add column (with workflow state sync)
@@ -222,7 +320,7 @@ export const addColumn = async (req, res) => {
     }
 
     // Generate key from name
-    const key = name.toLowerCase().replace(/\s+/g, '_');
+    const key = name.toLowerCase();
 
     // Check for duplicate column key
     if (board.columns.some(col => col.key === key)) {
@@ -323,7 +421,7 @@ export const updateColumn = async (req, res) => {
     const { boardId } = req.params;
     const { columnId, name, color } = req.body;
 
-    // Validate inputs
+    // Validate name
     if (!name || typeof name !== "string" || name.trim() === "") {
       await session.abortTransaction();
       session.endSession();
@@ -344,26 +442,25 @@ export const updateColumn = async (req, res) => {
       return res.status(404).json({ error: "Column not found" });
     }
 
-    // Generate new key from name
-    const newKey = name.toLowerCase().replace(/\s+/g, '_');
+    // Store oldKey BEFORE changing anything
+    const oldKey = column.key;
+    const newKey = name.toLowerCase().trim();
 
-    // Check for duplicate key (excluding current column)
-    if (board.columns.some(col =>
+    const isDuplicate = board.columns.some(col =>
       col._id.toString() !== columnId && col.key === newKey
-    )) {
+    );
+    if (isDuplicate) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ error: "Column with this key already exists" });
     }
 
-    const oldKey = column.key;
-
-    // Update column
+    // Update column details
     column.name = name;
     column.key = newKey;
     if (color) column.color = color;
 
-    // If board has workflow, update corresponding state
+    // Update matching workflow state if applicable
     if (board.workflow) {
       const workflow = await Workflow.findById(board.workflow).session(session);
       if (workflow) {
@@ -377,13 +474,20 @@ export const updateColumn = async (req, res) => {
       }
     }
 
+    // Update tasks that match the old column key
+    await Task.updateMany(
+      { boardId, status: oldKey },
+      { $set: { status: newKey } },
+      { session }
+    );
+
     await board.save({ session });
     await session.commitTransaction();
     session.endSession();
 
-    res.json({
+    return res.json({
       success: true,
-      message: "Column updated",
+      message: "Column updated successfully",
       column: {
         id: columnId,
         name,
@@ -395,12 +499,15 @@ export const updateColumn = async (req, res) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    res.status(500).json({
+    console.error("Error updating column:", err);
+    return res.status(500).json({
       error: "Internal server error",
       details: err.message
     });
   }
 };
+
+
 
 // 🔹 Delete column (with workflow state sync)
 export const deleteColumn = async (req, res) => {
@@ -484,3 +591,4 @@ export const deleteColumn = async (req, res) => {
     });
   }
 };
+

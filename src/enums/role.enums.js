@@ -3,28 +3,31 @@
 // enums/roles.enum.js
 
 export const ROLES = {
-  // 🌐 Organization-level Roles
+  // Org level
   SUPER_ADMIN: "SuperAdmin",
   ORG_ADMIN: "OrgAdmin",
   MANAGER: "Manager",
   SUPPORT_AGENT: "SupportAgent",
   USER: "User",
-  CUSTOM: "Custom", // For override-based roles
+  ORG_CUSTOM: "OrgCustom",
 
-  // 🏢 Workspace-level Roles
+  // Workspace level
   WORKSPACE_ADMIN: "WorkspaceAdmin",
   WORKSPACE_MEMBER: "WorkspaceMember",
   WORKSPACE_VIEWER: "WorkspaceViewer",
+  WORKSPACE_CUSTOM: "WorkspaceCustom",
 
-  // 👥 Team-level Roles
+  // Team level
   TEAM_ADMIN: "TeamAdmin",
   TEAM_MEMBER: "TeamMember",
   TEAM_VIEWER: "TeamViewer",
+  TEAM_CUSTOM: "TeamCustom",
 
-  // 📁 Project-level Roles
+  // Project level
   PROJECT_ADMIN: "ProjectAdmin",
   PROJECT_MEMBER: "ProjectMember",
-  PROJECT_VIEWER: "ProjectViewer"
+  PROJECT_VIEWER: "ProjectViewer",
+  PROJECT_CUSTOM: "ProjectCustom",
 };
 
 export const MODULES = {
@@ -193,3 +196,38 @@ export const PERMISSIONS = {
   INVITE_GUEST: "INVITE_GUEST",
   VIEW_MEMBER_LIST: "VIEW_MEMBER_LIST",
 };
+
+export const ROLE_SCOPE = {
+  ORGANIZATION: "sc-org",
+  WORKSPACE: "sc-wrk",
+  PROJECT: "sc-prj",
+  TEAM: "sc-tm",
+};export const ROLE_SCOPES_MAP = {
+  // Organization level
+  [ROLES.SUPER_ADMIN]: ROLE_SCOPE.ORGANIZATION,
+  [ROLES.ORG_ADMIN]: ROLE_SCOPE.ORGANIZATION,
+  [ROLES.MANAGER]: ROLE_SCOPE.ORGANIZATION,
+  [ROLES.SUPPORT_AGENT]: ROLE_SCOPE.ORGANIZATION,
+  [ROLES.USER]: ROLE_SCOPE.ORGANIZATION,
+  [ROLES.ORG_CUSTOM]: ROLE_SCOPE.ORGANIZATION,
+
+  // Workspace level
+  [ROLES.WORKSPACE_ADMIN]: ROLE_SCOPE.WORKSPACE,
+  [ROLES.WORKSPACE_MEMBER]: ROLE_SCOPE.WORKSPACE,
+  [ROLES.WORKSPACE_VIEWER]: ROLE_SCOPE.WORKSPACE,
+  [ROLES.WORKSPACE_CUSTOM]: ROLE_SCOPE.WORKSPACE,
+
+  // Team level
+  [ROLES.TEAM_ADMIN]: ROLE_SCOPE.TEAM,
+  [ROLES.TEAM_MEMBER]: ROLE_SCOPE.TEAM,
+  [ROLES.TEAM_VIEWER]: ROLE_SCOPE.TEAM,
+  [ROLES.TEAM_CUSTOM]: ROLE_SCOPE.TEAM,
+
+  // Project level
+  [ROLES.PROJECT_ADMIN]: ROLE_SCOPE.PROJECT,
+  [ROLES.PROJECT_MEMBER]: ROLE_SCOPE.PROJECT,
+  [ROLES.PROJECT_VIEWER]: ROLE_SCOPE.PROJECT,
+  [ROLES.PROJECT_CUSTOM]: ROLE_SCOPE.PROJECT,
+};
+
+// console.log(ROLE_SCOPES_MAP);

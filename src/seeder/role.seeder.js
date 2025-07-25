@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { connectDB } from "../../config/db.config.js";
 import { RolePermission } from "../models/RolePermission.js"; // Adjust if your export differs
-import { ROLES } from "../enums/role.enums.js";
+import { ROLES, ROLE_SCOPES_MAP } from "../enums/role.enums.js";
 import { rolepermission } from "../utils/role-permission.js";
 
 import dotenv from "dotenv";
@@ -17,13 +17,16 @@ const seedRoles = async () => {
   session.startTransaction();
 
   try {
-    for (const roleName of Object.values(ROLES)) {
-      const permissions =rolepermission[roleName] || [];
+    await RolePermission.deleteMany({});
+    for (const role of Object.values(ROLES)) {
+      const permissions = rolepermission[role] || [];
+      const scope = ROLE_SCOPES_MAP[role] || ROLE_SCOPE.ORGANIZATION;
 
-      const update = {
-        
-        role: roleName,
-        name: roleName,
+      const permissionDoc = {
+        role,
+        name: role,
+        scope,
+        isCustom: false,
         permissions: permissions.map(({ module, actions }) => ({
           module,
           actions,
@@ -32,8 +35,8 @@ const seedRoles = async () => {
 
       // 🛡️ Use upsert to update if exists, or insert if not
       await RolePermission.findOneAndUpdate(
-        { role: roleName },
-        update,
+        { role: role },
+        permissionDoc, // Use permissionDoc instead of undefined 'update'
         {
           session,
           new: true,
@@ -42,7 +45,7 @@ const seedRoles = async () => {
         }
       );
 
-      console.log(`✅ Role '${roleName}' seeded/updated.`);
+      console.log(`✅ Role '${role}' seeded/updated.`); // Use role instead of roleName
     }
 
     await session.commitTransaction();
@@ -52,6 +55,9 @@ const seedRoles = async () => {
     await session.abortTransaction();
     session.endSession();
     console.error("❌ Error seeding roles:", error.message);
+    process.exit(1); // Exit with failure
+  } finally {
+    mongoose.disconnect(); // Ensure mongoose connection is closed
   }
 };
 

@@ -2,7 +2,7 @@ import { z } from "zod";
 import mongoose from "mongoose";
 
 export const workspaceSchema = z.object({
-  name: z.string().min(3).max(20),
+  name: z.string().min(3).max(30),
   description: z.string().trim().optional(),
 });
 export const nameSchema = z
