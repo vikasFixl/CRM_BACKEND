@@ -7,17 +7,18 @@ dotenv.config({ path: "../../.env" });
 const ORGSECRET = process.env.ORG_SECRET;
 
 
-
 export const authenticateOrgToken = () => {
   return (req, res, next) => {
     const token = req.cookies?.oid;
+    console.log("token", token);
+   
 
     if (!token) {
       return res.status(401).json({ message: "Missing org token in cookie" });
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.ORGSECRET); // Use your ORG secret
+      const decoded = jwt.verify(token, ORGSECRET); // Use your ORG secret
 
       req.orgUser = {
         userId: decoded.userId,

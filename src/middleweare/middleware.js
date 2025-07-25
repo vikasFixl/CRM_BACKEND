@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 export const isAuthenticated = (req, res, next) => {
   const token = req.cookies?.sid;
   
-
+console.log(req.cookies)
   if (!token) {
     return res.status(401).json({ message: "Unauthorized: No token in cookie" });
   }

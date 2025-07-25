@@ -91,7 +91,7 @@ app.use(fileUpload({
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors({
   // origin: "https://cubicle-crm.vercel.app",
-  origin: "http://localhost:51",
+  origin: "*",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 }));
@@ -161,6 +161,8 @@ process.on("uncaughtExceptionMonitor", (err) => console.log("Uncaught Exception 
 httpServer.listen(PORT, async () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
   await connectDB();
-  startUserCleanupCron();
-  runWelcomeEmail();
+ 
 });
+await connectDB();
+startUserCleanupCron();
+runWelcomeEmail();
