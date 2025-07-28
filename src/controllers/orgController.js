@@ -6,7 +6,7 @@ import mongoose, { mongo } from "mongoose";
 import { OrganizationBilling } from "../models/OranizationBillingPlanModel.js";
 import { RolePermission } from "../models/RolePermission.js";
 import { v4 as uuidv4 } from "uuid";
-import { generateOrgToken } from "../utils/generatetoken.js";
+import { generateOrgAccessToken, setAccessCookieOnly } from "../utils/generatetoken.js";
 import { OrganizationInvite } from "../models/OrganisationInviteModel.js";
 import { sendEmail } from "../../config/nodemailer.config.js";
 import { InviteEmailTemplate } from "../utils/helperfuntions/emailtemplate.js";
@@ -139,14 +139,16 @@ export const createOrganization = async (req, res) => {
 
     await orgMember.save();
 
-    // ✅ Generate org-scoped JWT token
-    const orgToken = generateOrgToken({
+    let payload = {
       userId,
       orgId: savedOrg._id,
       employeeId,
       role: orgAdminRole.role,
       permissions: orgAdminRole.permissions,
-    });
+    }
+    let orgtoken = generateOrgAccessToken(payload, req.headers["user-agent"], req.ip);
+
+    setAccessCookieOnly(res, orgtoken);
 
     user.currentOrganization = savedOrg._id;
     await user.save();
@@ -200,11 +202,7 @@ export const switchOrg = async (req, res) => {
         .status(403)
         .json({ message: "User not part of this organization" });
     }
-
-    // Optionally: Update user's current active org info in DB if needed
-
-    // Generate new token scoped to the selected org
-    const orgtoken = generateOrgToken({
+    let payload = {
       userId,
       orgId,
       employeeId: member.employeeId,
@@ -213,17 +211,22 @@ export const switchOrg = async (req, res) => {
         member.permissionsOverride?.length > 0
           ? member.permissionsOverride
           : member.role?.permissions || [],
-    });
+    }
+    // Optionally: Update user's current active org info in DB if needed
+    let orgtoken = generateOrgAccessToken(payload, req.headers["user-agent"], req.ip);
+
+    setAccessCookieOnly(res, orgtoken);
+
     user.currentOrganization = orgId;
     await user.save();
 
     const { exp } = jwt.decode(orgtoken);
-  res.cookie("oid", orgtoken, {
-  httpOnly:isProd,        // Prevents JS access — secure against XSS
-  secure:isProd,          // Only send over HTTPS
-  sameSite: "lax",    // Prevents CSRF
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-});
+    res.cookie("oid", orgtoken, {
+      httpOnly: isProd,        // Prevents JS access — secure against XSS
+      secure: isProd,          // Only send over HTTPS
+      sameSite: "lax",    // Prevents CSRF
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
     return res.status(200)
   } catch (err) {
     console.error("Switch Org Error:", err);
@@ -297,7 +300,7 @@ export const switchOrg = async (req, res) => {
 //       org: organization._id,
 //       role: role,
 //       employeeId,
-//       token: generateOrgToken({
+//       token: generateOrgAccessToken({
 //         userId,
 //         orgId: organization._id,
 //         employeeId,

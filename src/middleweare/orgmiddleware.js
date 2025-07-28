@@ -2,23 +2,27 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
+import { verifyOrgToken } from "../utils/generatetoken.js";
 dotenv.config({ path: "../../.env" });
 
-const ORGSECRET = process.env.ORG_SECRET;
+
 
 
 export const authenticateOrgToken = () => {
   return (req, res, next) => {
-    const token = req.cookies?.oid;
-    console.log("token", token);
+    const token = req.cookies?._fxl_1A2B3C;
+    
+     const userAgent = req.headers['user-agent'];
+    
    
+     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
     if (!token) {
       return res.status(401).json({ message: "Missing org token in cookie" });
     }
 
     try {
-      const decoded = jwt.verify(token, ORGSECRET); // Use your ORG secret
+      const decoded = verifyOrgToken(token, userAgent, ip);
 
       req.orgUser = {
         userId: decoded.userId,

@@ -2,7 +2,7 @@ import User from "../models/userModel.js";
 import qrcode from "qrcode";
 import { authenticator } from "otplib";
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
-import { generateOrgToken, generateGlobalToken } from "../utils/generatetoken.js";
+import {generateOrgAccessToken, generateRefreshToken} from "../utils/generatetoken.js";
 import { Session } from "../models/sessionModel.js";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
@@ -117,7 +117,7 @@ export const verify2FALogin = async (req, res) => {
         return res.status(409).json({ message: "Too many active sessions." });
     }
 
-    const accessToken = generateGlobalToken(user);
+    const accessToken =generateRefreshToken(user);
 
     const decoded = jwt.decode(accessToken);
     const expiresAt = new Date(decoded.exp * 1000);
@@ -151,7 +151,7 @@ export const verify2FALogin = async (req, res) => {
             role: member.role.role,
             permissions: member.role.permissions,
         };
-        orgToken = generateOrgToken(orgPayload);
+        orgToken =generateOrgAccessToken(orgPayload,userAgent, ip);
     }
 
     const responseData = {

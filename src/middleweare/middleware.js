@@ -1,18 +1,17 @@
 // middleware.js
 
-import jwtDecode from "jwt-decode";
-// import ActivityModel from "../models/activityModel.js";
-import jwt from "jsonwebtoken";
+
+import { verifyRefreshToken } from "../utils/generatetoken.js";
 export const isAuthenticated = (req, res, next) => {
-  const token = req.cookies?.sid;
+  const token = req.cookies?._fxl_9X8Y7Z;
   
-console.log(req.cookies)
   if (!token) {
     return res.status(401).json({ message: "Unauthorized: No token in cookie" });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Use your JWT secret
+    const decoded = verifyRefreshToken(token); // Use your JWT secret
+   
    
     req.user = decoded; // Attach decoded info to req
     next();
