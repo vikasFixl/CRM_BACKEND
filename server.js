@@ -46,6 +46,10 @@ import { sendToUser } from "./config/socket.handler.js";
 import { initSocket } from "./config/socket.js";
 import otplib from "otplib"
 import qrcode from "qrcode"
+import macaddress from 'macaddress'
+macaddress.all((err, all) => {
+  console.log(all); // All network interfaces and their MACs
+});
 // Generate a secret key
 // Generate a secret key
 const secret = otplib.authenticator.generateSecret();
@@ -91,7 +95,7 @@ app.use(fileUpload({
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors({
   // origin: "https://cubicle-crm.vercel.app",
-  origin: "*",
+  origin: "http://localhost:5173",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 }));

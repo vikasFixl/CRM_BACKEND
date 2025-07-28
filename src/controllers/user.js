@@ -39,7 +39,7 @@ function getDeviceAndLocation(req) {
     location: geo
       ? `${geo.city || 'Unknown City'}, ${geo.country || 'Unknown Country'}`
       : 'Unknown Location',
-    deviceId: uuidv4(), // should come from frontend as UUID
+
     deviceType: `${result.browser.name} on ${result.os.name}`,
   };
 }
@@ -51,8 +51,11 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isProd = process.env.NODE_ENV === 'production';
 
 export const login = async (req, res) => {
-  const { email, password } = req.body || {};
-  const { userAgent, ip, location, deviceId, deviceType } = getDeviceAndLocation(req);
+  const { email, password, macAddress } = req.body || {};
+  const { userAgent, ip, location, deviceType } = getDeviceAndLocation(req);
+  if(!macAddress){
+    return res.status(400).json({ message: "m_add" });
+  }
 
   // Validate input
   if (!email?.trim() || !password?.trim()) {
@@ -98,8 +101,8 @@ export const login = async (req, res) => {
     user.isActive = true;
     user.deletedAt = null;
     await user.save();
-    if(user.twoFAEnabled){
-      return res.status(200).json({ message: "2FA enabled" ,uid:user._id });
+    if (user.twoFAEnabled) {
+      return res.status(200).json({ message: "2FA enabled", uid: user._id });
     }
 
     let orgToken = null;
@@ -144,6 +147,23 @@ export const login = async (req, res) => {
 
     // Session management
     const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
+    // Check if session exists with same deviceId (macAddress)
+    const existingSession = await Session.findOne({
+      user: user._id,
+      deviceId: macAddress,
+      isActive: true
+    });
+    if (existingSession) {
+      // Update the existing session
+      existingSession.jwtToken = accessToken;
+      existingSession.deviceType = deviceType;
+      existingSession.ip = ip;
+      existingSession.location = location;
+      existingSession.userAgent = userAgent;
+      existingSession.expiresAt = expiresAt;
+      existingSession.expiresIn = expiresInDays;
+      await existingSession.save();
+    }
 
     if (activeSessions.length >= 5) {
       return res.status(409).json({ message: "Too many active sessions. Please log out from another device." });
@@ -152,7 +172,7 @@ export const login = async (req, res) => {
     await Session.create({
       user: user._id,
       jwtToken: accessToken,
-      deviceId,
+      deviceId: macAddress,
       deviceType,
       ip,
       location,
