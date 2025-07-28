@@ -153,13 +153,13 @@ export const createOrganization = async (req, res) => {
     user.currentOrganization = savedOrg._id;
     await user.save();
 
-    const { exp } = jwt.decode(orgToken);
+    const { exp } = jwt.decode(orgtoken);
 
     return res.status(201).json({
       message: "Organization and Billing created successfully",
       orgId: savedOrg._id,
       employeeId,
-      orgtoken: orgToken,
+   
       expiresAt: exp * 1000,
     });
   } catch (error) {
@@ -221,13 +221,10 @@ export const switchOrg = async (req, res) => {
     await user.save();
 
     const { exp } = jwt.decode(orgtoken);
-    res.cookie("oid", orgtoken, {
-      httpOnly: isProd,        // Prevents JS access — secure against XSS
-      secure: isProd,          // Only send over HTTPS
-      sameSite: "lax",    // Prevents CSRF
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-    return res.status(200)
+   
+    return res.status(200).json({
+      message:"Organization switched successfully",
+    })
   } catch (err) {
     console.error("Switch Org Error:", err);
     res.status(500).json({ message: "Internal server error" });
