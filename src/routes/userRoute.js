@@ -20,7 +20,7 @@ import {
 import { isAuthenticated, isAdminOrSelf } from "../middleweare/middleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js"
 import { loginEmailRateLimiter, signupEmailRateLimiter, resetEmailRateLimiter, forgotEmailRateLimiter } from "../middleweare/ratelimitter.js";
-import { generate2FAQr, sendLoginOTP, verify2FALogin, verify2FASetup, verifyLoginOTP } from "../controllers/authcontroller.js";
+import { generate2FAQr, refreshToken, sendLoginOTP, verify2FALogin, verify2FASetup, verifyLoginOTP } from "../controllers/authcontroller.js";
 
 
 
@@ -68,4 +68,5 @@ Router.route("/verify-2fa-setup").post(isAuthenticated, verify2FASetup); // veri
 Router.route("/verify-2fa-login").post(verify2FALogin); // verify the 2fa login
 Router.route("/send-login-otp").post(sendLoginOTP); // generate otp code for password less login
 Router.route("/verify-login-otp").post(verifyLoginOTP); // verify login otp
+Router.route("/refresh").post(isAuthenticated,refreshToken); // refresh token
 export default Router;

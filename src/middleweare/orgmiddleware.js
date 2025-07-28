@@ -18,7 +18,7 @@ export const authenticateOrgToken = () => {
      const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
     if (!token) {
-      return res.status(401).json({ message: "Missing org token in cookie" });
+      return res.status(401).json({ message: "invalid token" });
     }
 
     try {
@@ -45,7 +45,7 @@ export const checkPermission = (moduleName, actionName) => {
     try {
       const userId = req.user.userId;
       const orgId = req.orgUser.orgId;
-      console.log("orgId", orgId);
+    
 
       if (!userId || !orgId) {
         return res.status(401).json({ error: "Unauthorized access" });

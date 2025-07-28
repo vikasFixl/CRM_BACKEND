@@ -128,9 +128,8 @@ export const login = async (req, res) => {
         orgToken = generateOrgAccessToken(orgPayload, userAgent, ip);
       }
     }
-    console.log("orgToken", orgToken);
+   
     const accessToken = generateRefreshToken(user);
-    console.log("accessToken", accessToken);
     const decoded = jwt.decode(accessToken);
     const expiresAt = new Date(decoded.exp * 1000);
     const nowInSeconds = Math.floor(Date.now() / 1000);

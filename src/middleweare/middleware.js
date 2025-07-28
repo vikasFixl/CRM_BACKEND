@@ -6,7 +6,7 @@ export const isAuthenticated = (req, res, next) => {
   const token = req.cookies?._fxl_9X8Y7Z;
   
   if (!token) {
-    return res.status(401).json({ message: "Unauthorized: No token in cookie" });
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {

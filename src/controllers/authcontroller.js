@@ -2,7 +2,7 @@ import User from "../models/userModel.js";
 import qrcode from "qrcode";
 import { authenticator } from "otplib";
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
-import {generateOrgAccessToken, generateRefreshToken} from "../utils/generatetoken.js";
+import { generateOrgAccessToken, generateRefreshToken, setTokenCookies, verifyRefreshToken } from "../utils/generatetoken.js";
 import { Session } from "../models/sessionModel.js";
 import { v4 as uuidv4 } from "uuid";
 import dotenv from "dotenv";
@@ -32,7 +32,7 @@ function getDeviceAndLocation(req) {
     };
 }
 
-const frontendUrl = process.env.FRONTEND_URL;
+
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const generate2FAQr = async (req, res) => {
@@ -117,7 +117,7 @@ export const verify2FALogin = async (req, res) => {
         return res.status(409).json({ message: "Too many active sessions." });
     }
 
-    const accessToken =generateRefreshToken(user);
+    const accessToken = generateRefreshToken(user);
 
     const decoded = jwt.decode(accessToken);
     const expiresAt = new Date(decoded.exp * 1000);
@@ -151,7 +151,7 @@ export const verify2FALogin = async (req, res) => {
             role: member.role.role,
             permissions: member.role.permissions,
         };
-        orgToken =generateOrgAccessToken(orgPayload,userAgent, ip);
+        orgToken = generateOrgAccessToken(orgPayload, userAgent, ip);
     }
 
     const responseData = {
@@ -170,19 +170,7 @@ export const verify2FALogin = async (req, res) => {
         currentWorkspace: user?.currentWorkspace || null,
     };
 
-    res.cookie("oid", orgToken, {
-        httpOnly: isProd,
-        secure: isProd,
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.cookie("sid", accessToken, {
-        httpOnly: isProd,
-        secure: isProd,
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setTokenCookies(res, orgToken, accessToken); // org token is named as access token
 
     return res.status(200).json({
         message: `2FA Login successful`,
@@ -244,7 +232,7 @@ export const verifyLoginOTP = async (req, res) => {
         return res.status(409).json({ message: "Too many active sessions." });
     }
 
-    const accessToken = generateGlobalToken(user);
+    const accessToken = generateRefreshToken(user);
 
     const decoded = jwt.decode(accessToken);
     const expiresAt = new Date(decoded.exp * 1000);
@@ -278,7 +266,7 @@ export const verifyLoginOTP = async (req, res) => {
             role: member.role.role,
             permissions: member.role.permissions,
         };
-        orgToken = generateOrgToken(orgPayload);
+        orgToken = generateOrgAccessToken(orgPayload, userAgent, ip);
     }
 
     const responseData = {
@@ -297,20 +285,7 @@ export const verifyLoginOTP = async (req, res) => {
         currentWorkspace: user?.currentWorkspace || null,
     };
 
-    res.cookie("oid", orgToken, {
-        httpOnly: isProd,
-        secure: isProd,
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.cookie("sid", accessToken, {
-        httpOnly: isProd,
-        secure: isProd,
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
+    setTokenCookies(res, orgToken, accessToken);
     return res.status(200).json({
         message: `otp Login successful`,
         success: true,
@@ -320,3 +295,49 @@ export const verifyLoginOTP = async (req, res) => {
     });
 };
 
+export const refreshToken = async (req, res) => {
+    try {
+        const refreshToken = req.cookies._fxl_9X8Y7Z;
+        if (!refreshToken) return res.status(401).json({ message: 'No refresh token' });
+
+        const decoded = verifyRefreshToken(refreshToken);
+        if (!decoded) return res.status(401).json({ message: 'Invalid refresh token' });
+
+        // 2️⃣ Ensure user still valid
+        const user = await User.findById(decoded.userId);
+        if (!user || !user.isActive) return res.status(401).json({ message: 'Invalid refresh token' });
+
+        // 3️⃣ Re-issue pair
+        const ua = req.headers['user-agent'] || '';
+        const ip = req.ip || req.connection?.remoteAddress || '';
+        let orgToken = null;
+        if (user.currentOrganization) {
+            const member = await OrgMember.findOne({
+                userId: user._id,
+                organizationId: user.currentOrganization._id,
+                status: "active",
+            }).populate("role");
+
+            if (member && member.role) {
+                const orgPayload = {
+                    userId: user._id,
+                    orgId: member.organizationId,
+                    employeeId: member.employeeId,
+                    role: member.role.role,
+                    permissions: member.role.permissions,
+                };
+                orgToken = generateOrgAccessToken(orgPayload, ua, ip);
+            }
+        }
+
+        const newRefresh = generateRefreshToken(user);
+
+        setTokenCookies(res, orgToken, newRefresh);
+        res.status(200).json({ message: 'Tokens refreshed' });
+    } catch (err) {
+        // clear cookies on any failure
+        res.clearCookie('_fxl_1A2B3C');
+        res.clearCookie('_fxl_9X8Y7Z');
+        return res.status(401).json({ message: 'Invalid or expired refresh token' });
+    }
+}

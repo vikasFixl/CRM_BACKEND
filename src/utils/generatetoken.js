@@ -1,62 +1,9 @@
 
-// import jwt from "jsonwebtoken";
-// import dotenv from "dotenv";
-
-// dotenv.config({ path: "../../.env" });
-
-// const SECRET = process.env.JWT_SECRET
-// const ORGSECRET = process.env.ORG_SECRET 
-
-// // Default JWT options for all tokens
-// const jwtOptions = {
- 
-//   algorithm: "HS256",      // Hash algorithm
- 
-// };
-
-// // 1. Global token — used after login
-
-// export const generateGlobalToken = (user) => {
-//   return jwt.sign(
-//     {
-//       userId: user._id,
-//       uuid: user.uuid,
-//       role: user.Globalrole,
-//       email: user.email,
-//       firstName: user.firstName,
-      
-      
-//     },
-//     SECRET,
-//     { ...jwtOptions, expiresIn: "7d" } // merge custom overrides
-//   );
-
-  
-// };
-
-// // 2. Org-scoped token — used for org-specific access
-
-// export const generateOrgToken = (
-//   { userId, orgId, employeeId, role, permissions },
-  
-// ) => {
-//   return jwt.sign(
-//     {
-//       userId,
-//       orgId,
-//       employeeId,
-//       role,
-//       permissions,
-//     },
-//     ORGSECRET,
-//     { ...jwtOptions, expiresIn: "7d" }
-//   );
-// };
-
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config({ path: '../../.env' });
+const isProd = process.env.NODE_ENV === "production";
 
 const ACCESS_SECRET   = process.env.JWT_ACCESS_SECRET;   // 256-bit key
 const REFRESH_SECRET  = process.env.JWT_REFRESH_SECRET;
@@ -65,6 +12,7 @@ const ACCESS_TTL      = process.env.ACCESS_TTL
 const REFRESH_TTL     = process.env.REFRESH_TTL
 
 const BASE_OPTS = { algorithm: 'HS256' };
+
 
 /* -------------------------------------------------
    Helpers
@@ -111,8 +59,8 @@ export const generateRefreshToken = (user) => {
 
 export const setTokenCookies = (res, accessToken, refreshToken) => {
   const baseOpts = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    httpOnly:isProd,
+    secure:isProd,
     sameSite: 'Lax',
   };
 // org token
