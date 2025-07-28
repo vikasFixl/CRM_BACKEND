@@ -157,7 +157,7 @@ export const login = async (req, res) => {
     // Step 3: Check total active sessions
     const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
 
-    if (activeSessions.length >= 5) {
+    if (activeSessions.length >= 500) {
       return res.status(409).json({ message: "Too many active sessions. Please log out from another device." });
     }
 
