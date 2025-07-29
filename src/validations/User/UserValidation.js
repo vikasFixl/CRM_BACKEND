@@ -18,8 +18,7 @@ export const signupSchema = z.object({
     .min(6, "Password must be at least 6 characters long"),
 
   phone: z
-    .string({ required_error: "Phone number is required" })
-    .length(10, "Phone number must be exactly 10 digits"),
+    .string({ required_error: "Phone number is required" }),
   avatar: z
     .object({
       url: z.string().url("Invalid avatar URL"),

@@ -4,12 +4,12 @@ import bcrypt from "bcrypt";
 const UserSchema = new Schema(
   {
     firstName: { type: String, required: true, trim: true, minlength: 1 },
-    lastName: { type: String, trim: true,},
-    email: { type: String, required: true, trim: true, unique: true },
+    lastName: { type: String, trim: true, },
+    email: { type: String, required: true, trim: true, unique: true, lowercase: true },
     password: { type: String, required: true, minlength: 6 },
-    phone: { type: String, trim: true, minlength: 10,required: true },
+    phone: { type: String, required: true, trim: true },
     avatar: {
-      url: { type: String, trim: true ,default:"https://res.cloudinary.com/dnctmzmmx/image/upload/v1750401124/user/rvblg8czxgpg9qtap3rv.webp"},
+      url: { type: String, trim: true, default: "https://res.cloudinary.com/dnctmzmmx/image/upload/v1750401124/user/rvblg8czxgpg9qtap3rv.webp" },
       public_id: { type: String, trim: true },
     },
 
@@ -52,14 +52,34 @@ const UserSchema = new Schema(
     lockUntil: { type: Date },
     deletedAt: { type: Date, select: false },
     isDeleted: { type: Boolean, default: false, select: false },
-     // Fields for 2FA
+    // Fields for 2FA
     twoFAEnabled: { type: Boolean, default: false },
     twoFASecret: { type: String, select: false },
     // Fields for OTP login
     otp: { type: String, select: false },
     otpExpires: { type: Date, select: false },
+    phoneVerified: { type: Boolean, default: false },
+    emailVerified: { type: Boolean, default: false },
     // Fields for multi-device management
     primaryDevice: { type: String, select: false },
+    userType: {
+      type: String,
+      enum: ["orgUser", "supportAgent", "platformAdmin"],
+      required: true,
+      default: "orgUser",
+      index: true,
+    },
+    supportAccess: {
+      type: Boolean,
+      default: false, // User must explicitly enable this
+    },
+
+    supportPasskey: {
+      token: { type: String },
+      expiresAt: { type: Date },
+      createdAt: { type: Date, default: Date.now },
+    },
+
   },
   { timestamps: true }
 );

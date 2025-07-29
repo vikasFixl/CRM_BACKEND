@@ -15,6 +15,9 @@ import {
   updateUser,
   logout,
   updateProfileImage,
+  enableSupportAccess,
+  verifyOtp,
+  sendVerificationOtp,
 } from "../controllers/user.js";
 
 import { isAuthenticated, isAdminOrSelf } from "../middleweare/middleware.js";
@@ -42,31 +45,36 @@ const Router = express.Router();
 
 
 
-//  POST routes without  rate limitter
-Router.route("/signin").post(login); // login user
-Router.route("/signup").post(signup); // signup user
-Router.route("/forgot").post(forgotPassword);// forgot password
 
-Router.route("/reset").post(resetPassword); // reset password
-Router.route("/logout").post(logout); // logout
+// ==================== Auth Routes ====================
+Router.route("/signin").post(login);
+Router.route("/signup").post(signup);
+Router.route("/logout").post(logout);
+Router.route("/refresh").post(isAuthenticated, refreshToken);
 
-// GET routes
+// ==================== Password Reset Routes ====================
+Router.route("/forgot").post(forgotPassword);
+Router.route("/reset").post(resetPassword);
 
-Router.route("/getprofile").get(isAuthenticated, getUser); // user profile
+// ==================== Verification Routes ====================
+Router.route("/generate-otp").post(isAuthenticated,sendVerificationOtp);
 
+Router.route("/verify").post(isAuthenticated,verifyOtp); // case-insensitive handling done in controller
 
-// DELETE route
-Router.route("/delete/:id").delete(isAuthenticated, isAdminOrSelf, deleteUser); // delete user(admin or self) and soft delete for 30 days then automaticallydelete
+// ==================== Security Routes ====================
+Router.route("/generate-2fa-qr").post(isAuthenticated, generate2FAQr);
+Router.route("/verify-2fa-setup").post(isAuthenticated, verify2FASetup);
+Router.route("/verify-2fa-login").post(verify2FALogin);
+Router.route("/send-login-otp").post(sendLoginOTP);
+Router.route("/verify-login-otp").post(verifyLoginOTP);
+Router.route("/enable-support-access").post(isAuthenticated, enableSupportAccess);
 
-// PATCH routes
-Router.route("/updateUser/:id").patch(isAuthenticated, isAdminOrSelf, updateUser); // update user (admin or self)
-Router.route("/updateProfilephoto/:id").patch(isAuthenticated, updateProfileImage); // update user profile photo
-//
-// Auth Routes
-Router.route("/generate-2fa-qr").post(isAuthenticated, generate2FAQr); // generate 2fa qr code
-Router.route("/verify-2fa-setup").post(isAuthenticated, verify2FASetup); // verify the 2fa setup
-Router.route("/verify-2fa-login").post(verify2FALogin); // verify the 2fa login
-Router.route("/send-login-otp").post(sendLoginOTP); // generate otp code for password less login
-Router.route("/verify-login-otp").post(verifyLoginOTP); // verify login otp
-Router.route("/refresh").post(isAuthenticated,refreshToken); // refresh token
+// ==================== User Profile Routes ====================
+Router.route("/getprofile").get(isAuthenticated, getUser);
+Router.route("/updateUser/:id").patch(isAuthenticated, isAdminOrSelf, updateUser);
+Router.route("/updateProfilephoto").patch(isAuthenticated, updateProfileImage);
+
+// ==================== Admin/User Actions ====================
+Router.route("/delete/:id").delete(isAuthenticated, isAdminOrSelf, deleteUser); // soft delete for 30 days
+
 export default Router;

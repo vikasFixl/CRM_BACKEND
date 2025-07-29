@@ -25,6 +25,12 @@ import User from "../models/userModel.js";
 import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 import { Session } from "../models/sessionModel.js";
+import twilio from 'twilio';
+// Initialize Twilio client
+const accountSid = process.env.TWILLO_ACCOUNTSID;
+const authToken = process.env.TWILLO_AUTHTOKEN;
+const twilioPhone = process.env.TWILLO_MOBILE_NUMBER;
+const client = twilio(accountSid, authToken);
 
 dotenv.config();
 // Helper to extract device info and location
@@ -47,19 +53,38 @@ function getDeviceAndLocation(req) {
     deviceType: `${result.browser.name} on ${result.os.name}`,
   };
 }
-
-
-
 const frontendUrl = process.env.FRONTEND_URL;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isProd = process.env.NODE_ENV === 'production';
-console.log(process.env.NODE_ENV);
-console.log(isProd)
+
+
+const sendSmsOTP = async (phoneNumber, otp) => {
+  try {
+    await client.messages.create({
+      body: `Your verification code is: ${otp}. Valid for 10 minutes.`,
+      from: twilioPhone,
+      to: phoneNumber
+    });
+  } catch (err) {
+    console.error('Twilio SMS Error:', err);
+    throw new Error('Failed to send SMS');
+  }
+};
+const verifyPhoneExistence = async (phone) => {
+  try {
+    await client.lookups.v2.phoneNumbers(phone)
+      .fetch({ fields: 'line_type_intelligence' });
+    return true;
+  } catch (err) {
+    if (err.status === 404) {
+      return false;
+    }
+    throw err; // Re-throw other errors
+  }
+};
 export const login = async (req, res) => {
   const { email, password } = req.body || {};
   const { userAgent, ip, location, deviceId, deviceType } = getDeviceAndLocation(req);
-  console.log("userAgent", userAgent, "ip", ip, "location", location, "deviceId", deviceId, "deviceType", deviceType);
-
 
   // Validate input
   if (!email?.trim() || !password?.trim()) {
@@ -91,13 +116,21 @@ export const login = async (req, res) => {
       });
     }
 
+  
+
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       user.loginAttempts += 1;
       await user.save();
       return res.status(400).json({ message: "Invalid credentials" });
     }
+  // if (!user.emailVerified) {
+  //     return res.status(400).json({ message: "Email not verified" });
+  //   }
 
+  //   if (!user.phoneVerified) {
+  //     return res.status(400).json({ message: "Phone not verified" });
+  //   }
     // Successful login
     user.loginAttempts = 0;
     user.lastLogin = new Date();
@@ -105,6 +138,7 @@ export const login = async (req, res) => {
     user.isActive = true;
     user.deletedAt = null;
     await user.save();
+
     if (user.twoFAEnabled) {
       return res.status(200).json({ message: "2FA enabled", uid: user._id });
     }
@@ -128,16 +162,14 @@ export const login = async (req, res) => {
         orgToken = generateOrgAccessToken(orgPayload, userAgent, ip);
       }
     }
-   
+
     const accessToken = generateRefreshToken(user);
     const decoded = jwt.decode(accessToken);
     const expiresAt = new Date(decoded.exp * 1000);
     const nowInSeconds = Math.floor(Date.now() / 1000);
     const expiresInDays = (decoded.exp - nowInSeconds) / (60 * 60 * 24); // seconds → days
 
-    // Step 1: Get the user's IP address
-
-    // Step 2: Check if there's already a session from the same IP
+    // Check if there's already a session from the same IP
     const existingSession = await Session.findOne({
       user: user._id,
       ip: ip,
@@ -145,7 +177,7 @@ export const login = async (req, res) => {
     });
 
     if (existingSession) {
-      // ✅ Update the existing session
+      // Update the existing session
       existingSession.jwtToken = accessToken;
       existingSession.deviceType = deviceType;
       existingSession.location = location;
@@ -153,26 +185,28 @@ export const login = async (req, res) => {
       existingSession.expiresAt = expiresAt;
       existingSession.expiresIn = expiresInDays;
       await existingSession.save();
-    }
-    // Step 3: Check total active sessions
-    const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
+    } else {
+      // Check total active sessions
+      const activeSessions = await Session.find({ user: user._id, isActive: true }).sort({ createdAt: 1 });
 
-    if (activeSessions.length >= 500) {
-      return res.status(409).json({ message: "Too many active sessions. Please log out from another device." });
+      if (activeSessions.length >= 500) {
+        return res.status(409).json({ message: "Too many active sessions. Please log out from another device." });
+      }
+
+      // Create new session
+      await Session.create({
+        user: user._id,
+        jwtToken: accessToken,
+        ip,
+        deviceId,
+        deviceType,
+        location,
+        userAgent,
+        expiresAt,
+        expiresIn: expiresInDays,
+      });
     }
 
-    // Step 4: Create new session if no existing session from same IP
-    await Session.create({
-      user: user._id,
-      jwtToken: accessToken,
-      ip,
-      deviceId,
-      deviceType,
-      location,
-      userAgent,
-      expiresAt,
-      expiresIn: expiresInDays,
-    });
     const responseData = {
       id: user._id,
       uuid: user.uuid,
@@ -217,8 +251,12 @@ export const signup = async (req, res) => {
 
     const data = result.data;
 
+    const phoneExists = await verifyPhoneExistence(data.phone);
+    if(!phoneExists){
+      return res.status(400).json({ message: "Phone number not valid" });
+    }
     // Check for existing user
-    const existingUser = await User.findOne({ email: data.email });
+    const existingUser = await User.findOne({ email: data.email, isDeleted: false ,phone:data.phone });
     if (existingUser) {
       return res
         .status(403)
@@ -253,15 +291,10 @@ export const signup = async (req, res) => {
 
     await user.save();
 
-    const accessToken = generateGlobalToken(user);
-    const { exp } = jwt.decode(accessToken);
+    const accessToken = generateRefreshToken(user);
+ 
 
-    res.cookie("sid", accessToken, {
-      httpOnly: isProd,        // Prevents JS access — secure against XSS
-      secure: isProd,          // Only send over HTTPS
-      sameSite: "lax",    // Prevents CSRF
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    setTokenCookies(res, null, accessToken);
     return res.status(201).json({
       message: "You have signed up successfully",
       success: true,
@@ -560,7 +593,7 @@ export const updateUser = async (req, res) => {
 // need to implement cloudinary cloud upload
 export const updateProfileImage = async (req, res) => {
   try {
-    const _id = req.params.id;
+    const _id = req.user.userId;
 
     if (!mongoose.Types.ObjectId.isValid(_id)) {
       return res.status(404).json({ message: "Invalid User ID." });
@@ -604,38 +637,122 @@ export const updateProfileImage = async (req, res) => {
   }
 };
 
-// export const getUserList = async (req, res) => {
-//   try {
-//     const users = await User.find().select("-password");
-//     res.status(200).json({
-//       data: users.map(
-//         ({
-//           firstName,
-//           lastName,
-//           email,
-//           role,
-//           department,
-//           phone,
-//           permissions,
-//           avatar,
-//           _id,
-//         }) => ({
-//           firstName,
-//           lastName,
-//           email,
-//           role,
-//           department,
-//           phone,
-//           permissions,
-//           avatar,
-//           _id,
-//         })
-//       ),
-//       success: true,
-//       code: 200,
-//       message: "All users fetched!",
-//     });
-//   } catch (error) {
-//     res.status(500).json({ success: false, code: 500, message: error.message });
-//   }
-// };
+export const enableSupportAccess = async (req, res) => {
+  try {
+    const id = req.user.userId;
+
+    // 1. Find user
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // 2. Generate a JWT token
+    const payload = {
+      userId: user._id,
+      supportAccess: true,
+    };
+    const options = {
+      expiresIn: '15m', // 15 minutes
+    };
+    const secret = process.env.JWT_SUPPORT_SECRET; // Ensure you have a JWT_SECRET environment variable
+    const token = jwt.sign(payload, secret, options);
+
+    // 3. Update user document
+    user.supportAccess = true;
+    user.supportPasskey = {
+      token: token,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 min expiry
+    };
+
+    await user.save();
+
+    // 4. Send the token to the user to share with support
+    return res.status(200).json({
+      message: 'Support access enabled. Share this token with the support agent.',
+      passkey: token,
+      expiresIn: '15 minutes',
+    });
+  } catch (error) {
+    console.error('Error enabling support access:', error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+export const verifyOtp = async (req, res) => {
+  try {
+    const { otp, type } = req.body; // 'email' or 'phone'
+
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    const user = await User.findOne({
+      _id: req.user.userId,
+      otp: hashedOtp,
+      otpExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return res.status(400).json({ message: 'Invalid or expired OTP' });
+
+    if (type === 'email') user.emailVerified = true;
+    else if (type === 'phone') user.phoneVerified = true;
+    else return res.status(400).json({ message: 'Invalid type' });
+
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({
+      message: `${type === 'email' ? 'Email' : 'Phone'} verified successfully.`,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const sendVerificationOtp = async (req, res) => {
+  try {
+    const { type} = req.body; // 'email' or 'phone'
+    const user = await User.findById(req.user.userId).select("otp otpExpires email phone phoneVerified emailVerified isActive");
+    console.log(user);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!['email', 'phone'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid type. Must be "email" or "phone".' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+
+    // Store OTP in DB
+    user.otp = hashedOtp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000; // expires in 10 mins
+    await user.save();
+
+    // Mock sending message
+    if (type === 'email') {
+      // Uncomment this if real email sending is enabled
+      // await sendEmail({ to: user.email, subject: 'Your Verification OTP', text: `Your OTP is ${otp}` });
+
+      return res.status(200).json({
+        message: `Email OTP sent successfully.`,
+        debugOtp: otp, // Remove in production
+      });
+    } else {
+      // Uncomment this if real SMS sending is enabled
+      // await sendSMS(user.contactPhone, `Your OTP is ${otp}.`);
+      // Ensure the number is in E.164 format
+const formattedPhone = user.phone.startsWith('+') ? user.phone : `+91${user.phone}`;
+   await sendSmsOTP(formattedPhone, otp);
+     
+      return res.status(200).json({
+        message: `Phone OTP sent successfully.`,
+        debugOtp: otp, // Remove in production
+      });
+    }
+  } catch (err) {
+    console.error('OTP Send Error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};

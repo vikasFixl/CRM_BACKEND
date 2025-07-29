@@ -118,8 +118,7 @@ export const getClientById = async (req, res, next) => {
 export const getClients = async (req, res, next) => {
   try {
     const orgId = req.orgUser?.orgId;
-    if (!orgId) return res.status(400).json({ message: "Org id required" });
-
+   
     /* ---------- query params ---------- */
     const page  = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit ) || 10, 1), 100);
@@ -142,6 +141,7 @@ export const getClients = async (req, res, next) => {
     if(deleted){
       filter.deleted = deleted
     }
+    console.log(filter);
     /* ---------- counts & slice ---------- */
     const total      = await ClientModel.countDocuments(filter);
     const totalPages = Math.ceil(total / limit) || 1;
@@ -158,7 +158,7 @@ export const getClients = async (req, res, next) => {
       message: ` clients fetched successfully`,
       success: true,
       code: 200,
-      data: clients,
+      clients,
       pagination: {
         total,
         page,
@@ -169,7 +169,9 @@ export const getClients = async (req, res, next) => {
       },
     });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ message:"Server error" ,error: err.message });
+  
+
   }
 };
 
