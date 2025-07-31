@@ -13,8 +13,8 @@ import { generateWorkspaceToken, setWorkspaceCookie } from "../../utils/generate
 export const createWorkspace = async (req, res, next) => {
   const { userId } = req.user;
   const { orgId } = req.orgUser;
-  const parsed = workspaceSchema.safeParse(req.body);
 
+  const parsed = workspaceSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
       message: "Validation error",
@@ -34,11 +34,12 @@ export const createWorkspace = async (req, res, next) => {
       return res.status(400).json({ message: "Name already taken" });
     }
 
-    const user = await User.findById(userId, { session });
+    const user = await User.findById(userId).session(session);
     if (!user) {
       await session.abortTransaction();
       return res.status(404).json({ message: "User not found" });
     }
+
     const workspace = await Workspace.create(
       [
         {
@@ -50,6 +51,11 @@ export const createWorkspace = async (req, res, next) => {
       ],
       { session }
     );
+
+    if (!workspace || !workspace[0]) {
+      await session.abortTransaction();
+      return res.status(500).json({ message: "Workspace creation failed" });
+    }
 
     const ownerRole = await RolePermission.findOne({ role: "WorkspaceAdmin" }, null, { session });
     if (!ownerRole) {
@@ -70,32 +76,39 @@ export const createWorkspace = async (req, res, next) => {
       { session }
     );
 
-
-    const role = await RolePermission.findById(member.role).select("role permissions");
-    if (!role) {
-      return res.status(403).json({ message: "role not found" });
+    if (!member || !member[0]) {
+      await session.abortTransaction();
+      return res.status(500).json({ message: "Failed to assign member role" });
     }
-    const perm = member.hascustompermission ? member.permissionsOverride : role.permissions
-    let payload = {
-      workspaceId: id,
-      userId: userId,
+
+    const role = await RolePermission.findById(member[0].role).select("role permissions");
+    if (!role) {
+      await session.abortTransaction();
+      return res.status(403).json({ message: "Role not found" });
+    }
+
+    const perm = member[0].hascustompermission ? member[0].permissionsOverride : role.permissions;
+
+    const payload = {
+      workspaceId: workspace[0]._id,
+      userId,
       role: role.role,
       permissions: perm,
-      roleId: role._id
-    }
-    const worksapcetoken = generateWorkspaceToken(payload)
-    setWorkspaceCookie(res, worksapcetoken)
+      roleId: role._id,
+    };
 
-
+    const workspaceToken = generateWorkspaceToken(payload);
+    setWorkspaceCookie(res, workspaceToken);
 
     user.currentWorkspace = workspace[0]._id;
     await user.save({ session });
 
     await session.commitTransaction();
+
     res.status(201).json({
       message: "Workspace created successfully",
       workspace: workspace[0],
-      workspaceToken: worksapcetoken
+      workspaceToken,
     });
   } catch (err) {
     await session.abortTransaction();
@@ -104,6 +117,7 @@ export const createWorkspace = async (req, res, next) => {
     session.endSession();
   }
 };
+
 export const updateWorkspace = async (req, res, next) => {
   const id = req.params.id;
   const parsed = workspaceSchema.safeParse(req.body);

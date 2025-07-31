@@ -159,7 +159,7 @@ export const createOrganization = async (req, res) => {
       message: "Organization and Billing created successfully",
       orgId: savedOrg._id,
       employeeId,
-   
+      orgtoken,
       expiresAt: exp * 1000,
     });
   } catch (error) {
@@ -218,19 +218,19 @@ export const switchOrg = async (req, res) => {
     setAccessCookieOnly(res, orgtoken);
     // 🧹 Clear the new-named cookies
     res.clearCookie('_fxl_WSP', {  // clear workspace otken
-      httpOnly:isProd,
+      httpOnly: isProd,
       secure: isProd,
       sameSite: 'Lax',
       path: '/',
     });
     res.clearCookie('_fxl_PRJ', {  // clear proeject token 
-      httpOnly:isProd,
+      httpOnly: isProd,
       secure: isProd,
       sameSite: 'Lax',
       path: '/',
     });
     res.clearCookie('_fxl_TEA', {  // clear team token 
-      httpOnly:isProd,
+      httpOnly: isProd,
       secure: isProd,
       sameSite: 'Lax',
       path: '/',
@@ -239,11 +239,11 @@ export const switchOrg = async (req, res) => {
     user.currentOrganization = orgId;
     await user.save();
 
-   
+
     return res.status(200).json({
-      message:"Organization switched successfully",
-      token:orgtoken
-      
+      message: "Organization switched successfully",
+      token: orgtoken
+
     })
   } catch (err) {
     console.error("Switch Org Error:", err);
