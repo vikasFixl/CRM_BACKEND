@@ -47,6 +47,7 @@ import { initSocket } from "./config/socket.js";
 import otplib from "otplib"
 import qrcode from "qrcode"
 import macaddress from 'macaddress'
+import Ticket from "./src/routes/ticket.route.js";
 macaddress.all((err, all) => {
   console.log(all); // All network interfaces and their MACs
 });
@@ -134,6 +135,7 @@ app.use("/api/documents", DocumentRouter);
 app.use("/api/teams", TeamRouter);
 app.use("/api/project-templates", ProjectTemplateRouter);
 app.use("/api/session", router);
+app.use("/api/ticket",Ticket)
 
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;

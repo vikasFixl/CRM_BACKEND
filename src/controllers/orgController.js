@@ -216,14 +216,34 @@ export const switchOrg = async (req, res) => {
     let orgtoken = generateOrgAccessToken(payload, req.headers["user-agent"], req.ip);
 
     setAccessCookieOnly(res, orgtoken);
+    // 🧹 Clear the new-named cookies
+    res.clearCookie('_fxl_WSP', {  // clear workspace otken
+      httpOnly:isProd,
+      secure: isProd,
+      sameSite: 'Lax',
+      path: '/',
+    });
+    res.clearCookie('_fxl_PRJ', {  // clear proeject token 
+      httpOnly:isProd,
+      secure: isProd,
+      sameSite: 'Lax',
+      path: '/',
+    });
+    res.clearCookie('_fxl_TEA', {  // clear team token 
+      httpOnly:isProd,
+      secure: isProd,
+      sameSite: 'Lax',
+      path: '/',
+    });
 
     user.currentOrganization = orgId;
     await user.save();
 
-    const { exp } = jwt.decode(orgtoken);
    
     return res.status(200).json({
       message:"Organization switched successfully",
+      token:orgtoken
+      
     })
   } catch (err) {
     console.error("Switch Org Error:", err);

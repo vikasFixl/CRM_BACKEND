@@ -18,6 +18,7 @@ import { workspaceIdSchema } from "../../validations/project/workspace.js";
 import User from "../../models/userModel.js";
 import { Team } from "../../models/project/TeamModel.js";
 import { TeamMember } from "../../models/project/TeamMemberModel.js";
+import { generateProjectToken, setProjectCookie } from "../../utils/generatetoken.js";
 
 export const createProject = async (req, res) => {
   const session = await mongoose.startSession();
@@ -27,7 +28,6 @@ export const createProject = async (req, res) => {
     const orgId = req.orgUser.orgId;
     const { workspaceId } = req.params;
 
-    console.log("req.body", req.body)
     const parsed = createProjectSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({
@@ -110,7 +110,7 @@ export const createProject = async (req, res) => {
       await AutomationRule.insertMany(rules, { session });
     }
 
-    await ProjectMember.create([{
+  const [projectMember] =  await ProjectMember.create([{
       projectId: project._id,
       userId,
       role: ownerRole._id,
@@ -141,10 +141,24 @@ export const createProject = async (req, res) => {
       await Task.insertMany(taskDocs, { session });
     }
 
+     // find role 
+    const role=await RolePermission.findById(projectMember.role).select("role permissions");
+    const perm=projectMember.hascustompermission?projectMember.permissionsOverride:role.permissions
+    let payload={
+      permissions:perm,
+      role:role.role,
+      projectId:project._id,
+      userId:userId
+    }
+
+    // generate proejct token 
+    const projectToken = generateProjectToken(payload);
+    setProjectCookie(res, projectToken);
     await session.endSession();
 
     return res.status(201).json({
       message: "Project created successfully",
+      projecttoken: projectToken,
       project: {
         ...project.toObject(),
         workflowId: workflow._id,
@@ -323,6 +337,7 @@ export const getProjectById = async (req, res) => {
     // ✅ Validate projectId and workspaceId first (fail fast)
     const { projectId } = req.params;
     const { orgId } = req.orgUser;
+    const userId=req.user.userId
 
     const validatedProjectId = projectIdSchema.parse(projectId);
 
@@ -347,7 +362,31 @@ export const getProjectById = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
+    // find the member of proejct 
+    const member = await ProjectMember.findOne({
+      projectId: validatedProjectId,
+      userId,
+      isRemoved: false,
+    });
 
+    // ✅ Check if the user is a member of the project
+    if (!member) {
+      return res.status(403).json({ message: "You are not a member of this project" });
+    }
+    // find role 
+    const role=await RolePermission.findById(member.role).select("role permissions");
+    const perm=member.hascustompermission?member.permissionsOverride:role.permissions
+    let payload={
+      permissions:perm,
+      role:role.role,
+      projectId:validatedProjectId,
+      userId:userId
+    }
+
+    // generate proejct token 
+    const projectToken = generateProjectToken(payload);
+    setProjectCookie(res, projectToken);
+    
 
     // ✅ Create new object to avoid modifying the lean result
     const responseData = {

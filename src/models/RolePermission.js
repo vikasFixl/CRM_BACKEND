@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { ROLES, MODULES, PERMISSIONS, ROLE_SCOPE } from "../enums/role.enums.js";
 
+
 const rolePermissionSchema = new mongoose.Schema(
   {
     orgId: {

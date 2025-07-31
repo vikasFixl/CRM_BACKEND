@@ -1,12 +1,15 @@
 import { z } from "zod";
+
 const nameRegex = /^[A-Za-z]+$/;
+const phoneRegex = /^\+[1-9]\d{1,14}$/; // E.164 format
+const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])/;
 
 export const signupSchema = z.object({
   firstName: z
     .string({ required_error: "First name is required" })
-    .min(1)
-    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z).")
-    .nonempty("First name cannot be empty"),
+    .min(1, "First name cannot be empty")
+    .regex(nameRegex, "First name can only contain alphabetic letters (A-Z)"),
+
   lastName: z.string().optional(),
 
   email: z
@@ -15,26 +18,28 @@ export const signupSchema = z.object({
 
   password: z
     .string({ required_error: "Password is required" })
-    .min(6, "Password must be at least 6 characters long"),
+    .min(8, "Password must be at least 8 characters long")
+    .regex(
+      strongPasswordRegex,
+      "Password must include uppercase, lowercase, number, and special character"
+    ),
 
   phone: z
-    .string({ required_error: "Phone number is required" }),
+    .string({ required_error: "Phone number is required" })
+    .regex(phoneRegex, "Phone number must be in E.164 format (e.g., +1234567890)"),
+
   avatar: z
     .object({
       url: z.string().url("Invalid avatar URL"),
       public_id: z.string(),
     })
     .optional(),
-  isActive: z.boolean().optional().default(true),
 
+  isActive: z.boolean().optional().default(true),
   lastLogin: z.coerce.date().optional(),
 
-  // You may choose to exclude timestamps (createdAt, updatedAt) since they are automatic
+  twoFAEnabled: z.boolean().optional(),
 });
-
-
-
-
 
 export const updateUserSchema = z.object({
   firstName: z
@@ -42,9 +47,7 @@ export const updateUserSchema = z.object({
     .min(1, "First name cannot be empty")
     .regex(nameRegex, "First name can only contain alphabetic letters (A-Z)"),
 
-  lastName: z
-    .string()
-    .optional(),
+  lastName: z.string().optional(),
 
   email: z
     .string()
@@ -53,12 +56,16 @@ export const updateUserSchema = z.object({
 
   password: z
     .string()
-    .min(6, "Password must be at least 6 characters long")
+    .min(8, "Password must be at least 8 characters long")
+    .regex(
+      strongPasswordRegex,
+      "Password must include uppercase, lowercase, number, and special character"
+    )
     .optional(),
 
   phone: z
     .string({ required_error: "Phone number is required" })
-    .length(10, "Phone number must be exactly 10 digits"),
+    .regex(phoneRegex, "Phone number must be in E.164 format (e.g., +1234567890)"),
 
   avatar: z
     .object({
@@ -67,7 +74,7 @@ export const updateUserSchema = z.object({
     })
     .optional(),
 
-  twoFAEnabled: z.boolean(),
+  twoFAEnabled: z.boolean().optional(),
 
   isActive: z.boolean().optional(),
 });

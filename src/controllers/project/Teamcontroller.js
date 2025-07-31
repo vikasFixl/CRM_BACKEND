@@ -11,6 +11,7 @@ import { TeamMember } from "../../models/project/TeamMemberModel.js";
 import { Project } from "../../models/project/ProjectModel.js"
 import { Task } from "../../models/project/TaskModel.js";
 import { StatusCodes } from 'http-status-codes';
+import { generateTeamToken, setTeamCookie } from "../../utils/generatetoken.js";
 
 // Utility to validate ObjectId
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -51,7 +52,7 @@ export const createTeam = async (req, res) => {
     });
 
     /* ---------- add creator as team member ---------- */
-    await TeamMember.create({
+    const teamMember = await TeamMember.create({
       teamId: team._id,
       member: projectMember._id,
       role: teamRole._id,
@@ -111,8 +112,21 @@ export const createTeam = async (req, res) => {
     await team.save()
     await Workflow.updateOne({ _id: projectBoard.workflow }, { teamId: team._id });
 
+    // find role 
+    const role = await RolePermission.findOne({ _id: teamMember.role });
+    if (!role) return res.status(404).json({ message: "Role not found" });
+    const perm = teamMember.hascustompermission ? teamMember.permissionsOverride : role.permissions
+    let payload = {
+      permissions: perm,
+      role: role.role,
+      projectId: project,
+      userId: createdBy
+    }
+    const teamtoken = generateTeamToken(payload)
+    setTeamCookie(res, teamtoken)
+
     await session.commitTransaction();
-    res.status(201).json({ success: true, message: "Team created and linked to project board", team });
+    res.status(201).json({ success: true, message: "Team created and linked to project board", team, token: teamtoken });
   } catch (err) {
     await session.abortTransaction();
     console.error(err);
@@ -600,7 +614,10 @@ export const getTeamById = async (req, res) => {
   try {
     const { teamId } = req.params;
     const team = await Team.findById(teamId).populate('createdBy', 'email _id firstName lastName');
-    if (!team) return notFound(res, teamId);
+
+    if (!team) return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Team not found' });
+    // find the team member 
+    // const teammember= await TeamMember.findOne({ teamId: team._id, member:memberId});
     return res.status(StatusCodes.OK).json({ success: true, team });
   } catch (error) {
     console.error('getTeamById:', error);

@@ -9,6 +9,7 @@ import { RolePermission } from "../../models/RolePermission.js";
 import { Task } from "../../models/project/TaskModel.js";
 import mongoose from "mongoose";
 import { Team } from "../../models/project/TeamModel.js";
+import { generateWorkspaceToken, setWorkspaceCookie } from "../../utils/generatetoken.js";
 export const createWorkspace = async (req, res, next) => {
   const { userId } = req.user;
   const { orgId } = req.orgUser;
@@ -33,6 +34,11 @@ export const createWorkspace = async (req, res, next) => {
       return res.status(400).json({ message: "Name already taken" });
     }
 
+    const user = await User.findById(userId, { session });
+    if (!user) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "User not found" });
+    }
     const workspace = await Workspace.create(
       [
         {
@@ -51,7 +57,7 @@ export const createWorkspace = async (req, res, next) => {
       return res.status(404).json({ message: "Owner role not found" });
     }
 
-    await Member.create(
+    const member = await Member.create(
       [
         {
           userId,
@@ -64,11 +70,23 @@ export const createWorkspace = async (req, res, next) => {
       { session }
     );
 
-    const user = await User.findById(userId, null, { session });
-    if (!user) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: "User not found" });
+
+    const role = await RolePermission.findById(member.role).select("role permissions");
+    if (!role) {
+      return res.status(403).json({ message: "role not found" });
     }
+    const perm = member.hascustompermission ? member.permissionsOverride : role.permissions
+    let payload = {
+      workspaceId: id,
+      userId: userId,
+      role: role.role,
+      permissions: perm,
+      roleId: role._id
+    }
+    const worksapcetoken = generateWorkspaceToken(payload)
+    setWorkspaceCookie(res, worksapcetoken)
+
+
 
     user.currentWorkspace = workspace[0]._id;
     await user.save({ session });
@@ -77,6 +95,7 @@ export const createWorkspace = async (req, res, next) => {
     res.status(201).json({
       message: "Workspace created successfully",
       workspace: workspace[0],
+      workspaceToken: worksapcetoken
     });
   } catch (err) {
     await session.abortTransaction();
@@ -203,10 +222,12 @@ export const getMyWorkspace = async (req, res, next) => {
 };
 export const getWorkspaceById = async (req, res, next) => {
   const id = req.params.workspaceId;
+  const userId = req.user.userId;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ message: "Invalid workspace ID" });
   }
+
 
   try {
     const workspace = await Workspace.findById(id)
@@ -216,11 +237,37 @@ export const getWorkspaceById = async (req, res, next) => {
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
+    // find the member of the workspace
+    const member = await Member.findOne({
+      workspaceId: id,
+      userId,
+      isDeleted: false,
+    });
+
+    if (!member) {
+      return res.status(403).json({ message: "You are not a member of this workspace" });
+    }
+    const role = await RolePermission.findById(member.role).select("role permissions");
+    if (!role) {
+      return res.status(403).json({ message: "role not found" });
+    }
+    const perm = member.hascustompermission ? member.permissionsOverride : role.permissions
+    let payload = {
+      workspaceId: id,
+      userId: userId,
+      role: role.role,
+      permissions: perm,
+      roleId: role._id
+    }
+    const worksapcetoken = generateWorkspaceToken(payload)
+    setWorkspaceCookie(res, worksapcetoken)
+
 
     res.status(200).json({
       success: true,
       message: "Workspace fetched successfully",
       workspace,
+      workspaceToken: worksapcetoken
     });
   } catch (err) {
     next(err);

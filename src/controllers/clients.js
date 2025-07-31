@@ -141,7 +141,7 @@ export const getClients = async (req, res, next) => {
     if(deleted){
       filter.deleted = deleted
     }
-    console.log(filter);
+    // console.log(filter);
     /* ---------- counts & slice ---------- */
     const total      = await ClientModel.countDocuments(filter);
     const totalPages = Math.ceil(total / limit) || 1;

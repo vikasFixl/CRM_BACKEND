@@ -227,6 +227,7 @@ export const login = async (req, res) => {
     res.status(200).json({
       message: `Welcome back ${user.firstName}`,
       success: true,
+      orgToken,
       code: 200,
       data: responseData,
       exp: expiresAt.getTime(),
@@ -320,14 +321,14 @@ export const logout = async (req, res) => {
   try {
     // 🧹 Clear the new-named cookies
     res.clearCookie('_fxl_1A2B3C', {  // access
-      httpOnly: true,
+      httpOnly:isProd,
       secure: isProd,
       sameSite: 'Lax',
       path: '/',
     });
 
     res.clearCookie('_fxl_9X8Y7Z', {  // refresh
-      httpOnly: true,
+      httpOnly:isProd,
       secure: isProd,
       sameSite: 'Lax',
       path: '/',
@@ -651,7 +652,7 @@ export const enableSupportAccess = async (req, res) => {
       supportAccess: true,
     };
     const options = {
-      expiresIn: '15m', // 15 minutes
+      expiresIn: '5m', // 15 minutes
     };
     const secret = process.env.JWT_SUPPORT_SECRET; // Ensure you have a JWT_SECRET environment variable
     const token = jwt.sign(payload, secret, options);
@@ -661,7 +662,7 @@ export const enableSupportAccess = async (req, res) => {
     user.supportPasskey = {
       token: token,
       createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 min expiry
+      expiresAt:  new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
     };
 
     await user.save();
@@ -670,7 +671,7 @@ export const enableSupportAccess = async (req, res) => {
     return res.status(200).json({
       message: 'Support access enabled. Share this token with the support agent.',
       passkey: token,
-      expiresIn: '15 minutes',
+      expiresIn: '5 minutes',
     });
   } catch (error) {
     console.error('Error enabling support access:', error);

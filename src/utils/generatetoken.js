@@ -10,6 +10,12 @@ const REFRESH_SECRET  = process.env.JWT_REFRESH_SECRET;
 const ISSUER          = process.env.JWT_ISSUER;
 const ACCESS_TTL      = process.env.ACCESS_TTL
 const REFRESH_TTL     = process.env.REFRESH_TTL
+const WORKSPACE_TTL  = process.env.WORKSPACE_TTL
+const WORKSPACE_SECRET  = process.env.WORKSPACE_SECRET
+const PROJECT_SECRET  = process.env.PROJECT_SECRET
+const PROJECT_TTL  = process.env.PROJECT_TTL
+const TEAM_SECRET  = process.env.TEAM_SECRET
+const TEAM_TTL  = process.env.TEAM_TTL
 
 const BASE_OPTS = { algorithm: 'HS256' };
 
@@ -94,10 +100,72 @@ export const createAccessTokenOnly = (payload, ua, ip) =>
  */
 export const setAccessCookieOnly = (res, accessToken) => {
   res.cookie('_fxl_1A2B3C', accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    httpOnly:isProd,
+    secure:isProd,
     sameSite: 'Lax',
     maxAge: 1000 * 60 * 60 * 2, // 2 h
+  });
+};
+export const generateWorkspaceToken = (payload) =>
+  sign(
+    {
+      ...payload,               // { userId, orgId, workspaceId, role, etc. }
+      nbf: Math.floor(Date.now() / 1000),
+    },
+    WORKSPACE_SECRET,
+    WORKSPACE_TTL
+  );
+
+export const setWorkspaceCookie = (res, token) => {
+  res.cookie('_fxl_WSP', token, {
+    httpOnly:isProd,
+    secure:isProd,
+    sameSite: 'Lax',
+   maxAge: 1000 * 60 * 60 * 24, // 1 day
+
+  });
+};
+
+/* -------------------------------------------------
+   Project token
+------------------------------------------------- */
+export const generateProjectToken = (payload) =>
+  sign(
+    {
+      ...payload,               // { userId, orgId, workspaceId, projectId, role, etc. }
+      nbf: Math.floor(Date.now() / 1000),
+    },
+    PROJECT_SECRET,
+    PROJECT_TTL
+  );
+
+export const setProjectCookie = (res, token) => {
+  res.cookie('_fxl_PRJ', token, {
+    httpOnly:isProd,
+    secure:isProd,
+    sameSite: 'Lax',
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+  });
+};
+/* -------------------------------------------------
+   Team token
+------------------------------------------------- */
+export const generateTeamToken = (payload) =>
+  sign(
+    {
+      ...payload,               // { userId, orgId, teamId, role, etc. }
+      nbf: Math.floor(Date.now() / 1000),
+    },
+    TEAM_SECRET,
+    TEAM_TTL
+  );
+
+export const setTeamCookie = (res, token) => {
+  res.cookie('_fxl_TEA', token, {
+    httpOnly:isProd,
+    secure:isProd,
+    sameSite: 'Lax',
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
   });
 };
 /* -------------------------------------------------
@@ -112,3 +180,9 @@ export const verifyOrgToken = (token, ua, ip) => {
 
 export const verifyRefreshToken = (token) =>
   jwt.verify(token, REFRESH_SECRET, { issuer: ISSUER });
+export const verifyWorkspaceToken = (token) =>
+  jwt.verify(token, WORKSPACE_SECRET, { issuer: ISSUER });
+export const verifyProjectToken = (token) =>
+  jwt.verify(token, PROJECT_SECRET, { issuer: ISSUER });
+export const verifyTeamToken = (token) =>
+  jwt.verify(token, TEAM_SECRET, { issuer: ISSUER });

@@ -1,6 +1,6 @@
 import { RolePermission } from "../models/RolePermission.js";
 import { MODULES, PERMISSIONS } from "../enums/role.enums.js";
-import { encryptData } from "../utils/encryptdata.js";
+import { decryptData, encryptData } from "../utils/encryptdata.js";
 import dotenv from "dotenv"
 dotenv.config({ path: "../../.env" });
 
@@ -113,7 +113,8 @@ export const getAllRolePermissions = async (req, res) => {
 
     // 🔐 Encrypt the data
     const encrypted = encryptData(allRoles, process.env.All_Roles_IV);
-
+    const decrypted = decryptData(encrypted.data, encrypted.iv);
+    console.log("Decrypted:", decrypted);
     return res.status(200).json({
       message: "Role permissions fetched successfully",
       total: systemRoles.length + customRoles.length,
@@ -132,7 +133,7 @@ export const getAllRolePermissions = async (req, res) => {
 
 export const getRoleNamesList = async (req, res) => {
   try {
-    
+
     const { workspaceId, scope, orgId } = req.query;
 
     // 🔹 Fetch system (global) roles excluding SuperAdmin

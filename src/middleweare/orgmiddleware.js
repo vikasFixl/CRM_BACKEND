@@ -11,19 +11,17 @@ dotenv.config({ path: "../../.env" });
 export const authenticateOrgToken = () => {
   return (req, res, next) => {
     const token = req.cookies?._fxl_1A2B3C;
-    
-     const userAgent = req.headers['user-agent'];
-    
-   
-     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+// console.log("token", token);
+    const userAgent = req.headers['user-agent']; 
 
+    // console.log("userAgent", userAgent);
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     if (!token) {
       return res.status(401).json({ message: "invalid token" });
     }
 
     try {
       const decoded = verifyOrgToken(token, userAgent, ip);
-
       req.orgUser = {
         userId: decoded.userId,
         orgId: decoded.orgId,
@@ -45,7 +43,7 @@ export const checkPermission = (moduleName, actionName) => {
     try {
       const userId = req.user.userId;
       const orgId = req.orgUser.orgId;
-    
+
 
       if (!userId || !orgId) {
         return res.status(401).json({ error: "Unauthorized access" });
