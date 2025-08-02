@@ -186,3 +186,56 @@ export const verifyProjectToken = (token) =>
   jwt.verify(token, PROJECT_SECRET, { issuer: ISSUER });
 export const verifyTeamToken = (token) =>
   jwt.verify(token, TEAM_SECRET, { issuer: ISSUER });
+export const generateSuperAdminToken = (user, ua, ip) => {
+  const payload = {
+    userId: user._id,
+    uuid: user.uuid,
+    email: user.email,
+    role: 'SuperAdmin',
+    fingerprint: crypto.createHash('sha256').update(ua + ip).digest('hex').slice(0, 16),
+    scope: 'platform',
+  };
+  return sign(payload, SUPPORT_SECRET, SUPER_ADMIN_TTL, { aud: 'platform' });
+
+};
+export const generateSupportAgentToken = (agent, ua, ip) => {
+  const payload = {
+    userId: agent._id,
+    uuid: agent.uuid,
+    email: agent.email,
+    role: 'SupportAgent',
+    fingerprint: crypto.createHash('sha256').update(ua + ip).digest('hex').slice(0, 16),
+    scope: 'support',
+  };
+  return sign(payload, SUPPORT_SECRET, SUPPORT_TTL, { aud: 'support' });
+};
+
+export const generateSupportOrgToken = (orgUser, supportAgentId, orgId, ua, ip) => {
+  const payload = {
+    userId: orgUser._id,
+    email: orgUser.email,
+    employeeId: orgUser.employeeId,
+    orgId,
+    role: orgUser.role,
+    actingAs: 'OrgUser',
+    impersonatedBy: supportAgentId, // link to original support agent
+    fingerprint: crypto.createHash('sha256').update(ua + ip).digest('hex').slice(0, 16),
+    scope: 'org-support',
+  };
+  return sign(payload, SUPPORT_SECRET, SUPPORT_TTL, { aud: orgId });
+};
+
+// Super Admin Cookie (1 hour)
+export const setSuperAdminTokenCookie = (res, token) => {
+  res.cookie('super_admin_token', token, secureCookieOptions(60 * 60 * 1000));
+};
+
+// Support Agent Cookie (1 hour)
+export const setSupportAgentTokenCookie = (res, token) => {
+  res.cookie('support_token', token, secureCookieOptions(60 * 60 * 1000));
+};
+
+// Support Org Impersonation Cookie (1 hour, short-lived)
+export const setSupportOrgTokenCookie = (res, token) => {
+  res.cookie('support_org_token', token, secureCookieOptions(60 * 60 * 1000));
+};
