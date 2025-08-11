@@ -26,6 +26,7 @@ import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 import { Session } from "../models/sessionModel.js";
 import twilio from 'twilio';
+import { SupportOrgSession } from "../models/superadmin/supportorgsession.js";
 // Initialize Twilio client
 const accountSid = process.env.TWILLO_ACCOUNTSID;
 const authToken = process.env.TWILLO_AUTHTOKEN;
@@ -98,6 +99,7 @@ export const login = async (req, res) => {
   try {
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
+      userType: "orgUser"
     })
       .select("+isSuspended")
       .populate("currentOrganization", "_id name contactEmail");
@@ -116,7 +118,7 @@ export const login = async (req, res) => {
       });
     }
 
-  
+
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
@@ -124,13 +126,13 @@ export const login = async (req, res) => {
       await user.save();
       return res.status(400).json({ message: "Invalid credentials" });
     }
-  // if (!user.emailVerified) {
-  //     return res.status(400).json({ message: "Email not verified" });
-  //   }
+    // if (!user.emailVerified) {
+    //     return res.status(400).json({ message: "Email not verified" });
+    //   }
 
-  //   if (!user.phoneVerified) {
-  //     return res.status(400).json({ message: "Phone not verified" });
-  //   }
+    //   if (!user.phoneVerified) {
+    //     return res.status(400).json({ message: "Phone not verified" });
+    //   }
     // Successful login
     user.loginAttempts = 0;
     user.lastLogin = new Date();
@@ -241,6 +243,7 @@ export const login = async (req, res) => {
   }
 };
 
+
 export const signup = async (req, res) => {
   try {
     const result = signupSchema.safeParse(req.body);
@@ -253,11 +256,11 @@ export const signup = async (req, res) => {
     const data = result.data;
 
     const phoneExists = await verifyPhoneExistence(data.phone);
-    if(!phoneExists){
+    if (!phoneExists) {
       return res.status(400).json({ message: "Phone number not valid" });
     }
     // Check for existing user
-    const existingUser = await User.findOne({ email: data.email, isDeleted: false ,phone:data.phone });
+    const existingUser = await User.findOne({ email: data.email, isDeleted: false, phone: data.phone });
     if (existingUser) {
       return res
         .status(403)
@@ -293,7 +296,7 @@ export const signup = async (req, res) => {
     await user.save();
 
     const accessToken = generateRefreshToken(user);
- 
+
 
     setTokenCookies(res, null, accessToken);
     return res.status(201).json({
@@ -321,14 +324,14 @@ export const logout = async (req, res) => {
   try {
     // 🧹 Clear the new-named cookies
     res.clearCookie('_fxl_1A2B3C', {  // access
-      httpOnly:isProd,
+      httpOnly: isProd,
       secure: isProd,
       sameSite: 'Lax',
       path: '/',
     });
 
     res.clearCookie('_fxl_9X8Y7Z', {  // refresh
-      httpOnly:isProd,
+      httpOnly: isProd,
       secure: isProd,
       sameSite: 'Lax',
       path: '/',
@@ -641,37 +644,54 @@ export const updateProfileImage = async (req, res) => {
 export const enableSupportAccess = async (req, res) => {
   try {
     const id = req.user.userId;
+    const orgId = req.orgUser.orgId
 
     // 1. Find user
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // 2. Remove any existing session for this supportAgent + org
+    await SupportOrgSession.deleteMany({
+      userId: id,
+      orgId: orgId
+    });
     // 2. Generate a JWT token
     const payload = {
       userId: user._id,
       supportAccess: true,
     };
     const options = {
-      expiresIn: '5m', // 15 minutes
+      expiresIn: '30m', // ✅ Now 30 minutes
     };
     const secret = process.env.JWT_SUPPORT_SECRET; // Ensure you have a JWT_SECRET environment variable
     const token = jwt.sign(payload, secret, options);
+    const now = Date.now();
+    // 4. Save in SupportOrgSession collection
+    const newSession = await SupportOrgSession.create({
+      tokenHash: token, // Ideally hash before storing
+      userId: user._id,
 
-    // 3. Update user document
+      orgId: orgId,
+      createdAt: new Date(),
+      expiresAt: new Date(now + 30 * 60 * 1000), // ✅ 30 minutes from now
+      revoked: false
+    });
+    // 5. (Optional) Update user document
     user.supportAccess = true;
     user.supportPasskey = {
       token: token,
       createdAt: new Date(),
-      expiresAt:  new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
+      expiresAt: new Date(now + 30 * 60 * 1000) // ✅ same 30 minutes
     };
 
     await user.save();
 
-    // 4. Send the token to the user to share with support
+    // 6. Send response
     return res.status(200).json({
       message: 'Support access enabled. Share this token with the support agent.',
       passkey: token,
-      expiresIn: '5 minutes',
+      expiresIn: '30 minutes',
+      sessionId: newSession._id
     });
   } catch (error) {
     console.error('Error enabling support access:', error);
@@ -710,7 +730,7 @@ export const verifyOtp = async (req, res) => {
 
 export const sendVerificationOtp = async (req, res) => {
   try {
-    const { type} = req.body; // 'email' or 'phone'
+    const { type } = req.body; // 'email' or 'phone'
     const user = await User.findById(req.user.userId).select("otp otpExpires email phone phoneVerified emailVerified isActive");
     console.log(user);
 
@@ -744,9 +764,9 @@ export const sendVerificationOtp = async (req, res) => {
       // Uncomment this if real SMS sending is enabled
       // await sendSMS(user.contactPhone, `Your OTP is ${otp}.`);
       // Ensure the number is in E.164 format
-const formattedPhone = user.phone.startsWith('+') ? user.phone : `+91${user.phone}`;
-   await sendSmsOTP(formattedPhone, otp);
-     
+      const formattedPhone = user.phone.startsWith('+') ? user.phone : `+91${user.phone}`;
+      await sendSmsOTP(formattedPhone, otp);
+
       return res.status(200).json({
         message: `Phone OTP sent successfully.`,
         debugOtp: otp, // Remove in production
@@ -757,3 +777,30 @@ const formattedPhone = user.phone.startsWith('+') ? user.phone : `+91${user.phon
     return res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const getSupportsession = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    const session = await SupportOrgSession.findOne({ UserId: user._id });
+    if (!session) return res.status(404).json({ message: "Session not found" });
+    return res.status(200).json({ message: "no active support session ", session });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+export const revokeaccess = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    user.supportAccess = false;
+    const session = await SupportOrgSession.findOneAndDelete({ userId: user._id });
+   
+  
+    return res.status(200).json({ message: "Access revoked" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}

@@ -48,6 +48,7 @@ import otplib from "otplib"
 import qrcode from "qrcode"
 import macaddress from 'macaddress'
 import Ticket from "./src/routes/ticket.route.js";
+import SupportRouter from "./src/routes/superadmin/supportagent.js";
 macaddress.all((err, all) => {
   console.log(all); // All network interfaces and their MACs
 });
@@ -96,7 +97,9 @@ app.use(fileUpload({
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors({
   // origin: "https://cubicle-crm.vercel.app",
-  origin: "http://localhost:5173",
+  origin: "https://cubicle-crm.vercel.app",
+  // origin: "https://vikas-frontend-sigma.vercel.app",
+  // origin: "http://localhost:5173",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 }));
@@ -136,6 +139,7 @@ app.use("/api/teams", TeamRouter);
 app.use("/api/project-templates", ProjectTemplateRouter);
 app.use("/api/session", router);
 app.use("/api/ticket",Ticket)
+app.use("/api/support",SupportRouter)
 
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;

@@ -94,24 +94,5 @@ export const isAdminOrSelf = (req, res, next) => {
 //     }
 //   };
 // };
-export const validateSupportOrgToken = async (req, res, next) => {
-  const token = req.cookies.support_org_token || req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'Missing token' });
 
-  try {
-    const decoded = jwt.verify(token, SUPPORT_SECRET);
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-
-    const session = await SupportOrgSession.findOne({ tokenHash, revoked: false });
-    if (!session || new Date() > session.expiresAt) {
-      return res.status(403).json({ message: 'Support session invalid or expired' });
-    }
-
-    req.supportSession = session;
-    req.user = decoded; // Include impersonated user info
-    next();
-  } catch (err) {
-    return res.status(403).json({ message: 'Invalid support token' });
-  }
-};
 

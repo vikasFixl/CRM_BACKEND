@@ -17,6 +17,8 @@ import {
   updateProfileImage,
   enableSupportAccess,
   verifyOtp,
+  revokeaccess,
+  getSupportsession,
   sendVerificationOtp,
 } from "../controllers/user.js";
 
@@ -67,7 +69,7 @@ Router.route("/verify-2fa-setup").post(isAuthenticated, verify2FASetup);
 Router.route("/verify-2fa-login").post(verify2FALogin);
 Router.route("/send-login-otp").post(sendLoginOTP);
 Router.route("/verify-login-otp").post(verifyLoginOTP);
-Router.route("/enable-support-access").post(isAuthenticated, enableSupportAccess);
+Router.route("/enable-support-access").post(isAuthenticated,authenticateOrgToken(), enableSupportAccess);
 
 // ==================== User Profile Routes ====================
 Router.route("/getprofile").get(isAuthenticated, getUser);
@@ -76,5 +78,7 @@ Router.route("/updateProfilephoto").patch(isAuthenticated, updateProfileImage);
 
 // ==================== Admin/User Actions ====================
 Router.route("/delete/:id").delete(isAuthenticated, isAdminOrSelf, deleteUser); // soft delete for 30 days
+Router.route("/supportsession").get(isAuthenticated,getSupportsession); // soft delete for 30 days
+Router.route("/revoke").post(isAuthenticated,revokeaccess); // soft delete for 30 days
 
 export default Router;
