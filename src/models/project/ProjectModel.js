@@ -40,11 +40,6 @@ const ProjectSchema = new mongoose.Schema(
       ref: "Organization",
       required: true,
     },
-    visibility: {
-      type: String,
-      enum: ["private", "workspace", "public"],
-      default: "public",
-    },
     isArchived: {
       type: Boolean,
       default: false,
@@ -68,7 +63,7 @@ const ProjectSchema = new mongoose.Schema(
 );
 
 /** Unique key within a workspace */
-ProjectSchema.index({ workspace: 1, key: 1 }, { unique: true });
+ProjectSchema.index({ workspace: 1, key: 1,name:1 }, { unique: true });
 
 /** Slug generator */
 ProjectSchema.pre("save", async function (next) {

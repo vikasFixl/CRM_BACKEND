@@ -7,9 +7,10 @@ import { ProjectMember } from "../../models/project/projectMemberModel.js";
 import { AuditLog } from "../../models/project/auditLogModel.js";
 import { Workspace } from "../../models/project/WorkspaceModel.js";
 import { Task } from "../../models/project/TaskModel.js";
+import mongoose from "mongoose";
+
 
 import { RolePermission } from "../../models/RolePermission.js";
-import mongoose from "mongoose";
 import {
   createProjectSchema,
   projectIdSchema,
@@ -19,6 +20,7 @@ import User from "../../models/userModel.js";
 import { Team } from "../../models/project/TeamModel.js";
 import { TeamMember } from "../../models/project/TeamMemberModel.js";
 import { generateProjectToken, setProjectCookie } from "../../utils/generatetoken.js";
+import { Member } from "../../models/project/MemberModel.js";
 
 export const createProject = async (req, res) => {
   const session = await mongoose.startSession();
@@ -76,7 +78,6 @@ export const createProject = async (req, res) => {
       workspace: workspace._id,
       templateId: template._id,
       organization: orgId,
-      visibility,
       type: template.boardType,
       createdBy: userId,
     }], { session });
@@ -110,7 +111,7 @@ export const createProject = async (req, res) => {
       await AutomationRule.insertMany(rules, { session });
     }
 
-  const [projectMember] =  await ProjectMember.create([{
+    const [projectMember] = await ProjectMember.create([{
       projectId: project._id,
       userId,
       role: ownerRole._id,
@@ -141,14 +142,14 @@ export const createProject = async (req, res) => {
       await Task.insertMany(taskDocs, { session });
     }
 
-     // find role 
-    const role=await RolePermission.findById(projectMember.role).select("role permissions");
-    const perm=projectMember.hascustompermission?projectMember.permissionsOverride:role.permissions
-    let payload={
-      permissions:perm,
-      role:role.role,
-      projectId:project._id,
-      userId:userId
+    // find role 
+    const role = await RolePermission.findById(projectMember.role).select("role permissions");
+    const perm = projectMember.hascustompermission ? projectMember.permissionsOverride : role.permissions
+    let payload = {
+      permissions: perm,
+      role: role.role,
+      projectId: project._id,
+      userId: userId
     }
 
     // generate proejct token 
@@ -158,12 +159,12 @@ export const createProject = async (req, res) => {
 
     return res.status(201).json({
       message: "Project created successfully",
-      projecttoken: projectToken,
       project: {
         ...project.toObject(),
         workflowId: workflow._id,
         boardId: board._id,
       },
+      projecttoken: projectToken,
     });
 
   } catch (error) {
@@ -309,7 +310,7 @@ export const getMyProjectsByWorkspace = async (req, res) => {
       userId,
       isRemoved: false, // optional filter to ignore removed members
     }).select("projectId");
-    console.log("memberships", memberships)
+
 
     // 2. Extract project IDs
     const projectIds = memberships.map((m) => m.projectId);
@@ -319,7 +320,7 @@ export const getMyProjectsByWorkspace = async (req, res) => {
       _id: { $in: projectIds },
       workspace: workspaceId,
     })
-      .populate("createdBy", "email _id firstName lastName")
+      .select("name _id")
       .lean();
 
     return res.status(200).json({
@@ -337,19 +338,23 @@ export const getProjectById = async (req, res) => {
     // ✅ Validate projectId and workspaceId first (fail fast)
     const { projectId } = req.params;
     const { orgId } = req.orgUser;
-    const userId=req.user.userId
-
+    const userId = req.user.userId
+    const { workspaceId } = req.query;
     const validatedProjectId = projectIdSchema.parse(projectId);
 
-
+    const exists = await Workspace.exists({ _id: workspaceId, organization: orgId });
+    if (!exists) {
+      return res.status(404).json({ message: "project not part of current workspace" });
+    }
     // ✅ Use Promise.all for parallel operations
     const [project] = await Promise.all([
       Project.findOne({
         _id: validatedProjectId,
         organization: orgId,
+        workspace: workspaceId
       })
         .populate([
-          { path: "createdBy", select: "email _id firstName lastName" },
+          { path: "createdBy", select: "email _id" },
           { path: "workspace", select: "name _id" },
           { path: "organization", select: "name _id" },
           { path: "boardId", select: "_id columns" }
@@ -374,19 +379,19 @@ export const getProjectById = async (req, res) => {
       return res.status(403).json({ message: "You are not a member of this project" });
     }
     // find role 
-    const role=await RolePermission.findById(member.role).select("role permissions");
-    const perm=member.hascustompermission?member.permissionsOverride:role.permissions
-    let payload={
-      permissions:perm,
-      role:role.role,
-      projectId:validatedProjectId,
-      userId:userId
+    const role = await RolePermission.findById(member.role).select("role permissions");
+    const perm = member.hascustompermission ? member.permissionsOverride : role.permissions
+    let payload = {
+      permissions: perm,
+      role: role.role,
+      projectId: validatedProjectId,
+      userId: userId
     }
 
     // generate proejct token 
     const projectToken = generateProjectToken(payload);
     setProjectCookie(res, projectToken);
-    
+
 
     // ✅ Create new object to avoid modifying the lean result
     const responseData = {
@@ -415,50 +420,68 @@ export const getProjectById = async (req, res) => {
 
 export const getAssignableMembers = async (req, res) => {
   try {
-    const projectId = req.params.projectId;
+    const { projectId } = req.params;
+    const { workspaceId } = req.body;
+    const { orgId } = req.orgUser;
 
-    if (!projectId) {
-      return res.status(400).json({ message: "Project ID is required" });
+    if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+      return res.status(400).json({ message: "Invalid workspace ID" });
     }
 
-    // 1. Get all members assigned to the project
-    const projectMembers = await ProjectMember.find({ projectId });
-
-    if (projectMembers.length === 0) {
-      return res.status(200).json({
-        message: "No members assigned to this project",
-        members: [],
-      });
+    // 1. Check workspace exists
+    const exists = await Workspace.exists({ _id: workspaceId, orgId });
+    if (!exists) {
+      return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // 2. Get userIds and map memberId
-    const memberDataMap = projectMembers.reduce((acc, member) => {
-      acc[member.userId.toString()] = member._id;
-      return acc;
-    }, {});
+    // 2. Check project belongs to this workspace + org
+    const project = await Project.findOne({
+      _id: projectId,
+      organization: orgId,
+      workspace: workspaceId,
+    });
 
-    const userIds = Object.keys(memberDataMap);
+    if (!project) {
+      return res
+        .status(404)
+        .json({ message: "Project is not part of this workspace" });
+    }
 
-    // 3. Fetch user details (email and avatar)
-    const users = await User.find({ _id: { $in: userIds } }).select("email avatar");
+    // 3. Get all current project members
+    const projectMembers = await ProjectMember.find({
+      projectId,
+      isRemoved: false,
+      organizationId: orgId,
+    }).select("userId");
 
-    // 4. Combine user info with projectMember ID
-    const members = users.map((user) => ({
-      memberId: memberDataMap[user._id.toString()],
-      userId: user._id,
-      email: user.email,
-      avatar: user.avatar || null,
-    }));
+  
 
-    res.status(200).json({
+    // 4. Get all workspace members
+    const workspaceMembers = await Member.find({
+      workspace: workspaceId,
+      isRemoved: false,
+      organizationId: orgId,
+    })
+      .select("_id userId")
+      .populate("userId", "email");
+
+    // 5. Filter out users already in project
+    const assignableMembers = workspaceMembers
+      .map((m) => ({
+        mId: m._id,
+        email: m.userId.email,
+      }));
+
+    return res.status(200).json({
       message: "Assignable project members fetched successfully",
-      members,
+      members: assignableMembers,
     });
   } catch (error) {
     console.error("Error in getAssignableMembers:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 export const getProjectAnalytics = async (req, res) => {
   try {
@@ -561,4 +584,4 @@ export const getProjectAnalytics = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-  
+

@@ -7,7 +7,7 @@ const workspaceSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      maxlength: 30,
+      maxlength: 10,
     },
     description: {
       type: String,
@@ -30,13 +30,13 @@ const workspaceSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    inviteCode: {
-      type: String,
-      unique: true,
-      required: true,
-      default: generateInviteCode,
-     match: /^[a-zA-Z0-9]{6,12}$/  // allows 6–12 chars, mixed case
-    },
+    // inviteCode: {
+    //   type: String,
+    //   unique: true,
+    //   required: true,
+    //   default: generateInviteCode,
+    //  match: /^[a-zA-Z0-9]{6,12}$/  // allows 6–12 chars, mixed case
+    // },
     isDeleted: {
       type: Boolean,
       default: false,
@@ -48,12 +48,7 @@ const workspaceSchema = new mongoose.Schema(
       required: false, // optional to avoid update errors
     },
 
-    // Optional future-proofing
-    visibility: {
-      type: String,
-      enum: ["private", "public"],
-      default: "private",
-    },
+   
     type: {
       type: String,
       enum: [

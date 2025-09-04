@@ -10,6 +10,8 @@ import { Task } from "../../models/project/TaskModel.js";
 import mongoose from "mongoose";
 import { Team } from "../../models/project/TeamModel.js";
 import { generateWorkspaceToken, setWorkspaceCookie } from "../../utils/generatetoken.js";
+import { OrgMember } from "../../models/OrganisationMemberSchema.js";
+import { sendCustomEmail } from "../../../config/nodemailer.config.js";
 export const createWorkspace = async (req, res, next) => {
   const { userId } = req.user;
   const { orgId } = req.orgUser;
@@ -28,7 +30,7 @@ export const createWorkspace = async (req, res, next) => {
   session.startTransaction();
 
   try {
-    const exists = await Workspace.findOne({ createdBy: userId, name }, null, { session });
+    const exists = await Workspace.exists({ createdBy: userId, name }, { session });
     if (exists) {
       await session.abortTransaction();
       return res.status(400).json({ message: "Name already taken" });
@@ -204,7 +206,7 @@ export const getAllWorkspace = async (req, res, next) => {
       workspaces,
     });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ error: err.message || "Internal server error " });
   }
 };
 export const getMyWorkspace = async (req, res, next) => {
@@ -224,8 +226,9 @@ export const getMyWorkspace = async (req, res, next) => {
       _id: { $in: workspaceIds },
       orgId,
       isDeleted: false,
-    }).sort({ createdAt: -1 });
-
+    })
+      .sort({ createdAt: -1 })
+      .select("_id name");
     res.status(200).json({
       message: "Workspaces fetched successfully",
       workspaces,
@@ -521,3 +524,236 @@ export const getWorkspaceAnalytics = async (req, res, next) => {
     next(err);
   }
 };
+export const workspacemember = async (req, res, next) => {
+  try {
+    const { workspaceId } = req.params;
+    const { orgId } = req.orgUser;
+
+    // Pagination inputs with max limit 50
+    let limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+    // Base query
+    const query = { workspaceId, organizationId: orgId, isDeleted: false };
+
+    // Add filters if provided
+    if (req.query.customPermission !== undefined) {
+      query.hasCustomPermission = req.query.customPermission === "true";
+    }
+    if (req.query.isDeleted) {
+      query.isDeleted = req.query.isDeleted === "true";
+    }
+
+    // Workspace existence check
+    const workspaceExists = await Workspace.exists({ _id: workspaceId, organizationId: orgId });
+    if (!workspaceExists) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Email filter (applied inside populate)
+    const emailFilter = req.query.email
+      ? { email: { $regex: req.query.email, $options: "i" } }
+      : {};
+
+    // Fetch total count
+    const totalMembers = await Member.countDocuments(query);
+
+    // Fetch members with filters + pagination
+    const members = await Member.find(query)
+      .select(
+        "_id userId role hasCustomPermission joinedAt status permissionsOverride createdAt updatedAt isDeleted"
+      )
+      .populate({
+        path: "userId",
+        select: "email firstName lastName",
+        match: emailFilter,
+      })
+      .populate({
+        path: "role",
+        select: "role permissions",
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Filter out members without matching user
+    const finalMembers = members
+      .filter(m => m.userId)
+      .map(m => ({
+        _id: m._id,
+        email: m.userId.email,
+        role: m.role?.role || null,
+        hasCustomPermission: m.hasCustomPermission,
+        status: m.status,
+        joinedAt: m.joinedAt,
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+        isDeleted: m.isDeleted,
+        permissions: m.hasCustomPermission
+          ? m.permissionsOverride || []
+          : m.role?.permissions || [],
+      }));
+
+    return res.status(200).json({
+      message: "Workspace members fetched successfully",
+      members: finalMembers,
+      pageInfo: {
+        currentPage: Number(page),
+        hasNextPage: skip + members.length < totalMembers,
+        totalPages: Math.ceil(totalMembers / limit),
+        limit: limit,
+        totalMembers
+      }
+    });
+  } catch (error) {
+    console.error("Error at workspace member:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const AddworkspaceMember = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const { email, role } = req.body;
+    const { userId } = req.user
+    const { orgId } = req.orgUser; // org user from auth
+
+    // 2. Check if user exists
+    const user = await User.findOne({ email }).select("_id");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 3. Check if user belongs to organization
+    const isOrgMember = await OrgMember.exists({
+      organizationId: orgId,
+      userId: user._id
+    });
+    if (!isOrgMember) {
+      return res.status(403).json({ message: "User not part of organization" });
+    }
+
+    // 1. Check if workspace exists
+    const workspaceExists = await Workspace.exists({ _id: workspaceId, organizationId: orgId });
+    if (!workspaceExists) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+
+
+    // find role 
+    const Role = await RolePermission.findOne({ role })
+    if (!Role) {
+      return res.status(404).json({ message: "Role not found" });
+    }
+
+
+    // 4. Check if already a workspace member
+    const memberExists = await Member.exists({
+      workspaceId,
+      organizationId: orgId,
+      userId: user._id,
+    });
+    if (memberExists) {
+      return res.status(400).json({ message: "User already a member of this workspace" });
+    }
+
+    // 5. Create workspace member
+    const member = await Member.create({
+      userId: user._id,
+      workspaceId,
+      organizationId: orgId,
+      role: Role._id, // you can set a default role if not passed
+      invitedBy: userId
+    });
+
+    return res.status(201).json({
+      message: "Member added successfully",
+      member
+    });
+  } catch (error) {
+    console.error("Error at AddMember:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const RemoveworkspaceMember = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const { email, reason } = req.body;
+    const { orgId } = req.orgUser;
+    const { userId } = req.user; // the one performing the removal
+
+    // 1. Check if workspace exists in organization
+    const workspace = await Workspace.findOne({ _id: workspaceId, organizationId: orgId }).select("name");
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // 2. Check if user exists
+    const user = await User.findOne({ email }).select("_id firstName lastName email");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 3. Check if user is a workspace member
+    const member = await Member.findOne({
+      workspaceId,
+      organizationId: orgId,
+      userId: user._id,
+      isDeleted: false
+    });
+    if (!member) {
+      return res.status(404).json({ message: "User is not a member of this workspace" });
+    }
+
+    // 4. Soft delete the membership
+    member.isDeleted = true;
+    member.removalReason = reason || "Removed from workspace";
+    member.status = "removed";
+    await member.save();
+
+    // 5. Send email notification
+    try {
+      const subject = `You have been removed from ${workspace.name}`;
+      const body = `
+        <p>Hi ${user.firstName || "there"},</p>
+        <p>You have been removed from the workspace <strong>${workspace.name}</strong>.</p>
+        <p><strong>Reason:</strong> ${reason || "No reason provided."}</p>
+        <p>If you believe this is a mistake, please contact the workspace admin.</p>
+        <br/>
+        <p>– FixlCRM Team</p>
+      `;
+      await sendCustomEmail({
+        to: user.email,
+        subject: subject,
+        html: body, // if body is HTML
+      });
+
+    } catch (emailError) {
+      console.error("Error sending removal email:", emailError.message);
+      // don’t block the API just because email failed
+    }
+
+    return res.status(200).json({
+      message: "Member removed successfully",
+      removedMember: {
+        _id: member._id,
+        userId: member.userId,
+        workspaceId: member.workspaceId,
+        removedBy: userId,
+        removalReason: member.removalReason,
+        removedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error("Error at RemoveworkspaceMember:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+
+
+

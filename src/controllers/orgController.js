@@ -47,8 +47,6 @@ export const createOrganization = async (req, res) => {
       contactPhone,
       contactName,
       address,
-      orgCity,
-      orgState,
       orgCountry,
     };
 
@@ -56,6 +54,11 @@ export const createOrganization = async (req, res) => {
       if (!value || value.trim() === "") {
         return res.status(400).json({ message: `${key} is required` });
       }
+    }
+
+    // check if name has number 
+    if (name.match(/\d/)) {
+      return res.status(400).json({ message: "Organization name cannot contain numbers" });
     }
 
     const user = await User.findById(userId);
@@ -251,103 +254,7 @@ export const switchOrg = async (req, res) => {
   }
 };
 
-// export const AddUserToOrganization = async (req, res) => {
-//   try {
-//     const { userId, role, jobTitle } = req.body;
-//     const organizationId = req.orgUser.orgId;
-//     const loggedinuser = req.user.userId;
-//     // ✅ Validate ObjectIds
-//     if (!mongoose.isValidObjectId(organizationId)) {
-//       return res.status(400).json({ message: "Invalid organizationId" });
-//     }
-//     if (!mongoose.isValidObjectId(userId)) {
-//       return res.status(400).json({ message: "Invalid userId" });
-//     }
 
-//     // ✅ No object needed in findById
-//     const organization = await Org.findOne({
-//       _id: organizationId,
-//       createdBy: loggedinuser, // ensures only the creator can access/modify
-//     });
-//     if (!organization) {
-//       return res
-//         .status(404)
-//         .json({ message: "Organization not found || you are not the creator" });
-//     }
-
-//     const user = await User.findById(userId).select("-password");
-//     if (!user) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-
-//     if (user.role === "SuperAdmin") {
-//       return res.status(400).json({ message: "You can't add SuperAdmin" });
-//     }
-//     const employeeId = generateEmployeeId(organizationId);
-//     // add that user to organization users array
-//     organization.users.push({
-//       userId: userId,
-//       employeeId,
-//       role: role,
-//       joinedAt: new Date(),
-//     });
-
-//     await organization.save();
-
-//     // ✅ Check if user is already in the organization
-//     const alreadyExists = user.organizations.some(
-//       (org) => org.org.toString() === organizationId
-//     );
-//     if (alreadyExists) {
-//       return res
-//         .status(400)
-//         .json({ message: "User already belongs to this organization" });
-//     }
-
-//     const rolePermissions = await RolePermission.findOne({ role });
-//     if (!rolePermissions) {
-//       return res.status(404).json({ message: "Role not found" });
-//     }
-
-//     const permissions = rolePermissions ? rolePermissions.permissions : [];
-//     console.log("permissions", permissions);
-
-//     // ✅ Add organization entry to user
-//     const organizationObject = {
-//       org: organization._id,
-//       role: role,
-//       employeeId,
-//       token: generateOrgAccessToken({
-//         userId,
-//         orgId: organization._id,
-//         employeeId,
-//         role,
-//         permissions,
-//       }),
-//       jobTitle: jobTitle,
-
-//       permissions: permissions,
-//     };
-
-//     user.organizations.push(organizationObject);
-//     await user.save();
-
-//     return res.status(200).json({
-//       message: "User added to organization successfully",
-//       user,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({
-//       message: "Error adding user to organization",
-//       error: error.message,
-//     });
-//   }
-// };
-
-// returns all the organizations that the user is part of
-
-// return all user in org
 
 export const getUserOrganizations = async (req, res) => {
   try {
@@ -387,13 +294,16 @@ export const getUserOrganizations = async (req, res) => {
 
     return res.status(200).json({
       message: "Organizations fetched successfully",
+      data,
       success: true,
       code: 200,
-      total: result.total,
-      page: result.page,
-      totalPages: result.totalPages,
-      limit: result.limit,
-      data,
+      pageinfo: {
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+        limit: result.limit,
+      }
+
     });
   } catch (error) {
     console.error("Error fetching user organizations:", error);
@@ -946,3 +856,39 @@ export const getOrganizationInvite = async (req, res) => {
     });
   }
 };
+
+export const UpdateOrgDetails = async (req, res) => {
+  try {
+
+    const {
+      name,
+      contactEmail,
+      contactPhone,
+      contactName,
+      address,
+      orgCountry
+    } = req.body
+    const orgId = req.orgUser.orgId;
+
+    let organization = await Org.exists({_id:orgId});
+    if (!organization) {
+      return res.status(404).json({ message: "Organization not found" });
+    }
+    const org = await Org.findByIdAndUpdate(orgId, {
+      name,
+      contactEmail,
+      contactPhone,
+      contactName,
+      address,
+      orgCountry
+    })
+
+    await org.save();
+    console.log("organization", organization);
+
+    res.status(200).json({ message: "Organization details updated successfully" });
+
+  } catch (error) {
+    return res.status(500).json({ message: "failed to update organization details" })
+  }
+}

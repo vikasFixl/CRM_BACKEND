@@ -35,5 +35,35 @@ export const sendEmail = async (to, subject, html) => {
   }
 };
 
+export const sendCustomEmail = async ({
+  from,
+  to,
+  cc,
+  bcc,
+  subject,
+  html,
+  text,
+}) => {
+  const mailOptions = {
+    from: from || `"FixlCRM" <${process.env.EMAIL_USER}>`, // default if not passed
+    to,
+    cc,
+    bcc,
+    subject,
+    text, // optional plain text
+    html,
+  
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Custom email sent successfully!");
+    return info;
+  } catch (error) {
+    console.error("Error sending custom email:", error.message);
+    throw error;
+  }
+};
+
 
 export default transporter;

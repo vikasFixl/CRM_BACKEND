@@ -72,4 +72,4 @@ MemberSchema.statics.findActive = function (query = {}) {
 //const members = await Member.findActive({ workspaceId: someId }); use of about statics
 
 export const Member =
-  mongoose.models.Member || mongoose.model("Member", MemberSchema);
+  mongoose.models.Member || mongoose.model("workspaceMember", MemberSchema);

@@ -126,7 +126,7 @@ export const createTeam = async (req, res) => {
     setTeamCookie(res, teamtoken)
 
     await session.commitTransaction();
-    res.status(201).json({ success: true, message: "Team created and linked to project board", team, token: teamtoken });
+    res.status(201).json({ message: "Team created and linked to project board", success: true, team, teamtoken: teamtoken });
   } catch (err) {
     await session.abortTransaction();
     console.error(err);
@@ -190,26 +190,24 @@ export const getTeamsByWorkspace = async (req, res) => {
 export const addTeamMember = async (req, res) => {
   try {
     const { teamId } = req.params;
-    const { projectId, member, role } = req.body;
+    const { projectId, memberId, role } = req.body;
     const addedBy = req.user.userId         // global User model
 
     // --- basic validation
-    if (!teamId || !projectId || !member || !role) {
+    if (!teamId || !projectId || !memberId || !role) {
       return res.status(400).json({ success: false, message: "teamId, projectId, member, and role are required" });
     }
-    if (![teamId, projectId, member].every(isValidObjectId)) {
+    if (![teamId, projectId, memberId].every(isValidObjectId)) {
       return res.status(400).json({ success: false, message: "One or more invalid ObjectId(s) provided" });
     }
 
     // --- check duplicates (unique index on {teamId, member})
-    const existing = await TeamMember.findOne({ teamId, member, isRemoved: false });
+    const existing = await TeamMember.findOne({ teamId, member: memberId, isRemoved: false });
     if (existing) {
       return res.status(409).json({ success: false, message: "User already exists in the team" });
     }
 
-    if (role == "TeamAdmin") {
-      return res.status(409).status({ message: "cannot assign this role " })
-    }
+
     // find role from the db 
     const teamrole = await RolePermission.findOne({ role })
     if (!teamrole) {
@@ -219,7 +217,7 @@ export const addTeamMember = async (req, res) => {
     const teamMember = await TeamMember.create({
       teamId,
       projectId,
-      member,      // ProjectMember _id
+      member: memberId,      // ProjectMember _id
       role: teamrole._id,
       addedBy,     // User _id
       isRemoved: false,
@@ -228,7 +226,7 @@ export const addTeamMember = async (req, res) => {
     // --- bump counter
     await Team.findByIdAndUpdate(teamId, { $inc: { membersCount: 1 } });
 
-    res.status(201).json({ success: true, message: "Member added to team", teamMember });
+    res.status(201).json({ message: "Member added to team", success: true, teamMember });
   } catch (error) {
     if (error.code === 11000) { // duplicate key
       return res.status(409).json({ success: false, message: "User already exists in the team" });
@@ -334,7 +332,7 @@ export const getTeamMembers = async (req, res) => {
     ]);
 
     /* ✅ Step 4: Send the result back */
-    res.status(200).json({ success: true, total: members.length, members });
+    res.status(200).json({ message: "Members fetched successfully", success: true, total: members.length, members });
   } catch (err) {
     // Error handler
     res.status(500).json({ success: false, message: "Failed to get members", error: err.message });
@@ -613,14 +611,54 @@ export const getMyTeamsByWorkspace = async (req, res) => {
 export const getTeamById = async (req, res) => {
   try {
     const { teamId } = req.params;
+    
+    const userId=req.user.userId;
+
+    
     const team = await Team.findById(teamId).populate('createdBy', 'email _id firstName lastName');
 
+    const projectMember = await ProjectMember.findOne({ userId });
+    if (!projectMember) return res.status(StatusCodes.OK).json({ success: false, message: 'You must be a project member' });
+
+    if(projectMember.projectId.toString()!=team.projectId){
+      return res.status(StatusCodes.OK).json({ success: false, message: 'You cannot access this team' });
+    }
+
     if (!team) return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Team not found' });
-    // find the team member 
-    // const teammember= await TeamMember.findOne({ teamId: team._id, member:memberId});
     return res.status(StatusCodes.OK).json({ success: true, team });
   } catch (error) {
     console.error('getTeamById:', error);
     return sendErr(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Internal server error');
+  }
+};
+
+export const getAssignableMembersForTeam = async (req, res) => {
+  try {
+    const { projectId, teamId } = req.params;
+
+    // 1. Get all project members (only active ones if you use `isRemoved`)
+    const projectMembers = await ProjectMember.find({ projectId })
+      .populate("userId", "fullName email") // populate user details
+      .lean();
+
+    // 2. Get already added team members (optional, if you want to exclude)
+    const teamMembers = await TeamMember.find({ teamId }).select("member").lean();
+    const teamMemberIds = teamMembers.map((m) => String(m.member));
+
+    // 3. Filter project members who are NOT in the team already
+    const assignable = projectMembers.filter(
+      (pm) => !teamMemberIds.includes(String(pm._id)) // compare with ProjectMember._id
+    );
+
+    return res.status(200).json({
+      message: "Assignable members fetched successfully",
+      members: assignable.map((pm) => ({
+        projectMemberId: pm._id, // needed when adding to TeamMember
+        email: pm.userId.email,
+      })),
+    });
+  } catch (err) {
+    console.error("getAssignableMembersForTeam error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };

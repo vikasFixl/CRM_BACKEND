@@ -18,6 +18,7 @@ import {
   getUserOrganizations,
   switchOrg,
   UpdateOrganizationUser,
+  UpdateOrgDetails,
 } from "../controllers/orgController.js";
 import { isAuthenticated } from "../middleweare/middleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
@@ -125,5 +126,6 @@ Router.route("/all/Invite").get(
 
   getOrganizationInvite
 );
+Router.route("/update/details").patch(isAuthenticated, authenticateOrgToken(), UpdateOrgDetails);
 
 export default Router;

@@ -12,12 +12,12 @@ const ProjectMemberSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    // teamId: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "Team", // Optional: if user is part of a team assigned to the project
-    // },
+    teamId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Team", // Optional: if user is part of a team assigned to the project
+    },
     role: {
-     type:mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "RolePermission",
       required: true,
     },
@@ -40,32 +40,20 @@ const ProjectMemberSchema = new mongoose.Schema(
         actions: [{ type: String }], // Example: ["CREATE", "EDIT", "DELETE"]
       },
     ],
-    preferences: {
-      theme: {
-        type: String,
-        default: "light",
-      },
-      removeReason: {
-        type: String,
-        default: "",
-        select: false,
-      },
-      timezone: {
-        type: String,
-        default: "UTC",
-      },
+    removeReason: {
+      type: String,
+      default: "",
+      select: false,
     },
     isRemoved: {
       type: Boolean,
       default: false,
     },
- 
   },
   { timestamps: true }
 );
 
 // ✅ Ensure a user is added only once per project
-//   ✅ This allows the same user to be in multiple projects, but only once per project.
 ProjectMemberSchema.index({ projectId: 1, userId: 1 }, { unique: true });
 
 // Optional index for fast member listing by project

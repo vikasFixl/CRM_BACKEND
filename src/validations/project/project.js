@@ -15,10 +15,7 @@ export const createProjectSchema = z.object({
     message: "Invalid template ID",
   }),
 
-  visibility: z.enum(["public", "private"], {
-    required_error: "Visibility must be either 'public' or 'private'",
-    invalid_type_error: "Visibility must be a string (public/private)",
-  }),
+
 });
 export const projectIdSchema = z
   .string()
@@ -31,17 +28,18 @@ export const projectIdSchema = z
 const AllowedProjectRoles = ["ProjectAdmin", "ProjectMember", "ProjectViewer"];
 
 export const addMemberSchema = z.object({
-  email: z
+
+
+
+  memberId: z
     .string({
-      required_error: "Email is required",
-      invalid_type_error: "Email must be a string",
+      required_error: "Member ID is required",
+      invalid_type_error: "Member ID must be a string",
     })
-    .email("Invalid email address"),
-
-  level: z.enum(["workspace", "project",], {
-    required_error: "Level must be either 'workspace' or 'project'",
-  }),
-
+    .min(1, "Member ID cannot be empty")
+    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
+      message: "Invalid member ID",
+    }),
   workspaceId: z
     .string({
       required_error: "Workspace ID is required",

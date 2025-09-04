@@ -8,7 +8,6 @@ import { Workspace } from "../../models/project/WorkspaceModel.js";
 import { RolePermission } from "../../models/RolePermission.js";
 import { Project } from "../../models/project/ProjectModel.js";
 import { Task } from "../../models/project/TaskModel.js";
-import mongoose from "mongoose";
 // add member
 export const assignMember = async (req, res) => {
   try {
@@ -24,110 +23,84 @@ export const assignMember = async (req, res) => {
       });
     }
 
-    const { email, level, workspaceId, role: roleName } = parsed.data;
+    const { memberId, workspaceId, role: roleName } = parsed.data;
 
-    // ✅ Validate IDs
-    if (!mongoose.isValidObjectId(workspaceId)) {
-      return res.status(400).json({ message: "Invalid workspaceId" });
-    }
-    if (level === "project" && !mongoose.isValidObjectId(projectId)) {
-      return res.status(400).json({ message: "Invalid projectId" });
+    // ✅ Check workspace existence in org
+    const workspace = await Workspace.findOne({ _id: workspaceId, orgId });
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // ✅ Check user
-    const user = await User.findOne({ email });
-    if (!user)
+    // ✅ Find workspace member
+    const workspaceMember = await Member.findOne({
+      _id: memberId,
+      workspace: workspaceId,
+      organizationId: orgId,
+      isRemoved: false,
+    }).populate("userId", "email");
+    
+    if (!workspaceMember) {
       return res
         .status(404)
-        .json({ message: "User dosen't exist on this platform" });
-
-    // ✅ Check if user is in organization
-    const isOrgMember = await OrgMember.exists({
-      userId: user._id,
-      organizationId: orgId,
-    });
-    if (!isOrgMember) {
-      return res.status(403).json({
-        message: "User is not a member of this current  organization",
-      });
+        .json({ message: "Member not found in workspace or removed" });
     }
 
-    // ✅ Validate workspace
-    const workspace = await Workspace.findById(workspaceId);
-    if (!workspace)
-      return res.status(404).json({ message: "Workspace not found" });
+    const userId = workspaceMember.userId._id; // ✅ extract userId
 
-    // ✅ Fetch RolePermission
-    let workrole = "WorkspaceMember";
-    const role = await RolePermission.findOne({ role: workrole });
-    if (!role) return res.status(404).json({ message: "Role not found" });
-
-    // ✅ Add to workspace (for both levels)
-    const existingWorkspaceMember = await Member.findOne({
-      userId: user._id,
-      workspaceId,
-      organizationId: orgId,
-    });
-
-    if (!existingWorkspaceMember) {
-      await Member.create({
-        userId: user._id,
-        workspaceId,
-        organizationId: orgId,
-        role: role._id,
-        invitedBy: req.user.userId,
-      });
-    }
-    user.currentWorkspace = workspaceId;
-    await user.save();
-    // ✅ If only adding to workspace
-    if (level === "workspace") {
-      if (existingWorkspaceMember) {
-        return res.status(400).json({ message: "User already in workspace" });
-      }
-      return res.status(200).json({ message: "User added to workspace" });
-    }
-
-    // ✅ Add to project
+    // ✅ Verify project belongs to workspace + org
     const project = await Project.findOne({
       _id: projectId,
       workspace: workspaceId,
+      organization: orgId,
     });
     if (!project) {
       return res
         .status(404)
-        .json({ message: "Project not found in workspace" });
+        .json({ message: "Project does not exist in this workspace" });
     }
 
-    const alreadyInProject = await ProjectMember.exists({
-      userId: user._id,
+    // ✅ Check if user already in project
+    const alreadyInProject = await ProjectMember.findOne({
+      userId,
       projectId,
-    }).select("totalmembers");
-
+      organizationId: orgId,
+      isRemoved: false,
+    });
     if (alreadyInProject) {
       return res.status(400).json({ message: "User already in project" });
     }
 
-    const projectrole = await RolePermission.findOne({ role: roleName });
+    // ✅ Get role
+    const projectRole = await RolePermission.findOne({ role: roleName });
+    if (!projectRole) {
+      return res.status(404).json({ message: "Role not found" });
+    }
 
+    // ✅ Create project member
     await ProjectMember.create({
-      userId: user._id,
+      userId,
       projectId,
       workspaceId,
       organizationId: orgId,
-      role: projectrole._id,
-
+      role: projectRole._id,
       addedBy: req.user.userId,
     });
 
-    return res.status(200).json({ message: "User added to project" });
+    return res.status(201).json({
+      message: "User added to project successfully",
+      addedUser: {
+        email: workspaceMember.userId.email,
+        role: projectRole.role,
+      },
+    });
   } catch (error) {
     console.error("Error assigning member:", error);
     return res
       .status(500)
-      .json({ message: "Server error", error: error.message });
+      .json({ message: "Error assigning member", error: error.message });
   }
 };
+
 
 export const getAllProjectMembers = async (req, res) => {
   try {
@@ -140,6 +113,7 @@ export const getAllProjectMembers = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    
 
     // Populate user and role fields
     const membersRaw = await ProjectMember.find({ projectId })
@@ -148,7 +122,7 @@ export const getAllProjectMembers = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    console.log(membersRaw)
+    
     const totalMembers = await ProjectMember.countDocuments({ projectId });
 
     // Format each member
@@ -162,10 +136,11 @@ export const getAllProjectMembers = async (req, res) => {
         : defaultPermissions.flatMap((perm) => perm.actions);
 
       return {
-        m_id: member._id,
+        _id: member._id,
         email: member.userId?.email,
         fullName: member.userId?.fullName,
         role: roleName,
+         addedVia: member.addedVia,
         hasCustomPermission: member.hasCustomPermission,
         permissions: effectivePermissions,
       };
@@ -244,7 +219,8 @@ export const UpdateProjectMember = async (req, res) => {
 };
 export const RemoveProjectMember = async (req, res) => {
   try {
-    const memberId = req.params.memberId;
+    const memberId = req.body.memberId;
+    const projectId = req.params.projectId;
 
     // ✅ 1. find the proejct member
     const project = await ProjectMember.findById(memberId).populate(

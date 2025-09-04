@@ -14,7 +14,7 @@ export const verifySupportoken = async (req, res, next) => {
             return res.status(401).json({ message: 'Invalid support org token' });
         }
 
-     
+
         req.support = {
 
 
@@ -32,7 +32,7 @@ export const verifySupportoken = async (req, res, next) => {
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 };
-export const verifySupporOrgtoken = async(req, res, next) => {
+export const verifySupporOrgtoken = async (req, res, next) => {
     try {
         const token = req.cookies?.support_org_token;
         if (!token) {
@@ -45,12 +45,12 @@ export const verifySupporOrgtoken = async(req, res, next) => {
             return res.status(401).json({ message: 'Invalid support org token' });
         }
 
-         const session =  await SupportOrgSession.findOne({
+        const session = await SupportOrgSession.findOne({
             supportorgtoken: token,
             revoked: false,
             expiresAt: { $gt: Date.now() } // If using hashing, replace with tokenHash comparison
         })
-        if(!session){
+        if (!session) {
             return res.status(401).json({ message: 'Invalid or expired session token' });
         }
         req.supportorg = {

@@ -43,12 +43,7 @@ export const createTask = async (req, res) => {
     const { projectId } = req.params;
     const userId = req.user.userId;
 
-    //  check if team exist or not 
-    const team = await Team.findById(assignedTeamId);
-    if (!team) {
-      return res.status(404).json({ message: "team not found " })
-    }
-
+   
     /* ---------- 2. Parallel fetch + checks ---------- */
     const [project, board, member] = await Promise.all([
       Project.findById(projectId),
@@ -59,17 +54,26 @@ export const createTask = async (req, res) => {
     if (!project) return res.status(404).json({ message: "Project not found" });
     if (!board) return res.status(404).json({ message: "Board not found" });
     if (!member) return res.status(403).json({ message: "User not part of project" });
+     if (assignedTeamId) {
+      const team = await Team.findOne({ _id: assignedTeamId });
+       
+      if (!team || team.projectId.toString() != projectId ) {
+        return res.status(400).json({ message: "Invalid team for this project" });
+      }
+      if(team.boardId.toString()!=project.boardId.toString()){
+        return res.status(400).json({ message: "Team board does not match project board" });
+      }
+    }
+
+
+
+ 
 
     /* ---------- 3. Duplicate task name ---------- */
     const dup = await Task.findOne({ name, projectId, boardId });
     if (dup) return res.status(400).json({ message: "Task name already exists" });
     /* ---------- 3a. Validate assigned team ---------- */
-    if (assignedTeamId) {
-      const team = await Team.findOne({ _id: assignedTeamId });
-      if (!team || team.projectId.toString() != projectId) {
-        return res.status(400).json({ message: "Invalid team for this project" });
-      }
-    }
+   
 
     /* ---------- 4. Column validation ---------- */
     const column = board.columns.find((c) => c.key === status);
@@ -123,6 +127,7 @@ export const createTask = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
 
 export const getAllTasks = async (req, res) => {
   try {

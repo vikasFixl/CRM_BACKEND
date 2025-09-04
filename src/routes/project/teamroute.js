@@ -4,6 +4,7 @@ import {
   addTeamMember,
   createTeam,
   deleteTeam,
+  getAssignableMembersForTeam,
   getMyTeamsByWorkspace,
   getTeamById,
   getTeamMembers,
@@ -22,13 +23,18 @@ TeamRouter.route("/")
 // get all team in workspace
 TeamRouter.route("/")
   .get(getTeamsByWorkspace); // admin route to view all teams
-  TeamRouter.route("/:teamId")
+  TeamRouter.route("/:teamId/details")
   .get(isAuthenticated,authenticateOrgToken(),getTeamById);
 TeamRouter.route("/:workspaceId/all")
   .get(isAuthenticated,authenticateOrgToken(),getMyTeamsByWorkspace);
+TeamRouter.route("/:projectId/:teamId/assignable/members")
+  .get(isAuthenticated,authenticateOrgToken(),getAssignableMembersForTeam);
 
-TeamRouter.route("/:teamId/members")
+
+TeamRouter.route("/:teamId/add-member")
   .post(isAuthenticated,authenticateOrgToken(),addTeamMember)
+ 
+  TeamRouter.route("/:teamId/members")
   .get(isAuthenticated,authenticateOrgToken(),getTeamMembers);
 
 TeamRouter.route("/:teamId/member/:memberId")

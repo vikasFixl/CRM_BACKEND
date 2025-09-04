@@ -34,8 +34,8 @@ ProjectRouter.route("/workspace/:workspaceId/my-projects").get(
   authenticateOrgToken(),
   getMyProjectsByWorkspace
 );
-// get project members
-ProjectRouter.route("/:projectId").get(
+
+ProjectRouter.route("/:projectId/details").get(
   isAuthenticated,
   authenticateOrgToken(),
   getProjectById
