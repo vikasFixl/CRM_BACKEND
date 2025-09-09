@@ -1,486 +1,342 @@
-// enums/role.enum.js
-
-// enums/roles.enum.js
-// if (!user.permissions.includes("SUPPORT_ORG_LOGIN")) {
-//   throw new Error("Access denied: No support impersonation rights");
-// }
-
-// if (!user.permissions.includes("SUPPORT_VIEW_USERS")) {
-//   throw new Error("Support agent cannot view users in this org");
-// }
-
 
 export const ROLES = {
-  // 🌐 Platform-level Roles (Global access to entire SaaS system)
-  SUPER_ADMIN: "SuperAdmin",          // Full platform control
-  PLATFORM_ADMIN: "PlatformAdmin",       // Administers platform-wide settings
-  PLATFORM_SUPPORT: "PlatformSupport",     // Support for all organizations
-  PLATFORM_BILLING_OPS: "PlatformBillingOps",  // Handles billing and taxation
-  PLATFORM_DEVOPS: "PlatformDevOps",      // Infrastructure, monitoring
-  PLATFORM_ANALYST: "PlatformAnalyst",     // Reviews global reports
-  PLATFORM_CUSTOM: "PlatformCustom",      // For future/custom system-wide roles
+  // 🌐 Platform-level (SaaS-wide)
+  SUPER_ADMIN: "SuperAdmin",            // Full control over platform
+  PLATFORM_ADMIN: "PlatformAdmin",      // Manages platform settings & users
+  PLATFORM_SUPPORT: "PlatformSupport",  // Troubleshooting, impersonation
+  PLATFORM_BILLING: "PlatformBilling",  // Billing & taxation
+  PLATFORM_DEVOPS: "PlatformDevOps",    // Infra & monitoring
+  PLATFORM_ANALYST: "PlatformAnalyst",  // Global analytics
+  PLATFORM_CUSTOM: "PlatformCustom",    // Flexible custom role
 
-  // 🏢 Organization-level Roles (For managing firms/clients)
-  ORG_OWNER: "OrgOwner",         // Owns and controls the organization
-  ORG_ADMIN: "OrgAdmin",         // Manages users, settings, security
-  MANAGER: "Manager",          // Middle management, manages modules like leads, tasks
-  SUPPORT_AGENT: "SupportAgent",     // Handles support queries
-  FINANCE_MANAGER: "FinanceManager",   // Handles invoices, tax, expenses
-  SALES_MANAGER: "SalesManager",     // Manages leads, deals, contacts
-  SALES_REP: "SalesRep",         // Executes sales activities
-  ORG_ANALYST: "OrgAnalyst",       // Views reports, analytics
-  CLIENT_CONTACT: "ClientContact",    // Client-side person interacting with system
-  ORG_CUSTOM: "OrgCustom",        // Custom org-level role
+  // 🏢 Organization-level (CRM operations)
+  ORG_OWNER: "OrgOwner",                // Ultimate control of org
+  ORG_ADMIN: "OrgAdmin",                // Manages settings, users, modules
+  FINANCE_MANAGER: "FinanceManager",    // Invoices, tax, billing
+  SALES_MANAGER: "SalesManager",        // Leads, clients, pipeline
+  SUPPORT_AGENT: "SupportAgent",        // Handles support queries
+  ORG_ANALYST: "OrgAnalyst",            // Reporting & analytics
+  CLIENT_CONTACT: "ClientContact",      // External client role
+  ORG_CUSTOM: "OrgCustom",              // Custom org role
 
-  // 🧱 Workspace-level Roles (Used to group teams/projects)
-  WORKSPACE_ADMIN: "WorkspaceAdmin",    // Manages workspace-wide settings
-  WORKSPACE_MEMBER: "WorkspaceMember",   // Collaborates on projects
-  WORKSPACE_VIEWER: "WorkspaceViewer",   // View-only
-  WORKSPACE_CUSTOM: "WorkspaceCustom",   // Custom role for workspace
+  // 🧱 Workspace-level (group of projects/teams)
+  WORKSPACE_ADMIN: "WorkspaceAdmin",    // Controls workspace
+  WORKSPACE_MEMBER: "WorkspaceMember",  // Contributes to projects
+  WORKSPACE_VIEWER: "WorkspaceViewer",  // Read-only
+  WORKSPACE_CUSTOM: "WorkspaceCustom",  // Custom workspace role
 
-  // 👥 Team-level Roles (For cross-functional teams)
-  TEAM_ADMIN: "TeamAdmin",     // Manages team structure, members
-  TEAM_LEAD: "TeamLead",      // Leads a team, assigns work
-  TEAM_MEMBER: "TeamMember",    // Participates actively in team tasks
-  TEAM_VIEWER: "TeamViewer",    // Passive member, read-only
-  TEAM_CUSTOM: "TeamCustom",    // Custom team role
+  // 👥 Team-level (inside workspace/project)
+  TEAM_LEAD: "TeamLead",                // Leads & assigns work
+  TEAM_MEMBER: "TeamMember",            // Active contributor
+  TEAM_VIEWER: "TeamViewer",            // Read-only
+  TEAM_CUSTOM: "TeamCustom",            // Custom team role
 
-  // 📁 Project-level Roles (Project-based access control)
-  PROJECT_ADMIN: "ProjectAdmin",    // Controls project, workflow, permissions
-  PROJECT_MANAGER: "ProjectManager",  // Plans and oversees execution
-  PROJECT_LEAD: "ProjectLead",     // Leads implementation
-  PROJECT_MEMBER: "ProjectMember",   // Works on tasks
-  PROJECT_VIEWER: "ProjectViewer",   // Read-only access to project
-  PROJECT_CUSTOM: "ProjectCustom",   // Custom project-level role
+  // 📁 Project-level (Jira-like project management)
+  PROJECT_ADMIN: "ProjectAdmin",        // Controls project setup & workflows
+  PROJECT_MEMBER: "ProjectMember",      // Works on tasks
+  PROJECT_VIEWER: "ProjectViewer",      // Read-only
+  PROJECT_CUSTOM: "ProjectCustom",      // Custom project role
+
+  // 👔 HRM-level (employees & HR ops)
+  HR_ADMIN: "HRAdmin",                  // Controls HR module
+  HR_MANAGER: "HRManager",              // Manages employees, payroll
+  EMPLOYEE: "Employee",                 // Standard staff role
+  HR_CUSTOM: "HRCustom"                 // Custom HR role
 };
 
 
+
 export const MODULES = {
-  PLATFORM_SETTINGS: "platformSettings",
-  PLATFORM_BILLING: "platformBilling",
-  PLATFORM_ANALYTICS: "platformAnalytics",
-  PLATFORM_SUPPORT: "platformSupport",
-  PLATFORM_USERS: "platformUsers",
-  PLATFORM_AUDIT_LOGS: "platformAuditLogs",
-  PLATFORM_ROLES: "platformRoles",
-  PLATFORM_CLIENTS: "platformClients",
-  PLATFORM_ORGANIZATIONS: "platformOrganizations",
-  PLATFORM_INVOICES: "platformInvoices",
-  PLATFORM_REPORTS: "platformReports",
-
-  // 🏢 Organization-Level Modules (Client/Company level)
-  ORG_PROFILE: "orgProfile",
-  ORG_USERS: "orgUsers",
-  ORG_ROLES: "orgRoles",
-  ORG_PERMISSIONS: "orgPermissions",
-  ORG_BILLING: "orgBilling",
-  ORG_INVOICES: "orgInvoices",
-  ORG_LEADS: "orgLeads",
-  ORG_CONTACTS: "orgContacts",
-  ORG_CLIENTS: "orgClients",
-  ORG_TASKS: "orgTasks",
-  ORG_NOTES: "orgNotes",
-  ORG_FILES: "orgFiles",
-  ORG_EMAILS: "orgEmails",
-  ORG_SUPPORT: "orgSupport",
-  ORG_ANALYTICS: "orgAnalytics",
-  ORG_AUDIT_LOGS: "orgAuditLogs",
-
-  // 🧱 Workspace-Level Modules (used to organize teams/projects)
-  WORKSPACE_SETTINGS: "workspaceSettings",
-  WORKSPACE_USERS: "workspaceUsers",
-  WORKSPACE_TEAMS: "workspaceTeams",
-  WORKSPACE_PROJECTS: "workspaceProjects",
-  WORKSPACE_BOARDS: "workspaceBoards",
-  WORKSPACE_FILES: "workspaceFiles",
-  WORKSPACE_REPORTS: "workspaceReports",
-
-  // 👥 Team-Level Modules
-  TEAM_PROFILE: "teamProfile",
-  TEAM_MEMBERS: "teamMembers",
-  TEAM_TASKS: "teamTasks",
-  TEAM_BOARDS: "teamBoards",
-  TEAM_NOTES: "teamNotes",
-  TEAM_CALENDAR: "teamCalendar",
-  TEAM_FILES: "teamFiles",
-
-  // 📁 Project-Level Modules
-  PROJECT_PROFILE: "projectProfile",
-  PROJECT_MEMBERS: "projectMembers",
-  PROJECT_TASKS: "projectTasks",
-  PROJECT_EPICS: "projectEpics",
-  PROJECT_SPRINTS: "projectSprints",
-  PROJECT_BOARDS: "projectBoards",
-  PROJECT_FILES: "projectFiles",
-  PROJECT_COMMENTS: "projectComments",
-  PROJECT_WIKI: "projectWiki",
-  PROJECT_AUTOMATIONS: "projectAutomations",
-  PROJECT_REPORTS: "projectReports",
-  PROJECT_WORKLOGS: "projectWorklogs",
-  PROJECT_RELEASES: "projectReleases",
-  PROJECT_INTEGRATIONS: "projectIntegrations",
-
-  // General/Common Modules (used across scopes)
-  NOTIFICATIONS: "notifications",
-  CALENDAR: "calendar",
-  MESSAGES: "messages",
-  SETTINGS: "settings",
-  ACTIVITY_LOGS: "activityLogs",
+  PLATFORM: "platform",                     // Global settings, monitoring, billing ops, infra
+  ORGANIZATION: "organization",             // Org-level settings & details
+  FIRM: "firm",                             // Business units inside organizations
+  CLIENT: "client",                         // Customers, partners
+  LEAD: "lead",                             // Sales pipeline
+  INVOICE: "invoice",                       // Billing documents
+  TAX: "tax",                               // Tax configurations & compliance
+  USER: "user",
+  DOCUMENT: "document",
+  REPORTS: "reports",                       // Org users
+  ROLE_PERMISSION: "role_permission",       // Role-based access control
+  PROJECT_MANAGEMENT: "project_management", // Projects, tasks, workflows
+  HRM_MANAGEMENT: "hrm_management"          // Employees, payroll, HR ops
 };
 
 
 
 
 export const PERMISSIONS = {
-  // ──────────────────────────────────────────────
-  // ──────────────────────────────────────────────
-  // 📊 Dashboard & Settings (Platform Admins only)
-  // ──────────────────────────────────────────────
-
-  // Can view global metrics, system health, and high-level stats
-  VIEW_DASHBOARD: 'VIEW_DASHBOARD',
-
-  // Can update platform-wide configurations (SMTP, branding, limits, etc.)
+  // ───────────────────────────────
+  // Platform
+  // ───────────────────────────────
   MANAGE_PLATFORM_SETTINGS: 'MANAGE_PLATFORM_SETTINGS',
+  MANAGE_SUBSCRIPTIONS: 'MANAGE_SUBSCRIPTIONS',
+  MANAGE_SUPPORT_SESSIONS: 'MANAGE_SUPPORT_SESSIONS',
+  VIEW_PLATFORM_ANALYTICS: 'VIEW_PLATFORM_ANALYTICS',
 
-  // ──────────────────────────────────────────────
-  // 👥 Users & Organizations (Super Admins only)
-  // ──────────────────────────────────────────────
-
-  // Can manage user accounts globally (create/delete/edit across orgs)
-  MANAGE_USER_ACCOUNTS: 'MANAGE_USER_ACCOUNTS',
-
-  // Can suspend a user's access platform-wide
-  SUSPEND_USER: 'SUSPEND_USER',
-
-  // Can reactivate suspended users
-  REACTIVATE_USER: 'REACTIVATE_USER',
-
-  // Can view and manage all organizations on the platform
-  MANAGE_ORGANIZATIONS: 'MANAGE_ORGANIZATIONS',
-
-  // Can suspend an organization (block login, pause billing)
-  SUSPEND_ORGANIZATION: 'SUSPEND_ORGANIZATION',
-
-  // Can reactivate suspended organizations
-  REACTIVATE_ORGANIZATION: 'REACTIVATE_ORGANIZATION',
-
-  // Can view/edit members within any organization
-  MANAGE_ORG_MEMBERS: 'MANAGE_ORG_MEMBERS',
-
-  // Can view and edit all system/global role definitions
-  MANAGE_SYSTEM_ROLES: 'MANAGE_SYSTEM_ROLES',
-
-  // ──────────────────────────────────────────────
-  // 📁 Data Access (Read-only by default unless impersonating)
-  // ──────────────────────────────────────────────
-
-  // View all client records across all organizations
-  VIEW_ALL_CLIENTS: 'VIEW_ALL_CLIENTS',
-
-  // View all lead records across the system
-  VIEW_ALL_LEADS: 'VIEW_ALL_LEADS',
-
-  // View all projects across organizations
-  VIEW_ALL_PROJECTS: 'VIEW_ALL_PROJECTS',
-
-  // View all tasks (without sensitive content unless SUPPORT_ORG_LOGIN is used)
-  VIEW_ALL_TASKS: 'VIEW_ALL_TASKS',
-
-  // View all workspace structures across orgs (if applicable)
-  VIEW_ALL_WORKSPACES: 'VIEW_ALL_WORKSPACES',
-
-  // View all team structures within any organization
-  VIEW_ALL_TEAMS: 'VIEW_ALL_TEAMS',
-
-  // View all users mapped within organizations
-  VIEW_ALL_USERS: 'VIEW_ALL_USERS',
-
-  // View all firms or business units (if supported)
-  VIEW_ALL_FIRMS: 'VIEW_ALL_FIRMS',
-
-  // ──────────────────────────────────────────────
-  // 💰 Billing & Subscription Management
-  // ──────────────────────────────────────────────
-
-  // Can create, update, and manage billing plans
-  MANAGE_BILLING_PLANS: 'MANAGE_BILLING_PLANS',
-
-  // Can manually expire a billing plan (e.g., ending a trial)
-  EXPIRE_BILLING_PLAN: 'EXPIRE_BILLING_PLAN',
-
-  // Can view and manage invoices of all organizations
-  MANAGE_INVOICES: 'MANAGE_INVOICES',
-
-  // Can set and edit global tax rules (e.g., GST/VAT)
-  MANAGE_TAX_CONFIG: 'MANAGE_TAX_CONFIG',
-
-  // ──────────────────────────────────────────────
-  // 📄 Logs, Docs & Reporting
-  // ──────────────────────────────────────────────
-
-  // Can view all platform-level audit logs (login, actions, changes)
-  VIEW_AUDIT_LOGS: 'VIEW_AUDIT_LOGS',
-
-  // Can view documents uploaded globally (if flagged as public/shared)
-  VIEW_PLATFORM_DOCUMENTS: 'VIEW_PLATFORM_DOCUMENTS',
-
-  // Can view usage, growth, activity reports across all orgs
-  VIEW_USAGE_REPORTS: 'VIEW_USAGE_REPORTS',
-
-  // ──────────────────────────────────────────────
-  // 🔌 Integrations & API
-  // ──────────────────────────────────────────────
-
-  // Can view and manage integrations (Slack, Zapier, etc.)
-  MANAGE_INTEGRATIONS: 'MANAGE_INTEGRATIONS',
-
-  // Can create and manage platform-wide API clients and keys
-  MANAGE_API_CLIENTS: 'MANAGE_API_CLIENTS',
-
-  // ──────────────────────────────────────────────
-  // 🛟 Support & Security Tools (Support Staff Access)
-  // ──────────────────────────────────────────────
-
-  // 🔒 Can impersonate/login into any organization (logs required)
-  // Used by support agents to troubleshoot or configure on behalf of orgs
-  SUPPORT_ORG_LOGIN: 'SUPPORT_ORG_LOGIN',
-
-  // Can manage and reply to support tickets across all orgs
-  MANAGE_SUPPORT_TICKETS: 'MANAGE_SUPPORT_TICKETS',
-
-  // Can view abuse/spam/fraud reports flagged by users or the system
-  VIEW_ABUSE_REPORTS: 'VIEW_ABUSE_REPORTS',
-
-  // Can view org-level security status (2FA, breached accounts, etc.)
-  VIEW_ORG_SECURITY_STATUS: 'VIEW_ORG_SECURITY_STATUS',
-
-  // ──────────────────────────────────────────────
-  // 📣 Platform Notifications & Alerts
-  // ──────────────────────────────────────────────
-
-  // Can send platform-wide announcements or alerts to all users/orgs
-  MANAGE_PLATFORM_ANNOUNCEMENTS: 'MANAGE_PLATFORM_ANNOUNCEMENTS',
-
-  // Can view logs of all platform-level notifications sent (email/SMS/push)
-  VIEW_NOTIFICATION_LOGS: 'VIEW_NOTIFICATION_LOGS',
-
-  // ──────────────────────────────────────────────
-  // ⚖️ Legal & Compliance
-  // ──────────────────────────────────────────────
-
-  // Can view compliance logs (terms accepted, policy updates, audits)
-  VIEW_COMPLIANCE_LOGS: 'VIEW_COMPLIANCE_LOGS',
-
-  // Can manage legal documents (privacy policy, ToS, DPA)
-  MANAGE_LEGAL_POLICIES: 'MANAGE_LEGAL_POLICIES',
-
-  // ──────────────────────────────────────────────
-  // Organization-level permissions
-  // ──────────────────────────────────────────────
+  // ───────────────────────────────
+  // Organization & Users
+  // ───────────────────────────────
   CREATE_ORGANIZATION: 'CREATE_ORGANIZATION',
   EDIT_ORGANIZATION: 'EDIT_ORGANIZATION',
   DELETE_ORGANIZATION: 'DELETE_ORGANIZATION',
   SUSPEND_ORGANIZATION: 'SUSPEND_ORGANIZATION',
-  SEND_INVITATION: 'SEND_INVITATION',
-  DELETE_ORG_USER: 'DELETE_ORG_USER',
-  UPDATE_ORG_USER: 'UPDATE_ORG_USER',
-  VIEW_ORG_USER: 'VIEW_ORG_USER',
-  APPROVE_ORG_USER: 'APPROVE_ORG_USER',
   EXPORT_ORG_DATA: 'EXPORT_ORG_DATA',
   VIEW_ORG_ANALYTICS: 'VIEW_ORG_ANALYTICS',
-  CREATE_TICKET: 'CREATE_TICKET',
+  VIEW_ORG: 'VIEW_ORG',
+  VIEW_USER: 'VIEW_USER',
+  VIEW_ALL_USERS: 'VIEW_ALL_USERS',
+  UPDATE_ORG_USER: 'UPDATE_ORG_USER',
+  DELETE_ORG_USER: 'DELETE_ORG_USER',
+  SEND_INVITATION: 'SEND_INVITATION',
+  MANAGE_ORG_SESSIONS: 'MANAGE_ORG_SESSIONS',
+  ENABLE_SUPPORT_SESSIONS: 'ENABLE_SUPPORT_SESSIONS',
+  VIEW_ORG_USER: 'VIEW_ORG_USER',
 
-  // ──────────────────────────────────────────────
-  // User-level permissions
-  // ──────────────────────────────────────────────
+
   CREATE_USER: 'CREATE_USER',
   DELETE_USER: 'DELETE_USER',
   SUSPEND_USER: 'SUSPEND_USER',
-  VIEW_USER_PROFILE: 'VIEW_USER_PROFILE',
-  UPDATE_USER_PROFILE: 'UPDATE_USER_PROFILE',
-  RESET_USER_PASSWORD: 'RESET_USER_PASSWORD',
-  MANAGE_USER_SESSIONS: 'MANAGE_USER_SESSIONS',
+  // APPROVE_ORG_USER: 'APPROVE_ORG_USER',
 
-  // ──────────────────────────────────────────────
-  // Lead-level permissions
-  // ──────────────────────────────────────────────
+  VIEW_USER_PROFILE: 'VIEW_USER_PROFILE',
+  // UPDATE_USER_PROFILE: 'UPDATE_USER_PROFILE',
+  // RESET_USER_PASSWORD: 'RESET_USER_PASSWORD',
+  // MANAGE_USER_SESSIONS: 'MANAGE_USER_SESSIONS',
+
+  // ───────────────────────────────
+  // Lead
+  // ───────────────────────────────
   CREATE_LEAD: 'CREATE_LEAD',
   EDIT_LEAD: 'EDIT_LEAD',
   DELETE_LEAD: 'DELETE_LEAD',
+  VIEW_DELETED_LEAD: 'VIEW_DELETED_LEAD',
   RESTORE_LEAD: 'RESTORE_LEAD',
-  CONVERT_LEAD: 'CONVERT_LEAD',
+  // CONVERT_LEAD: 'CONVERT_LEAD',
   ASSIGN_LEAD: 'ASSIGN_LEAD',
   VIEW_LEAD: 'VIEW_LEAD',
 
-  // ──────────────────────────────────────────────
-  // Client-level permissions
-  // ──────────────────────────────────────────────
+  // ───────────────────────────────
+  // Client
+  // ───────────────────────────────
   CREATE_CLIENT: 'CREATE_CLIENT',
   EDIT_CLIENT: 'EDIT_CLIENT',
   DELETE_CLIENT: 'DELETE_CLIENT',
   RESTORE_CLIENT: 'RESTORE_CLIENT',
-
-  // ──────────────────────────────────────────────
-  // Firm-level permissions
-  // ──────────────────────────────────────────────
+  VIEW_CLIENT_LIST: 'VIEW_CLIENT_LIST',
+  VIEW_DELETED_CLIENT: 'VIEW_DELETED_CLIENT',
+  // ───────────────────────────────
+  // Firm
+  // ───────────────────────────────
   CREATE_FIRM: 'CREATE_FIRM',
   EDIT_FIRM: 'EDIT_FIRM',
   DELETE_FIRM: 'DELETE_FIRM',
-  SUSPEND_FIRM: 'SUSPEND_FIRM',
   RESTORE_FIRM: 'RESTORE_FIRM',
-  VIEW_TRASH: 'VIEW_TRASH',
-  MERGE_FIRMS: 'MERGE_FIRMS',
+  VIEW_DELETED_FIRM: 'VIEW_DELETED_FIRM',
+  VIEW_FIRM: 'VIEW_FIRM',
 
-  // ──────────────────────────────────────────────
-  // Project-level permissions
-  // ──────────────────────────────────────────────
+  // ───────────────────────────────
+  // Project
+  // ───────────────────────────────
   CREATE_PROJECT: 'CREATE_PROJECT',
   EDIT_PROJECT: 'EDIT_PROJECT',
   DELETE_PROJECT: 'DELETE_PROJECT',
-  ARCHIVE_PROJECT: 'ARCHIVE_PROJECT',
   ASSIGN_PROJECT_LEAD: 'ASSIGN_PROJECT_LEAD',
-  VIEW_PROJECT_ACTIVITY: 'VIEW_PROJECT_ACTIVITY',
+  ADD_PROJECT_MEMBER: 'ADD_PROJECT_MEMBER',
+  REMOVE_PROJECT_MEMBER: 'REMOVE_PROJECT_MEMBER',
+  VIEW_PROJECT_MEMBERS: 'VIEW_PROJECT_MEMBERS',
+  EDIT_PROJECT_MEMBERS: 'EDIT_PROJECT_MEMBERS',
+  VIEW_ASSIGN_PROJECT_MEMBERS: 'VIEW_ASSIGN_PROJECT_MEMBERS',
+  MAMAGE_PROJECT_PERMISSIONS: 'MAMAGE_PROJECT_PERMISSIONS',
   MANAGE_PROJECT_BUDGET: 'MANAGE_PROJECT_BUDGET',
+  VIEW_PROJECT: 'VIEW_PROJECT',
+  VIEW_ALL_PROJECT: 'VIEW_ALL_PROJECT',
+  VIEW_PROJECT_ANALYTICS: 'VIEW_PROJECT_ANALYTICS',
+
   CREATE_WORKFLOW: 'CREATE_WORKFLOW',
   EDIT_WORKFLOW: 'EDIT_WORKFLOW',
   DELETE_WORKFLOW: 'DELETE_WORKFLOW',
   MANAGE_WORKFLOW_TRANSITIONS: 'MANAGE_WORKFLOW_TRANSITIONS',
-  CREATE_BOARD: 'CREATE_BOARD',
-  EDIT_BOARD: 'EDIT_BOARD',
-  DELETE_BOARD: 'DELETE_BOARD',
-  MANAGE_BOARD_COLUMNS: 'MANAGE_BOARD_COLUMNS',
-  MOVE_TASKS_BETWEEN_COLUMNS: 'MOVE_TASKS_BETWEEN_COLUMNS',
   VIEW_WORKFLOW: 'VIEW_WORKFLOW',
-  VIEW_BOARD: 'VIEW_BOARD',
 
-  // ──────────────────────────────────────────────
-  // Task-level permissions
-  // ──────────────────────────────────────────────
+  CREATE_BOARD: 'CREATE_BOARD',
+  DELETE_BOARD: 'DELETE_BOARD',
+  EDIT_BOARD_COLUMN: 'EDIT_BOARD_COLUMN',
+  MANAGE_BOARD_COLUMNS: 'MANAGE_BOARD_COLUMNS',
+  DELETE_BOARD_COLUMN: 'DELETE_BOARD_COLUMN',
+  VIEW_BOARD: 'VIEW_BOARD',
+  VIEW_ALL_BOARD: 'VIEW_ALL_BOARD',
+
+  // ───────────────────────────────
+  // Board Automation (Jira-style)
+  // ───────────────────────────────
+  CREATE_AUTOMATION_RULE: 'CREATE_AUTOMATION_RULE',
+  EDIT_AUTOMATION_RULE: 'EDIT_AUTOMATION_RULE',
+  DELETE_AUTOMATION_RULE: 'DELETE_AUTOMATION_RULE',
+  ENABLE_AUTOMATION_RULE: 'ENABLE_AUTOMATION_RULE',
+  DISABLE_AUTOMATION_RULE: 'DISABLE_AUTOMATION_RULE',
+  VIEW_AUTOMATION_RULE: 'VIEW_AUTOMATION_RULE',
+  MANAGE_AUTOMATION_TRIGGERS: 'MANAGE_AUTOMATION_TRIGGERS',
+  MANAGE_AUTOMATION_ACTIONS: 'MANAGE_AUTOMATION_ACTIONS',
+  MANAGE_AUTOMATION_CONDITIONS: 'MANAGE_AUTOMATION_CONDITIONS',
+  RUN_AUTOMATION_MANUALLY: 'RUN_AUTOMATION_MANUALLY',
+
+  // ───────────────────────────────
+  // Task
+  // ───────────────────────────────
+
   CREATE_TASK: 'CREATE_TASK',
+  VIEW_ALL_TASKS: 'VIEW_ALL_TASKS',
   EDIT_TASK: 'EDIT_TASK',
   DELETE_TASK: 'DELETE_TASK',
-  ASSIGN_TASK: 'ASSIGN_TASK',
+  MOVE_TASKS_BETWEEN_COLUMNS: 'MOVE_TASKS_BETWEEN_COLUMNS',
   COMMENT_ON_TASK: 'COMMENT_ON_TASK',
-  CHANGE_TASK_STATUS: 'CHANGE_TASK_STATUS',
-  MARK_TASK_COMPLETE: 'MARK_TASK_COMPLETE',
-  SET_TASK_PRIORITY: 'SET_TASK_PRIORITY',
-  VIEW_TASK_HISTORY: 'VIEW_TASK_HISTORY',
+  VIEW_TASK: 'VIEW_TASK',
 
-  // ──────────────────────────────────────────────
-  // Team-level permissions
-  // ──────────────────────────────────────────────
+  // ───────────────────────────────
+  // Team
+  // ───────────────────────────────
   CREATE_TEAM: 'CREATE_TEAM',
+  VIEW_TEAM: 'VIEW_TEAM',
   EDIT_TEAM: 'EDIT_TEAM',
   DELETE_TEAM: 'DELETE_TEAM',
+  VIEW_ASSIGN_TEAM_MEMBERS: 'VIEW_ASSIGN_TEAM_MEMBERS',
   ADD_TEAM_MEMBER: 'ADD_TEAM_MEMBER',
   REMOVE_TEAM_MEMBER: 'REMOVE_TEAM_MEMBER',
+  VIEW_TEAM_MEMBERS: 'VIEW_TEAM_MEMBERS',
   ASSIGN_TEAM_ROLE: 'ASSIGN_TEAM_ROLE',
   MANAGE_TEAM_SETTINGS: 'MANAGE_TEAM_SETTINGS',
   MANAGE_TEAM_PERMISSIONS: 'MANAGE_TEAM_PERMISSIONS',
+  EDIT_TEAM_MEMBERS: 'EDIT_TEAM_MEMBERS',
 
-  // ──────────────────────────────────────────────
-  // Role-level permissions
-  // ──────────────────────────────────────────────
+  // ───────────────────────────────
+  // Role & Permissions
+  // ───────────────────────────────
   CREATE_ROLE: 'CREATE_ROLE',
   EDIT_ROLE: 'EDIT_ROLE',
   DELETE_ROLE: 'DELETE_ROLE',
-  ASSIGN_ROLE: 'ASSIGN_ROLE',
   VIEW_ROLE: 'VIEW_ROLE',
   MANAGE_PERMISSIONS: 'MANAGE_PERMISSIONS',
   AUDIT_PERMISSIONS: 'AUDIT_PERMISSIONS',
   CHANGE_MEMBER_ROLE: 'CHANGE_MEMBER_ROLE',
 
-  // ──────────────────────────────────────────────
-  // Audit-log permissions
-  // ──────────────────────────────────────────────
-  VIEW_AUDIT_LOGS: 'VIEW_AUDIT_LOGS',
-  EXPORT_AUDIT_LOGS: 'EXPORT_AUDIT_LOGS',
-
-  // ──────────────────────────────────────────────
-  // Document permissions
-  // ──────────────────────────────────────────────
+  // ───────────────────────────────
+  // Document
+  // ───────────────────────────────
   UPLOAD_DOCUMENT: 'UPLOAD_DOCUMENT',
   DOWNLOAD_DOCUMENT: 'DOWNLOAD_DOCUMENT',
   SHARE_DOCUMENT: 'SHARE_DOCUMENT',
   MANAGE_DOCUMENT_VERSIONS: 'MANAGE_DOCUMENT_VERSIONS',
   DELETE_DOCUMENT: 'DELETE_DOCUMENT',
 
-  // ──────────────────────────────────────────────
-  // Integration permissions
-  // ──────────────────────────────────────────────
-  INTEGRATE_THIRD_PARTY_APPS: 'INTEGRATE_THIRD_PARTY_APPS',
-  MANAGE_INTEGRATIONS: 'MANAGE_INTEGRATIONS',
-  MANAGE_WEBHOOKS: 'MANAGE_WEBHOOKS',
-
-  // ──────────────────────────────────────────────
-  // Reporting permissions
-  // ──────────────────────────────────────────────
+  // ───────────────────────────────
+  // Reporting
+  // ───────────────────────────────
   GENERATE_REPORT: 'GENERATE_REPORT',
   EXPORT_DATA: 'EXPORT_DATA',
   SCHEDULE_REPORTS: 'SCHEDULE_REPORTS',
   SHARE_REPORTS: 'SHARE_REPORTS',
 
-  // ──────────────────────────────────────────────
-  // View-mode permissions
-  // ──────────────────────────────────────────────
+  // ───────────────────────────────
+  // HRM
+  // ───────────────────────────────
+  CREATE_EMPLOYEE: 'CREATE_EMPLOYEE',
+  EDIT_EMPLOYEE: 'EDIT_EMPLOYEE',
+  DELETE_EMPLOYEE: 'DELETE_EMPLOYEE',
+  SUSPEND_EMPLOYEE: 'SUSPEND_EMPLOYEE',
+  VIEW_EMPLOYEE_PROFILE: 'VIEW_EMPLOYEE_PROFILE',
+  VIEW_ALL_EMPLOYEES: 'VIEW_ALL_EMPLOYEES',
+  MANAGE_EMPLOYE_LEAVE: 'MANAGE_EMPLOYE_LEAVE',
+  MANAGE_EMPLOYEE_PERMISSIONS: 'MANAGE_EMPLOYEE_PERMISSIONS',
+  UPDATE_EMPLOYEE_PROFILE: 'UPDATE_EMPLOYEE_PROFILE',
+
+  MANAGE_PAYROLL: 'MANAGE_PAYROLL',
+  VIEW_PAYSLIPS: 'VIEW_PAYSLIPS',
+  APPROVE_TIMESHEETS: 'APPROVE_TIMESHEETS',
+  MANAGE_ATTENDANCE: 'MANAGE_ATTENDANCE',
+
+  CREATE_JOB_POSTING: 'CREATE_JOB_POSTING',
+  EDIT_JOB_POSTING: 'EDIT_JOB_POSTING',
+  DELETE_JOB_POSTING: 'DELETE_JOB_POSTING',
+  REVIEW_APPLICATIONS: 'REVIEW_APPLICATIONS',
+  HIRE_CANDIDATE: 'HIRE_CANDIDATE',
+
+  INVITE_GUEST: 'INVITE_GUEST',
+
   VIEW_ONLY: 'VIEW_ONLY',
   VIEW_LIMITED_ACCESS: 'VIEW_LIMITED_ACCESS',
-  VIEW_SELF_DATA_ONLY: 'VIEW_SELF_DATA_ONLY',
-
-  // ──────────────────────────────────────────────
-  // Member permissions
-  // ──────────────────────────────────────────────
-  ADD_MEMBER: 'ADD_MEMBER',
-  REMOVE_MEMBER: 'REMOVE_MEMBER',
-  ASSIGN_MEMBER_TO_PROJECT: 'ASSIGN_MEMBER_TO_PROJECT',
-  INVITE_GUEST: 'INVITE_GUEST',
-  VIEW_MEMBER_LIST: 'VIEW_MEMBER_LIST',
-}
-
-export const ROLE_SCOPE = {
-  // 🔒 System-wide roles (e.g., SuperAdmin, Platform Support)
-  PLATFORM: "sc-plat",          // Applies to platform-level operations
-
-  // 🏢 Organization-level roles (e.g., OrgAdmin, Manager)
-  ORGANIZATION: "sc-org",       // Applies to a specific organization (firm)
-
-  // 🧩 Workspace-level roles (if using workspaces inside orgs)
-  WORKSPACE: "sc-wrk",          // Applies to a specific workspace
-
-  // 📁 Project-level roles (e.g., for project settings, boards, tasks)
-  PROJECT: "sc-prj",            // Applies to a specific project
-
-  // 👥 Team-level roles (e.g., for task collaboration and boards)
-  TEAM: "sc-tm",                // Applies to a specific team
+  //
+  VIEW_AUDIT_LOGS: 'VIEW_AUDIT_LOGS',
+  MANAGE_AUDIT_LOGS: 'MANAGE_AUDIT_LOGS',
 };
 
+
+export const ROLE_SCOPE = {
+  // 🔒 System-wide roles (platform-wide access)
+  PLATFORM: "sc-plat",          // Applies to platform-level operations
+
+  // 🏢 Organization-level roles
+  ORGANIZATION: "sc-org",       // Applies to a specific organization
+
+  // 🧩 Workspace-level roles
+  WORKSPACE: "sc-wrk",          // Applies to a specific workspace
+
+  // 📁 Project-level roles
+  PROJECT: "sc-prj",            // Applies to a specific project
+
+  // 👥 Team-level roles
+  TEAM: "sc-tm",                // Applies to a specific team
+
+  // 🧑‍💼 HRM-level roles
+  HRM: "sc-hrm",                // Applies to HRM (employees, payroll, HR ops)
+
+  // 🎟️ Guest-level roles
+  GUEST: "sc-guest",            // Applies to guest/external users
+};
+
+
 export const ROLE_SCOPES_MAP = {
-  // Organization level
-  [ROLES.SUPER_ADMIN]: ROLE_SCOPE.ORGANIZATION,
+  // 🌐 Platform level
+  [ROLES.SUPER_ADMIN]: ROLE_SCOPE.PLATFORM,
+  [ROLES.PLATFORM_ADMIN]: ROLE_SCOPE.PLATFORM,
+  [ROLES.PLATFORM_SUPPORT]: ROLE_SCOPE.PLATFORM,
+  [ROLES.PLATFORM_BILLING]: ROLE_SCOPE.PLATFORM,
+  [ROLES.PLATFORM_DEVOPS]: ROLE_SCOPE.PLATFORM,
+  [ROLES.PLATFORM_ANALYST]: ROLE_SCOPE.PLATFORM,
+  [ROLES.PLATFORM_CUSTOM]: ROLE_SCOPE.PLATFORM,
+
+  // 🏢 Organization level
+  [ROLES.ORG_OWNER]: ROLE_SCOPE.ORGANIZATION,
   [ROLES.ORG_ADMIN]: ROLE_SCOPE.ORGANIZATION,
-  [ROLES.MANAGER]: ROLE_SCOPE.ORGANIZATION,
+  [ROLES.FINANCE_MANAGER]: ROLE_SCOPE.ORGANIZATION,
+  [ROLES.SALES_MANAGER]: ROLE_SCOPE.ORGANIZATION,
   [ROLES.SUPPORT_AGENT]: ROLE_SCOPE.ORGANIZATION,
-  [ROLES.USER]: ROLE_SCOPE.ORGANIZATION,
+  [ROLES.ORG_ANALYST]: ROLE_SCOPE.ORGANIZATION,
+  [ROLES.CLIENT_CONTACT]: ROLE_SCOPE.ORGANIZATION, // external role still scoped to org
   [ROLES.ORG_CUSTOM]: ROLE_SCOPE.ORGANIZATION,
 
-  // Workspace level
+  // 🧱 Workspace level
   [ROLES.WORKSPACE_ADMIN]: ROLE_SCOPE.WORKSPACE,
   [ROLES.WORKSPACE_MEMBER]: ROLE_SCOPE.WORKSPACE,
   [ROLES.WORKSPACE_VIEWER]: ROLE_SCOPE.WORKSPACE,
   [ROLES.WORKSPACE_CUSTOM]: ROLE_SCOPE.WORKSPACE,
 
-  // Team level
-  [ROLES.TEAM_ADMIN]: ROLE_SCOPE.TEAM,
+  // 👥 Team level
+  [ROLES.TEAM_LEAD]: ROLE_SCOPE.TEAM,
   [ROLES.TEAM_MEMBER]: ROLE_SCOPE.TEAM,
   [ROLES.TEAM_VIEWER]: ROLE_SCOPE.TEAM,
   [ROLES.TEAM_CUSTOM]: ROLE_SCOPE.TEAM,
 
-  // Project level
+  // 📁 Project level
   [ROLES.PROJECT_ADMIN]: ROLE_SCOPE.PROJECT,
   [ROLES.PROJECT_MEMBER]: ROLE_SCOPE.PROJECT,
   [ROLES.PROJECT_VIEWER]: ROLE_SCOPE.PROJECT,
   [ROLES.PROJECT_CUSTOM]: ROLE_SCOPE.PROJECT,
+
+  // 👔 HRM level
+  [ROLES.HR_ADMIN]: ROLE_SCOPE.HRM,
+  [ROLES.HR_MANAGER]: ROLE_SCOPE.HRM,
+  [ROLES.EMPLOYEE]: ROLE_SCOPE.HRM,
+  [ROLES.HR_CUSTOM]: ROLE_SCOPE.HRM,
 };
 
-// console.log(ROLE_SCOPES_MAP);
