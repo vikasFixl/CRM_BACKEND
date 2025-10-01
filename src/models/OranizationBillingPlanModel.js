@@ -109,7 +109,7 @@ const OrganizationBillingSchema = new Schema(
     metadata: { type: Map, of: String },
 
     isDeleted: { type: Boolean, default: false },
-
+status: { type: String, enum: ["active", "inactive"], default: "active", index: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },

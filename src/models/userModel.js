@@ -73,7 +73,7 @@ const UserSchema = new Schema(
     primaryDevice: { type: String, select: false },
     userType: {
       type: String,
-      enum: ["orgUser", "supportAgent", "platformAdmin", "guestUser", "automationBot","auditor","partner"],
+      enum: ["orgUser", "supportAgent", "platformAdmin", "guestUser", "automationBot","auditor","partner","platformstaff"],
 
       required: true,
       default: "orgUser",

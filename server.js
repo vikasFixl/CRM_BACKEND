@@ -19,6 +19,7 @@ import { startUserCleanupCron } from "./src/automation/UserDeleteAutomation.js";
 import jwt from "jsonwebtoken";
 import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
 import { errorHandler } from "./src/middleweare/errorhandler.js";
+import {downgradeExpiredTrials} from "./src/automation/downgradeplan.js"
 
 // Routes
 import userRoutes from "./src/routes/userRoute.js";
@@ -145,6 +146,7 @@ app.use("/api/session", router);
 app.use("/api/platform/ticket",Ticket)
 app.use("/api/platform/support",SupportRouter)
 app.use("/api/platform/billingplan",BillingRouter)
+// app.use("/api/platform/Auth",Auth)
 
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;
@@ -181,3 +183,4 @@ httpServer.listen(PORT, async () => {
 await connectDB();
 startUserCleanupCron();
 runWelcomeEmail();
+downgradeExpiredTrials.start();
