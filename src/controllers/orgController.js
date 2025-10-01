@@ -15,6 +15,7 @@ import { OrgMember } from "../models/OrganisationMemberSchema.js";
 import { ROLES } from "../enums/role.enums.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 import { paginateQuery } from "../utils/pagination.js";
+import { BillingHistory } from "../models/BillingHistory.js";
 
 
 // import Employee from "../models/employeeModel.js";
@@ -72,15 +73,12 @@ export const createOrganization = async (req, res) => {
         .json({ message: "Organization name already taken" });
     }
 
-    // ✅ Fetch billing plan
-    const billingPlan = await BillingPlan.findOne({ code: "FREE" });
-    if (!billingPlan)
-      return res.status(404).json({ message: "Billing plan not found" });
+    // ✅ Fetch FREE plan
+    const freePlan = await BillingPlan.findOne({ code: "FREE" });
+    if (!freePlan) return res.status(404).json({ message: "FREE billing plan not found" });
 
-    // ✅ Create organization instance
-    const newOrg = new Org({
-      name: normalizedName,
-      billingPlan: billingPlan._id,
+    const org = new Org({
+      name: name.trim().toLowerCase(),
       contactEmail,
       contactPhone,
       contactName,
@@ -88,6 +86,8 @@ export const createOrganization = async (req, res) => {
       orgCity,
       orgState,
       orgCountry,
+      billingPlan: freePlan._id,
+      modules: freePlan.modules,
       createdBy: userId,
       updatedBy: userId,
       isActive: true,
@@ -106,24 +106,46 @@ export const createOrganization = async (req, res) => {
       };
     }
 
-    const savedOrg = await newOrg.save();
-
-    // ✅ Create billing info
-    const newBilling = new OrganizationBilling({
+    const savedOrg = await org.save();
+    // After creating the organization and fetching the FREE plan
+    const newOrgBilling = new OrganizationBilling({
       organizationId: savedOrg._id,
-      billingPlanId: billingPlan._id,
+      billingPlanId: freePlan._id,
+
+      planSnapshot: {
+        name: freePlan.name,
+        code: freePlan.code,
+        planType: freePlan.planType,
+        price: 0, // Free plan price
+        billingCycle: freePlan.pricing[0]?.billingCycle || "monthly",
+        currency: freePlan.pricing[0]?.currency || "USD",
+        features: freePlan.features.map(f => f.title),
+        limits: freePlan.limits,
+      },
       subscriptionStartDate: new Date(),
-      trialEndDate: billingPlan.trialDays
-        ? new Date(Date.now() + billingPlan.trialDays * 24 * 60 * 60 * 1000)
+      trialEndDate: freePlan.trialDays
+        ? new Date(Date.now() + freePlan.trialDays * 24 * 60 * 60 * 1000)
         : null,
-      paymentStatus: "trialing",
+  
       autoRenew: true,
-      paymentMethod: { type: "trialing" },
+      paymentMethods: [
+        {
+          type: "other",
+          isDefault: true,
+        },
+      ],
       createdBy: savedOrg._id,
       updatedBy: savedOrg._id,
     });
 
-    await newBilling.save();
+    const savedOrgBilling = await newOrgBilling.save();
+
+
+    // ✅ Link currentBilling to org
+    savedOrg.currentBilling = savedOrgBilling._id;
+    await savedOrg.save();
+
+
 
     // ✅ Assign OrgAdmin Role
     const orgAdminRole = await RolePermission.findOne({ role: "OrgAdmin" });
@@ -156,14 +178,13 @@ export const createOrganization = async (req, res) => {
     user.currentOrganization = savedOrg._id;
     await user.save();
 
-    const { exp } = jwt.decode(orgtoken);
+
 
     return res.status(201).json({
-      message: "Organization and Billing created successfully",
+      message: "Organization created with FREE plan successfully",
       orgId: savedOrg._id,
       employeeId,
       orgtoken,
-      expiresAt: exp * 1000,
     });
   } catch (error) {
     console.error("Organization creation failed:", error);
@@ -870,7 +891,7 @@ export const UpdateOrgDetails = async (req, res) => {
     } = req.body
     const orgId = req.orgUser.orgId;
 
-    let organization = await Org.exists({_id:orgId});
+    let organization = await Org.exists({ _id: orgId });
     if (!organization) {
       return res.status(404).json({ message: "Organization not found" });
     }
@@ -892,3 +913,4 @@ export const UpdateOrgDetails = async (req, res) => {
     return res.status(500).json({ message: "failed to update organization details" })
   }
 }
+

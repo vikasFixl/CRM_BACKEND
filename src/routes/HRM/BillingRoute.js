@@ -1,23 +1,14 @@
 import express from "express";
-import { createBillingPlan,getAllBillingPlans ,getBillingPlanById,updateBillingPlan,deleteBillingPlan} from "../../controllers/BillingPlanController.js";
+import {  activatePlan, createPlan, deactivatePlan, getAllPlans, getPlanById, updatePlan} from "../../controllers/BillingPlanController.js";
 import { isAuthenticated } from "../../middleweare/middleware.js";
-const Router = express.Router();
+const BillingRouter = express.Router();
 
-Router.route("/createBillingPlan").post( isAuthenticated,createBillingPlan);
+BillingRouter.route("/create").post( isAuthenticated,createPlan);
+BillingRouter.route("/all").get( isAuthenticated,getAllPlans);
+BillingRouter.route("/:id").get( isAuthenticated,getPlanById);
+BillingRouter.route("/activate/:id").patch( isAuthenticated,activatePlan);
+BillingRouter.route("/deactivate/:id").patch( isAuthenticated,deactivatePlan);
+BillingRouter.route("/update/:id").patch( isAuthenticated,updatePlan);
 
-// get al plans
-Router.route("/getAllBillingPlans").get(getAllBillingPlans);
 
-// get plan by id
-Router.route("/getBillingPlan/:id").get((req, res) => {
-  res.send("getBillingPlan by id");
-});
-
-// update by id
-Router.route("/updateBillingPlan/:id").patch(updateBillingPlan);
-// delete by id
-Router.route("/deleteBillingPlan/:id").delete((req, res) => {
-  res.send("delteBillingPlan");
-});
-
-export default Router;
+export default BillingRouter;

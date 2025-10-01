@@ -48,7 +48,9 @@ import otplib from "otplib"
 import qrcode from "qrcode"
 import macaddress from 'macaddress'
 import Ticket from "./src/routes/ticket.route.js";
+import BillingRouter from "./src/routes/HRM/BillingRoute.js"
 import SupportRouter from "./src/routes/superadmin/supportagent.js";
+import OrgBillingRouter from "./src/routes/orgBillingRoute.js";
 macaddress.all((err, all) => {
   console.log(all); // All network interfaces and their MACs
 });
@@ -138,9 +140,11 @@ app.use("/api/workflow", WorkflowRouter);
 app.use("/api/documents", DocumentRouter);
 app.use("/api/teams", TeamRouter);
 app.use("/api/project-templates", ProjectTemplateRouter);
+app.use("/api/OrgBilling",OrgBillingRouter)
 app.use("/api/session", router);
-app.use("/api/ticket",Ticket)
-app.use("/api/support",SupportRouter)
+app.use("/api/platform/ticket",Ticket)
+app.use("/api/platform/support",SupportRouter)
+app.use("/api/platform/billingplan",BillingRouter)
 
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;

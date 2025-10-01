@@ -1,82 +1,134 @@
 import { BillingPlan } from "../models/BillingPlanModel.js";
-
-// Create a new billing plan
-export const createBillingPlan = async (req, res) => {
+import { BillingPlanValidator } from "../validations/billing/billing.js";
+export const createPlan = async (req, res, next) => {
   try {
-    const { name, code, description, price, billingCycle, maxUsers, maxStorageGB, trialDays, features, permissions } = req.body;
-    console.log(req.body);
+    const body = BillingPlanValidator.parse(req.body);
 
-    const billingPlan = new BillingPlan({
-      name, 
-      code, 
-      description, 
-      price, 
-      billingCycle, 
-      maxUsers, 
-      maxStorageGB, 
-      trialDays, 
-      features, 
-      permissions,
-      createdBy: req.user.userId,
-      updatedBy: req.user.userId
+    const existingPlan = await BillingPlan.findOne({ code: body.code,name: body.name });
+    if(existingPlan){
+      return res.status(400).json({ success: false, message: "name and code already exists" });
+    }
+    const plan = await BillingPlan.create({
+      ...body,
+      createdBy: req.user?._id, // assuming auth middleware
     });
-    console.log(billingPlan);
-    await billingPlan.save();
-    res.status(201).json({ success: true, message: "Billing plan created successfully", data: billingPlan });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+
+    res.status(201).json({ success: true, message: "Plan created successfully"});
+  } catch (err) {
+    next(err);
   }
 };
 
-// Get all billing plans
-export const getAllBillingPlans = async (req, res) => {
+// ✅ Get all plans
+export const getAllPlans = async (req, res, next) => {
   try {
-    const billingPlans = await BillingPlan.find();
-    res.status(200).json({ success: true, data: billingPlans });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+    const { currency } = req.query; // e.g. ?currency=USD
 
-// Get a single billing plan by ID
-export const getBillingPlanById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const billingPlan = await BillingPlan.findById(id);
-    if (!billingPlan) {
-      return res.status(404).json({ success: false, message: "Billing plan not found" });
+    let plans = [];
+
+    if (currency) {
+      // Only return active plans with that currency
+      plans = await BillingPlan.aggregate([
+        { $match: { isActive: true } },
+        { $unwind: "$pricing" },
+        { $match: { "pricing.currency": currency } },
+        {
+          $group: {
+            _id: "$_id",
+            name: { $first: "$name" },
+            description: { $first: "$description" },
+            features: { $first: "$features" },
+            pricing: { $push: "$pricing" }
+          }
+        }
+      ]);
+    } else {
+      // No currency -> explicitly return empty array
+      plans = [];
     }
-    res.status(200).json({ success: true, data: billingPlan });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+
+    res.status(200).json({ success: true, plans });
+  } catch (err) {
+    next(err);
   }
 };
 
-// Update a billing plan
-export const updateBillingPlan = async (req, res) => {
+
+// ✅ Get plan by ID
+export const getPlanById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const updatedData = req.body;
-    const billingPlan = await BillingPlan.findByIdAndUpdate(id, updatedData, { new: true });
-    if (!billingPlan) {
-      return res.status(404).json({ success: false, message: "Billing plan not found" });
-    }
-    res.status(200).json({ success: true, message: "Billing plan updated successfully", data: billingPlan });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const planId= req.params.id
+    const plan = await BillingPlan.findOne({ _id: planId,isActive: true }).lean();
+    if (!plan) return res.status(404).json({ success: false, message: "Plan not found" });
+
+    res.status(200).json({ success: true, data: plan });
+  } catch (err) {
+    next(err);
   }
 };
 
-// Delete a billing plan
-export const deleteBillingPlan = async (req, res) => {
+// ✅ Update plan
+export const updatePlan = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const billingPlan = await BillingPlan.findByIdAndDelete(id);
-    if (!billingPlan) {
-      return res.status(404).json({ success: false, message: "Billing plan not found" });
-    }
-    res.status(200).json({ success: true, message: "Billing plan deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const body = BillingPlanValidator.partial().parse(req.body);
+
+    const plan = await BillingPlan.findByIdAndUpdate(
+      req.params.id,
+      { ...body, updatedBy: req.user?._id },
+      { new: true, runValidators: true }
+    );
+
+    if (!plan) return res.status(404).json({ success: false, message: "Plan not found" });
+
+    res.status(200).json({ success: true, data: plan });
+  } catch (err) {
+    next(err);
   }
 };
+
+// ✅ Delete plan
+
+
+// ✅ Activate plan
+export const activatePlan = async (req, res, next) => {
+  try {
+    const plan = await BillingPlan.findByIdAndUpdate(
+      req.params.id,
+      { isActive: true },
+      { new: true }
+    );
+
+    if (!plan) return res.status(404).json({ success: false, message: "Plan not found" });
+
+    res.status(200).json({ success: true, message: "Plan activated successfully"});
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ✅ Deactivate plan
+export const deactivatePlan = async (req, res, next) => {
+  try {
+  const plan = await BillingPlan.findOneAndUpdate(
+  {
+    _id: req.params.id,
+    isActive: true,           // must be active
+    planType: { $ne: "FREE" }    // not the free/basic plan
+  },
+  { isActive: false },
+  { new: true }
+);
+
+if (!plan) {
+  return res.status(400).json({
+    success: false,
+    message: "Plan cannot be deactivated. Either it is already inactive or it's the basic/free plan."
+  });
+}
+
+    res.status(200).json({ success: true,message: "Plan deactivated successfully"});
+  } catch (err) {
+    next(err);
+  }
+};
+

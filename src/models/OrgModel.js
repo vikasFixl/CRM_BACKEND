@@ -40,37 +40,27 @@ const OrganizationSchema = new Schema(
     orgCountry: { type: String, trim: true },
 
     timezone: { type: String, default: "UTC" },
-    fiscalYearStart: { type: Date },
-    curConvert: { type: String, trim: true },
 
     modules: { type: [String], default: [] },
 
-    billingPlan: { type: Schema.Types.ObjectId, ref: "BillingPlan" },
+    billingPlan: { type: Schema.Types.ObjectId, ref: "BillingPlan" }, // current selected plan
+    currentBilling: { type: Schema.Types.ObjectId, ref: "OrganizationBilling" }, // active billing
+ trials: [
+  {
+    type:String,
+   
+  }
+],
+
 
     isActive: { type: Boolean, default: true, index: true },
-    isDeleted: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
-
+    isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date },
 
-    createdBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-    },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User" },
+    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
 
-    updatedBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-    },
-
-    isSuspended: {
-      type: Boolean,
-      default: false,
-      select: false,
-    },
+    isSuspended: { type: Boolean, default: false, select: false },
   },
   { timestamps: true }
 );
@@ -80,16 +70,7 @@ OrganizationSchema.index({ contactEmail: 1 }, { unique: true });
 OrganizationSchema.index({ isDeleted: 1 });
 OrganizationSchema.index({ billingPlan: 1 });
 
-OrganizationSchema.pre("save", async function (next) {
-  if (this.isModified("billingPlan") && this.billingPlan) {
-    const BillingPlan = mongoose.model("BillingPlan");
-    const plan = await BillingPlan.findById(this.billingPlan);
-    if (plan) {
-      this.modules = plan.modules;
-    }
-  }
-  next();
-});
+
 
 const Org = mongoose.model("Organization", OrganizationSchema);
 export default Org;
