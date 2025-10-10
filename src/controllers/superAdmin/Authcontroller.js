@@ -1,5 +1,8 @@
 // import Org from ""
 
+import Org from "../../models/OrgModel.js";
+import User from "../../models/userModel.js";
+
 // Suspend User
 export const suspendUser = async (req, res) => {
   const { userId } = req.params;

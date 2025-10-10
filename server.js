@@ -52,6 +52,7 @@ import Ticket from "./src/routes/ticket.route.js";
 import BillingRouter from "./src/routes/HRM/BillingRoute.js"
 import SupportRouter from "./src/routes/superadmin/supportagent.js";
 import OrgBillingRouter from "./src/routes/orgBillingRoute.js";
+import AdminAuth from "./src/routes/superadmin/AuthRouter.js";
 macaddress.all((err, all) => {
   console.log(all); // All network interfaces and their MACs
 });
@@ -146,7 +147,7 @@ app.use("/api/session", router);
 app.use("/api/platform/ticket",Ticket)
 app.use("/api/platform/support",SupportRouter)
 app.use("/api/platform/billingplan",BillingRouter)
-// app.use("/api/platform/Auth",Auth)
+app.use("/api/platform/Auth",AdminAuth)
 
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;
