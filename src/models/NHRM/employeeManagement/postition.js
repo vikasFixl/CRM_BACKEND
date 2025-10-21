@@ -8,6 +8,7 @@ const positionSchema = new Schema({
   level: { type: String, enum: ["Junior", "Mid", "Senior", "Lead", "Executive"] },
   description: String,
   isActive: { type: Boolean, default: true },
+  createdBy: { type: Schema.Types.ObjectId, ref: "User" },
 }, { timestamps: true });
 
 positionSchema.index({ organizationId: 1, department: 1, title: 1 }, { unique: true });

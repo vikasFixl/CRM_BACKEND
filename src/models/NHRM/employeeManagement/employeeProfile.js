@@ -20,20 +20,22 @@ const documentSchema = new Schema({
   type: { type: String, enum: ["PAN", "AADHAR", "PASSPORT", "DRIVING_LICENSE", "OTHER"] },
   number: String,
   fileUrl: String,
+  public_id: String,
 }, { _id: false });
 
 const employeeSchema = new Schema({
   organizationId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
-
+offer: { type: mongoose.Schema.Types.ObjectId, ref: 'Offer', required: true }
+,
   employeeId: { type: String, required: true }, // company-assigned unique ID
   userId: { type: Schema.Types.ObjectId, ref: "User" }, // optional link to auth User
-
+ password: { type: String, required: true }, // temp
   personalInfo: {
-    firstName: String,
-    lastName: String,
+    firstName:{ type: String, required: true },
+    lastName: { type: String, required: true },
     dob: Date,
-    gender: { type: String, enum: ["Male", "Female", "Other"] },
-    maritalStatus: { type: String, enum: ["Single", "Married", "Divorced", "Widowed"] },
+    gender: { type: String, enum: ["Male", "Female", "Other"],default:"Male" },
+    maritalStatus: { type: String, enum: ["Single", "Married", "Divorced", "Widowed"],default:"Single" },
     contact: {
       email: { type: String, required: true },
       phone: String,
@@ -55,6 +57,7 @@ const employeeSchema = new Schema({
   family: [familyMemberSchema],
 
   profileImage: String,
+  createdBy: { type: Schema.Types.ObjectId, ref: "User" },
 }, { timestamps: true });
 
 employeeSchema.index({ organizationId: 1, employeeId: 1 }, { unique: true });

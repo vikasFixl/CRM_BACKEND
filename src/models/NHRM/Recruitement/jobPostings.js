@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
 const jobPostingSchema = new Schema({
+  organization: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true, index: true },
   title: { type: String, required: true, trim: true, index: true },
   description: { type: String, required: true },
   qualifications: [String],
@@ -14,11 +15,10 @@ const jobPostingSchema = new Schema({
   postedDate: { type: Date, default: Date.now },
   closingDate: Date,
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  applications: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Candidate' }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
 
 jobPostingSchema.index({ title: 1, status: 1 });
 
-export default mongoose.model('JobPosting', jobPostingSchema);
+export const JobPosting = mongoose.model('JobPosting', jobPostingSchema);

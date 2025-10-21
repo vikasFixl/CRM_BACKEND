@@ -1,22 +1,15 @@
 // server.js
 
 import express from "express";
-import geoip from 'geoip-lite';
 import bodyParser from "body-parser";
-import path, { dirname } from "path";
-import paypal from "paypal-rest-sdk";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
-import { fileURLToPath } from "url";
 import helmet from "helmet";
 import fileUpload from "express-fileupload";
-import { rateLimit, globalLimiter } from "./src/middleweare/ratelimitter.js";
+import { globalLimiter } from "./src/middleweare/ratelimitter.js";
 import { createServer } from "http";
-import { Server } from "socket.io";
 import { connectDB } from "./config/db.config.js";
 import { startUserCleanupCron } from "./src/automation/UserDeleteAutomation.js";
-import jwt from "jsonwebtoken";
 import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
 import { errorHandler } from "./src/middleweare/errorhandler.js";
 import {downgradeExpiredTrials} from "./src/automation/downgradeplan.js"
@@ -24,7 +17,7 @@ import {downgradeExpiredTrials} from "./src/automation/downgradeplan.js"
 // Routes
 import userRoutes from "./src/routes/userRoute.js";
 import orgRoutes from "./src/routes/orgRoute.js";
-import BillingRoutes from "./src/routes/HRM/BillingRoute.js";
+import BillingRoutes from "./src/routes/BillingRoute.js";
 import RoleRoutes from "./src/routes/rolepermissionroute.js";
 import firmRoutes from "./src/routes/firmRoute.js";
 import LeadRouter from "./src/routes/leadRoute.js";
@@ -45,44 +38,15 @@ import TeamRouter from "./src/routes/project/teamroute.js";
 import ProjectTemplateRouter from "./src/routes/project/projecttemplate.route.js";
 import { sendToUser } from "./config/socket.handler.js";
 import { initSocket } from "./config/socket.js";
-import otplib from "otplib"
-import qrcode from "qrcode"
-import macaddress from 'macaddress'
 import Ticket from "./src/routes/ticket.route.js";
-import BillingRouter from "./src/routes/HRM/BillingRoute.js"
+import BillingRouter from "./src/routes/BillingRoute.js"
 import SupportRouter from "./src/routes/superadmin/supportagent.js";
 import OrgBillingRouter from "./src/routes/orgBillingRoute.js";
 import AdminAuth from "./src/routes/superadmin/AuthRouter.js";
-macaddress.all((err, all) => {
-  console.log(all); // All network interfaces and their MACs
-});
-// Generate a secret key
-// Generate a secret key
-const secret = otplib.authenticator.generateSecret();
-
-// Create provisioning URI
-const provisioningUri = otplib.authenticator.keyuri('vikasbaplawat1@gmail.com', 'Cubicle-Crm', secret);
-
-// Generate and display QR code in the terminal
-qrcode.toString(provisioningUri, { type: 'terminal', small: true }, (err, url) => {
-  if (err) {
-    console.error('Error generating QR code:', err);
-    return;
-  }
-
-  console.log('Scan the following QR code with your authenticator app:');
-  // console.log(url);
-});
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-dotenv.config({ path: path.join(__dirname, "./.env") });
-
-// PayPal config
-paypal.configure({
-  mode: "sandbox",
-  client_id: process.env.PAYPAL_CLIENT_ID,
-  client_secret: process.env.PAYPAL_CLIENT_SECRET,
-});
+import JobRouter from "./src/routes/HRM/recruitemnt/JobPostingRoute.js";
+import DepartmentRouter from "./src/routes/HRM/Employee/department.js";
+import CandidateRouter from "./src/routes/HRM/recruitemnt/candidateRoute.js";
+import PositionRouter from "./src/routes/HRM/Employee/positionRoute.js";
 
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
@@ -148,6 +112,11 @@ app.use("/api/platform/ticket",Ticket)
 app.use("/api/platform/support",SupportRouter)
 app.use("/api/platform/billingplan",BillingRouter)
 app.use("/api/platform/Auth",AdminAuth)
+// hrm routes 
+app.use("/api/recruitment/jobs",JobRouter)
+app.use("/api/recruitment/candidate", CandidateRouter);
+app.use("/api/organization/positions", PositionRouter);
+app.use("/api/organization/department", DepartmentRouter);
 
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;

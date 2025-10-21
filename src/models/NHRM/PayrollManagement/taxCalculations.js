@@ -1,60 +1,37 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
-const taxCalculationSchema = new Schema({
-  employee: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'EmployeeProfile',
-    required: true,
-  },
-  payrollPeriod: {
-    type: Date,
-    required: true,
-  },
-  grossIncome: {
-    type: Number,
-    required: true,
-  },
-  payrollId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'PayrollProcessing',
-  },
-  taxYear: {
-    type: Number,
-    required: true,
-  },
-  isAutoCalculated: {
-    type: Boolean,
-    default: true,
-  },
-  federalTax: Number,
-  stateTax: Number,
-  localTax: Number,
-  otherTaxes: Number,
-  totalTaxes: {
-    type: Number,
-    default: 0,
-  },
-  netIncome: {
-    type: Number,
-    default: 0,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
+const taxBreakdownSchema = new Schema({
+  type: { type: String, required: true }, // e.g., IncomeTax, ProvidentFund, ProfessionalTax
+  amount: { type: Schema.Types.Decimal128, required: true },
+  description: String,
 });
 
+const taxCalculationSchema = new Schema({
+  employee: { type: Schema.Types.ObjectId, ref: 'EmployeeProfile', required: true, index: true },
+  payrollProcessing: { type: Schema.Types.ObjectId, ref: 'PayrollProcessing', index: true }, // link to payroll entry
+  payrollPeriod: { type: Date, required: true, index: true },
+  fiscalYear: { type: String }, // e.g., "2024-2025"
+  grossIncome: { type: Schema.Types.Decimal128, required: true },
+  calculatedAt: { type: Date, default: Date.now },
+  isAutoCalculated: { type: Boolean, default: true },
+  breakdown: { type: [taxBreakdownSchema], default: [] },
+  totalTaxes: { type: Schema.Types.Decimal128, default: 0 },
+  netIncome: { type: Schema.Types.Decimal128, default: 0 },
+  ruleVersion: { type: String }, // reference the tax rules version used
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  deleted: { type: Boolean, default: false },
+}, { timestamps: true });
+
 taxCalculationSchema.pre('save', function (next) {
-  this.totalTaxes = this.federalTax + this.stateTax + this.localTax + (this.otherTaxes || 0);
-  this.netIncome = this.grossIncome - this.totalTaxes;
+  // compute totals
+  const total = (this.breakdown || []).reduce((acc, b) => acc + parseFloat(b.amount?.toString() || '0'), 0);
+  this.totalTaxes = total;
+  const gross = parseFloat(this.grossIncome?.toString() || '0');
+  this.netIncome = gross - total;
   next();
 });
 
-const TaxCalculation = mongoose.model('TaxCalculation', taxCalculationSchema);
+taxCalculationSchema.index({ employee: 1, payrollPeriod: 1 });
 
-export default TaxCalculation;
+export default mongoose.model('TaxCalculation', taxCalculationSchema);

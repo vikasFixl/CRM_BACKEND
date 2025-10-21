@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 const { Schema, model } = mongoose;
-
 // Individual Step Schema
 const onboardingStepSchema = new Schema(
   {

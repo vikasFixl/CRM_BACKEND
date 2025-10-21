@@ -1,67 +1,55 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
-const payrollProcessingSchema = new Schema({
-  employee: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'EmployeeProfile',
-    required: true,
-  },
-  payrollPeriod: {
-    type: Date,
-    required: true,
-  },
-  grossPay: {
-    type: Number,
-    required: true,
-  },
-  deductions: {
-    type: Number,
-    default: 0,
-  },
-  netPay: {
-    type: Number,
-    default: 0,
-  },
-  paymentMethod: {
-    type: String,
-    enum: ['Direct Deposit', 'Check'],
-    default: 'Direct Deposit',
-  },
-  status: {
-    type: String,
-    enum: ['Processed', 'Pending', 'Failed'],
-    default: 'Pending',
-    index: true,
-  },
-  salaryConfigurationId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'SalaryConfiguration',
-  },
-  taxCalculationId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'TaxCalculation',
-  },
-  payrollBatchId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'PayrollBatch',
-  },
-  remarks: String,
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
+/**
+ * PayrollProcessing stores the generated payslip per employee per payroll cycle.
+ * Use `payrollCycle` object or payrollPeriod Date to identify the month.
+ */
+const componentLineSchema = new Schema({
+  key: { type: String, required: true }, // matching salary config keys
+  label: String,
+  type: { type: String, enum: ['EARNING', 'DEDUCTION'], required: true },
+  amount: { type: Schema.Types.Decimal128, required: true },
 });
 
+const payrollProcessingSchema = new Schema({
+  employee: { type: Schema.Types.ObjectId, ref: 'EmployeeProfile', required: true, index: true },
+  payrollPeriod: { type: Date, required: true, index: true }, // typically set to first of month
+  payrollCycleName: { type: String }, // e.g., "Mar 2025"
+  components: { type: [componentLineSchema], default: [] }, // all lines (earnings + deductions)
+  grossPay: { type: Schema.Types.Decimal128, required: true },
+  totalDeductions: { type: Schema.Types.Decimal128, default: 0 },
+  netPay: { type: Schema.Types.Decimal128, required: true },
+  currency: { type: String, default: 'INR' },
+  salaryConfiguration: { type: Schema.Types.ObjectId, ref: 'SalaryConfiguration' },
+  taxCalculation: { type: Schema.Types.ObjectId, ref: 'TaxCalculation' },
+  batch: { type: Schema.Types.ObjectId, ref: 'PayrollBatch', index: true },
+  paymentMethod: { type: String, enum: ['Direct Deposit', 'Check', 'Manual'], default: 'Direct Deposit' },
+  status: { type: String, enum: ['Pending', 'Processed', 'Approved', 'Paid', 'Failed', 'Reversed'], default: 'Pending', index: true },
+  processedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  processedAt: Date,
+  approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  approvedAt: Date,
+  remarks: String,
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  deleted: { type: Boolean, default: false },
+}, { timestamps: true });
+
+/**
+ * Pre-save sanity: compute totals from components
+ */
 payrollProcessingSchema.pre('save', function (next) {
-  this.netPay = this.grossPay - this.deductions;
+  const earnings = (this.components || []).filter(c => c.type === 'EARNING')
+    .reduce((s, c) => s + parseFloat(c.amount?.toString() || '0'), 0);
+  const deductions = (this.components || []).filter(c => c.type === 'DEDUCTION')
+    .reduce((s, c) => s + parseFloat(c.amount?.toString() || '0'), 0);
+
+  this.grossPay = earnings;
+  this.totalDeductions = deductions;
+  this.netPay = earnings - deductions;
   next();
 });
 
-const PayrollProcessing = mongoose.model('PayrollProcessing', payrollProcessingSchema);
+payrollProcessingSchema.index({ employee: 1, payrollPeriod: 1 }, { unique: true }); // one payslip per employee per period
 
-export default PayrollProcessing;
+export default mongoose.model('PayrollProcessing', payrollProcessingSchema);

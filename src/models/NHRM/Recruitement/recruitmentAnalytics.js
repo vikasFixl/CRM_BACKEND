@@ -21,4 +21,4 @@ const recruitmentAnalyticsSchema = new Schema({
 
 recruitmentAnalyticsSchema.index({ jobPosting: 1 });
 
-export default mongoose.model('RecruitmentAnalytics', recruitmentAnalyticsSchema);
+export const RecruitmentAnalytics = mongoose.model('RecruitmentAnalytics', recruitmentAnalyticsSchema);

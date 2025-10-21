@@ -5,7 +5,7 @@ const departmentSchema = new Schema({
   organizationId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
   name: { type: String, required: true },
   description: String,
-  head: { type: Schema.Types.ObjectId, ref: "EmployeeProfile" },
+  head: { type: Schema.Types.ObjectId, ref: "User" },
 }, { timestamps: true });
 
 departmentSchema.index({ organizationId: 1, name: 1 }, { unique: true });
