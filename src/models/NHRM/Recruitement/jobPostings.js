@@ -8,6 +8,13 @@ const jobPostingSchema = new Schema({
   qualifications: [String],
   responsibilities: [String],
   department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', required: true, index: true },
+  position: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Position",
+    required: true,
+    index: true,
+  },
+
   location: { type: String, required: true },
   employmentType: { type: String, enum: ['Full-Time', 'Part-Time', 'Contract', 'Internship'], default: 'Full-Time' },
   tags: [String],

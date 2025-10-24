@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
+
 const { Schema } = mongoose;
 
 const offerSchema = new Schema({
+  Organization: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
   candidate: { type: mongoose.Schema.Types.ObjectId, ref: 'Candidate', required: true },
   jobPosting: { type: mongoose.Schema.Types.ObjectId, ref: 'JobPosting', required: true },
   position: { type: mongoose.Schema.Types.ObjectId, ref: 'Position', required: true },

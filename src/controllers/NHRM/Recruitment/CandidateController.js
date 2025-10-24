@@ -6,7 +6,7 @@ import { candidateSchema, updateCandidateSchema } from "../../../validations/hrm
 import { EmployeeProfile } from "../../../models/NHRM/employeeManagement/employeeProfile.js";
 import { generateEmployeeId, generateShortPassword } from "../../../utils/helperfuntions/generateInviteCode.js";
 import { sendEmail } from "../../../../config/nodemailer.config.js";
-
+import { Position } from "../../../models/NHRM/employeeManagement/postition.js";
 // Create a new Candidate (HR adds manually)
 // Example data (from form or file)
 // export const createCandidates = async (req, res) => {
@@ -68,7 +68,10 @@ export const createCandidate = async (req, res) => {
     const existing = await Candidate.findOne({ email: validatedCandidate.email });
     if (existing)
       return res.status(400).json({ message: "Candidate with this email already exists" });
-
+    const jobpostingExit = await JobPosting.findOne({ _id: validatedCandidate.jobApplication, organization: req.orgUser.orgId, status: "Open" })
+    if (!jobpostingExit) {
+      return res.status(400).json({ message: "No Open Job Posting found" });
+    }
     const stageEntry = {
       stage: validatedCandidate.status,
       changedAt: new Date(),
@@ -297,6 +300,7 @@ export const MovetoInterview = async (req, res) => {
 export const moveToOffer = async (req, res) => {
   try {
     const { candidateId } = req.params;
+    const { orgId: organization } = req.orgUser;
     const { offerData, jobApplicationId, positionId } = req.body; // Expect salary, bonus, benefits, jobTitle, location, payFrequency, etc.
     if (!offerData || !offerData.baseSalary) {
       return res.status(400).json({ message: "Incomplete offer data" });
@@ -308,13 +312,14 @@ export const moveToOffer = async (req, res) => {
       return res.status(400).json({ message: "Candidate ID is required" });
     }
 
-    // Update candidate status to 'Offered'
-    const candidate = await Candidate.findByIdAndUpdate(
-      candidateId,
-      { status: "Offered" },
-      { new: true }
-    );
+    let candidate = await Candidate.findOne({ _id: candidateId, organization });
     if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+
+
+    const jobApplication = await JobPosting.findById(jobApplicationId);
+    if (!jobApplication) return res.status(404).json({ message: "Job Application not found" });
+    const position = await Position.findById(positionId);
+    if (!position) return res.status(404).json({ message: "Position not found" });
 
     // Create Offer for the candidate
     const offer = await Offer.create({
@@ -334,6 +339,9 @@ export const moveToOffer = async (req, res) => {
       },
     });
 
+    candidate.status = "Offered";
+    candidate.offer = offer._id;
+    candidate.lastUpdated = new Date();
     // Send professional email to candidate with offer details
     await sendEmail({
       to: candidate.email,
@@ -363,9 +371,10 @@ export const moveToHired = async (req, res) => {
   try {
     const { candidateId, offerId } = req.body;
     const hrId = req.user.userId;
+    const { orgId: organization } = req.orgUser;
 
     // 1️⃣ Fetch candidate
-    const candidate = await Candidate.findById(candidateId);
+    const candidate = await Candidate.find({ _id: candidateId, organization });
     if (!candidate) return res.status(404).json({ message: "Candidate not found" });
     if (candidate.status === "Hired") return res.status(400).json({ message: "Candidate is already hired" });
 
@@ -432,5 +441,324 @@ export const moveToHired = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// controllers/candidateController.js
+
+export const updateCandidateStatus = async (req, res) => {
+  try {
+    const { candidateId } = req.params;
+    const { status } = req.body;
+    const orgId = req.orgUser.orgId;
+
+    // Validate status
+
+    const validStatuses = ["Applied",
+      "Screening",
+      "Shortlisted",
+      "Interview_Scheduled",
+      "Interview_Completed",
+      "Offered",
+      "Rejected",
+      "Hired"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value.",
+      });
+    }
+
+
+
+    let candidate = await Candidate.findOne({ _id: candidateId, organization: orgId });
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        message: "Candidate not found.",
+      });
+    }
+    // Optional: enforce allowed transitions
+    const currentIndex = validStatuses.indexOf(candidate.status);
+    const newIndex = validStatuses.indexOf(status);
+
+    if (newIndex < currentIndex) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot move backward from ${candidate.status} to ${status}.`
+      });
+    }
+    // Helper function to check if interview stage exists
+    ;
+    if (candidate.status === status) {
+      return res.status(400).json({
+        success: false,
+        message: `Candidate is already in ${status} status.`,
+      });
+    }
+
+
+    if (candidate.status != status) {
+      // create stage history entry
+      const stageEntry = {
+        stage: status,
+        changedAt: new Date(),
+        changedBy: req.user.userId,
+      };
+      candidate.stageHistory.push(stageEntry);
+    }
+
+    // Handle side effects for certain statuses
+    switch (status) {
+      case "Interview_Scheduled":
+        {
+          const { interviewerId, scheduledDate, interviewType, panel } = req.body;
+
+          // Make sure required fields are provided
+          if (!interviewerId || !scheduledDate || !interviewType || !panel) {
+            return res.status(400).json({
+              success: false,
+              message: "interviewerId, scheduledDate, interviewType, and panel are required for scheduling an interview",
+            });
+          }
+
+          // Create new interview
+          const interview = new Interview({
+            candidate: candidateId,
+            jobPosting: candidate.jobApplication,
+            interviewer: interviewerId,
+            scheduledDate,
+            interviewType,
+            panel,
+            status: "Scheduled",
+          });
+
+          await interview.save();
+          // Update candidate
+          await candidate.updateOne({
+            $push: { interviews: interview._id },
+            status: "Interview_Scheduled",
+            lastUpdated: new Date(),
+          });
+
+          candidate = await Candidate.findById(candidateId).populate("interviews"); // optional: return populated data
+        }
+        return res.status(200).json({
+          success: true,
+          message: "Candidate moved to Interview Scheduled stage",
+          candidate,
+        });
+        break;
+      case "Offered":
+        {
+          const { offerData, jobApplicationId, positionId } = req.body;
+
+
+          if (!offerData || !offerData.baseSalary) {
+            return res.status(400).json({ message: "Incomplete offer data" });
+          }
+          if (!jobApplicationId || !positionId) {
+            return res.status(400).json({ message: "Job Application ID and Position ID are required" });
+          }
+
+          // Fetch candidate
+          let candidate = await Candidate.findOne({ _id: candidateId, organization: req.orgUser.orgId });
+          if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+
+          // Ensure candidate has at least one interview stage
+          const hasInterview = candidate.stageHistory.some(stage =>
+            stage.stage === "Interview_Scheduled" || stage.stage === "Interview_Completed"
+          );
+
+          if (!hasInterview) {
+            return res.status(400).json({
+              message: `Cannot move candidate to ${status}. Candidate must have at least one interview stage in history.`,
+            });
+          }
+          // Validate job posting and position
+          const jobApplication = await JobPosting.findById(jobApplicationId);
+          if (!jobApplication) return res.status(404).json({ message: "Job Application not found" });
+
+          const position = await Position.findById(positionId);
+          if (!position) return res.status(404).json({ message: "Position not found" });
+
+          // Create Offer
+          const offer = await Offer.create({
+            candidate: candidateId,
+            jobPosting: jobApplicationId,
+            position: positionId,
+            offerDate: new Date(),
+            status: "Pending",
+            offerDetails: {
+              baseSalary: offerData.baseSalary,
+              bonus: offerData.bonus || 0,
+              currency: offerData.currency || "INR",
+              payFrequency: offerData.payFrequency || "Monthly",
+              benefits: offerData.benefits || [],
+              jobTitle: offerData.jobTitle,
+              location: offerData.location,
+            },
+          });
+
+          // Update candidate status and link offer
+          candidate.status = "Offered";
+          candidate.offer = offer._id;
+          candidate.lastUpdated = new Date();
+          await candidate.save();
+
+
+
+          // Return updated candidate and offer
+          candidate = await Candidate.findById(candidateId).populate("offer");
+        }
+        return res.status(200).json({
+          success: true,
+          message: "Candidate moved to Offer stage",
+          candidate,
+        });
+        break;
+      case "Hired":
+        {
+          const { offerId } = req.body;
+          const hrId = req.user.userId;
+          const organization = req.orgUser.orgId;
+
+          // 1️⃣ Fetch candidate
+          let candidate = await Candidate.findOne({ _id: candidateId, organization });
+          if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+          if (candidate.status === "Hired") return res.status(400).json({ message: "Candidate is already hired" });
+          // Ensure candidate has at least one interview stage
+          const hasInterview = candidate.stageHistory.some(stage =>
+            stage.stage === "Interview_Scheduled" || stage.stage === "Interview_Completed"
+          );
+
+          if (!hasInterview) {
+            return res.status(400).json({
+              message: `Cannot move candidate to ${status}. Candidate must have at least one interview stage in history.`,
+            });
+          }
+
+          // 2️⃣ Fetch offer
+          const offer = await Offer.findById(offerId).populate("position");
+          if (!offer) return res.status(404).json({ message: "Offer not found" });
+
+          // 3️⃣ Generate employee ID & password
+          const employeeId = generateEmployeeId();
+          const password = await generateShortPassword();
+
+          // 4️⃣ Create EmployeeProfile
+          const employeeProfile = new EmployeeProfile({
+            organizationId: organization,
+            employeeId,
+            password,
+            offer: offer._id,
+            personalInfo: {
+              firstName: candidate.firstName,
+              lastName: candidate.lastName,
+              contact: {
+                email: candidate.email,
+                phone: candidate.phoneNumber,
+                location: candidate.location,
+              },
+            },
+            jobInfo: {
+              position: offer.position._id,
+              department: offer.position.department,
+            },
+            createdBy: hrId,
+          });
+
+          const savedEmployee = await employeeProfile.save();
+
+          // 5️⃣ Update candidate
+          candidate.status = "Hired";
+          candidate.offer = offer._id;
+          offer.status = "Accepted";
+          await offer.save();
+          candidate.employeeProfile = savedEmployee._id;
+          candidate.lastUpdated = new Date();
+          candidate.stageHistory.push({
+            stage: "Hired",
+            changedAt: new Date(),
+            changedBy: hrId,
+          });
+          await candidate.save();
+
+
+          candidate = await Candidate.findById(candidateId).populate("offer");
+        }
+        return res.status(200).json({
+          success: true,
+          message: "Candidate moved to Hired stage, EmployeeProfile created",
+          candidate,
+        });
+        break;
+      case "Rejected":
+        {
+          const hrId = req.user.userId;
+          const organization = req.orgUser.orgId;
+
+          // 1️⃣ Fetch candidate
+          const candidate = await Candidate.findOne({ _id: candidateId, organization });
+          if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+           // Ensure candidate has at least one interview stage
+          const hasInterview = candidate.stageHistory.some(stage =>
+            stage.stage === "Interview_Scheduled" || stage.stage === "Interview_Completed"
+          );
+
+          if (!hasInterview) {
+            return res.status(400).json({
+              message: `Cannot move candidate to ${status}. Candidate must have at least one interview stage in history.`,
+            });
+          }
+
+          // 2️⃣ Update candidate status
+          candidate.status = "Rejected";
+          candidate.lastUpdated = new Date();
+          candidate.stageHistory.push({
+            stage: "Rejected",
+            changedAt: new Date(),
+            changedBy: hrId,
+          });
+          await candidate.save();
+
+          // 3️⃣ Optional: Delete or mark offer as rejected
+          if (candidate.offer) {
+            await Offer.findByIdAndUpdate(candidate.offer, { status: "Rejected" });
+          }
+          candidate.interviews = []
+          await candidate.save();
+
+          // 4️⃣ Optional: Cancel interviews
+          await Interview.updateMany(
+            { candidate: candidateId },
+            { status: "Canceled" }
+          );
+
+        }
+        return res.status(200).json({
+          success: true,
+          message: "Candidate marked as Rejected, related interviews canceled",
+          candidate,
+        });
+        break;
+
+    }
+    candidate.status = status;
+    await candidate.save();
+
+
+
+    res.status(200).json({
+      success: true,
+      message: `Candidate status updated to ${status}.`,
+      candidate,
+    });
+  } catch (error) {
+    console.error("Error updating candidate status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
   }
 };

@@ -2,6 +2,9 @@ import { Department } from "../../../models/NHRM/employeeManagement/department.j
 import { OrgMember } from "../../../models/OrganisationMemberSchema.js";
 import Org from "../../../models/OrgModel.js";
 import { departmentSchema } from "../../../validations/hrm/department.js";
+import { Position } from "../../../models/NHRM/employeeManagement/postition.js";
+import { EmployeeProfile } from "../../../models/NHRM/employeeManagement/employeeProfile.js";
+import { JobPosting } from "../../../models/NHRM/Recruitement/jobPostings.js";
 import { z } from "zod";
 export const createDepartment = async (req, res) => {
   try {
@@ -21,6 +24,9 @@ export const createDepartment = async (req, res) => {
       });
 
     const isvalidUser = await OrgMember.findOne({ userId: validated.head || createdBy, organizationId: orgId, status: "active" })
+    if (!isvalidUser) {
+      return res.status(400).json({ success: false, message: "Department head must be an active member of the organization." });
+    }
     const department = await Department.create({
       ...validated,
       organizationId: orgId,
@@ -105,27 +111,27 @@ export const GetDepartmentList = async (req, res) => {
 export const getDepartment = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!id) return res.status(400).json({ success: false, message: "Department ID is required." });
+    const { orgId: organizationId } = req.orgUser;
 
-    const department = await Department.findById(id)
+    const department = await Department.find({ _id: id, organizationId })
       .populate("head", "firstName lastName email")
       .populate("organizationId", "name");
 
     if (!department)
       return res.status(404).json({ success: false, message: "Department not found." });
 
-    res.json({ success: true, data: department });
+    res.json({ message: "Department fetched successfully.", success: true, department });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-/**
- * @desc Update Department
- * @route PUT /api/organization/departments/:id
- */
+
 export const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!id) return res.status(400).json({ success: false, message: "Department ID is required." });
     const validated = departmentSchema.partial().parse(req.body);
 
     const updated = await Department.findByIdAndUpdate(id, validated, { new: true });
@@ -154,16 +160,23 @@ export const deleteDepartment = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const department = await Department.findById(id);
+    if (!id) return res.status(400).json({ success: false, message: "Department ID is required." });
+    const { orgId: organizationId } = req.orgUser;
+    // find postion linked to department
+    const postion = await Position.findOne({ department: id, organizationId })
+    if (postion) {
+      return res.status(400).json({ success: false, message: "Cannot delete department. Active positions linked." });
+    }
+    const department = await Department.find({ _id: id, organizationId });
     if (!department)
       return res.status(404).json({ success: false, message: "Department not found." });
 
     // 🧩 Check for active employees
-    const employeeCount = await EmployeeProfile.countDocuments({ department: id });
+    const employeeCount = await EmployeeProfile.countDocuments({ "jobInfo.department": id });
     if (employeeCount > 0)
       return res.status(400).json({
         success: false,
-        message: `Cannot delete department. ${employeeCount} active employees linked.`,
+        message: `Cannot delete department. ${employeeCount} active employees assigned.`,
       });
 
     // 🧩 Check for active job postings

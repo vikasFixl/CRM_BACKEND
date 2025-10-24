@@ -2,11 +2,12 @@ import express from "express"
 const DepartmentRouter = express.Router()
 import { isAuthenticated } from "../../../middleweare/middleware.js"
 import { authenticateOrgToken } from "../../../middleweare/orgmiddleware.js"
-import { createDepartment, GetDepartmentList, getDepartments } from "../../../controllers/NHRM/EmployeeController/DepartmentController.js"
+import { createDepartment, deleteDepartment, getDepartment, GetDepartmentList, getDepartments, updateDepartment } from "../../../controllers/NHRM/EmployeeController/DepartmentController.js"
 
 DepartmentRouter.route("/").post(isAuthenticated,authenticateOrgToken(),createDepartment)
 DepartmentRouter.route("/all").get(isAuthenticated,authenticateOrgToken(),getDepartments)
 DepartmentRouter.route("/list").get(isAuthenticated,authenticateOrgToken(),GetDepartmentList)
+DepartmentRouter.route("/:id").get(isAuthenticated,authenticateOrgToken(),getDepartment).patch(isAuthenticated,authenticateOrgToken(),updateDepartment).delete(isAuthenticated,authenticateOrgToken(),deleteDepartment)
 
 
 

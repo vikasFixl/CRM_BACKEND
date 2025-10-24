@@ -1,6 +1,8 @@
 import { Candidate } from "../../../models/NHRM/Recruitement/candidateTracking.js";
 import { JobPosting } from "../../../models/NHRM/Recruitement/jobPostings.js";
 import { RecruitmentAnalytics } from "../../../models/NHRM/Recruitement/recruitmentAnalytics.js";
+import { Department } from "../../../models/NHRM/employeeManagement/department.js";
+import { Position } from "../../../models/NHRM/employeeManagement/postition.js";
 // Create a new Job Posting
 import mongoose from "mongoose";
 
@@ -10,14 +12,23 @@ export const createJobPosting = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { title, description, qualifications, responsibilities, department, location, employmentType, tags, closingDate } = req.body;
+    const { title, description, qualifications,position, responsibilities, department, location, employmentType, tags, closingDate } = req.body;
 
-    if (!title || !description || !department || !location)
-      return res.status(400).json({ error: "Missing required fields" });
 
+    if(!title || !description || !department || !position || !location, !employmentType) {
+      return  res.status(400).json({ error: "Title, Description, Department, Position employmentType and Location are required" });
+    }
     const existingJob = await JobPosting.findOne({ title, department, status: "Open" });
-    if (existingJob) return res.status(409).json({ error: "Duplicate open job posting" });
+    if (existingJob) return res.status(409).json({ error: "A job with the same title and department already exists" });
 
+    const deparmentExists = await Department.findOne({ department, organization: orgId });
+    if (!deparmentExists) {
+      return res.status(400).json({ error: "Invalid Department for this organization" });
+    }
+    const postiion=await Position.findOne({ _id: position, organizationId: orgId, department: department, isActive: true });
+    if (!postiion) {
+      return res.status(400).json({ error: "No Active Position found" });
+    }
     const job = new JobPosting({
       organization: orgId,
       title,
@@ -25,6 +36,7 @@ export const createJobPosting = async (req, res) => {
       qualifications,
       responsibilities,
       department,
+      position,
       location,
       employmentType,
       tags,

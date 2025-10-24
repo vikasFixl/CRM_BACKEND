@@ -46,6 +46,7 @@ import AdminAuth from "./src/routes/superadmin/AuthRouter.js";
 import JobRouter from "./src/routes/HRM/recruitemnt/JobPostingRoute.js";
 import DepartmentRouter from "./src/routes/HRM/Employee/department.js";
 import CandidateRouter from "./src/routes/HRM/recruitemnt/candidateRoute.js";
+import OfferRouter from "./src/routes/HRM/recruitemnt/offerRoute.js";
 import PositionRouter from "./src/routes/HRM/Employee/positionRoute.js";
 
 const isProd = process.env.NODE_ENV === "production";
@@ -115,6 +116,7 @@ app.use("/api/platform/Auth",AdminAuth)
 // hrm routes 
 app.use("/api/recruitment/jobs",JobRouter)
 app.use("/api/recruitment/candidate", CandidateRouter);
+app.use("/api/recruitment/Offer", OfferRouter);
 app.use("/api/organization/positions", PositionRouter);
 app.use("/api/organization/department", DepartmentRouter);
 
