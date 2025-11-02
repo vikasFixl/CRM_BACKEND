@@ -508,6 +508,7 @@ export const updateCandidateStatus = async (req, res) => {
       candidate.stageHistory.push(stageEntry);
     }
 
+    await candidate.save();
     // Handle side effects for certain statuses
     switch (status) {
       case "Interview_Scheduled":
@@ -524,6 +525,7 @@ export const updateCandidateStatus = async (req, res) => {
 
           // Create new interview
           const interview = new Interview({
+            organization: orgId,
             candidate: candidateId,
             jobPosting: candidate.jobApplication,
             interviewer: interviewerId,
@@ -548,7 +550,7 @@ export const updateCandidateStatus = async (req, res) => {
           message: "Candidate moved to Interview Scheduled stage",
           candidate,
         });
-        break;
+
       case "Offered":
         {
           const { offerData, jobApplicationId, positionId } = req.body;
@@ -584,6 +586,7 @@ export const updateCandidateStatus = async (req, res) => {
 
           // Create Offer
           const offer = await Offer.create({
+            Organization: req.orgUser.orgId,
             candidate: candidateId,
             jobPosting: jobApplicationId,
             position: positionId,
@@ -627,6 +630,7 @@ export const updateCandidateStatus = async (req, res) => {
           let candidate = await Candidate.findOne({ _id: candidateId, organization });
           if (!candidate) return res.status(404).json({ message: "Candidate not found" });
           if (candidate.status === "Hired") return res.status(400).json({ message: "Candidate is already hired" });
+          console.log(candidate);
           // Ensure candidate has at least one interview stage
           const hasInterview = candidate.stageHistory.some(stage =>
             stage.stage === "Interview_Scheduled" || stage.stage === "Interview_Completed"
@@ -639,13 +643,12 @@ export const updateCandidateStatus = async (req, res) => {
           }
 
           // 2️⃣ Fetch offer
-          const offer = await Offer.findById(offerId).populate("position");
+          const offer = await Offer.findOne({ _id: offerId, Organization: organization }).populate("position");
           if (!offer) return res.status(404).json({ message: "Offer not found" });
-
           // 3️⃣ Generate employee ID & password
           const employeeId = generateEmployeeId();
           const password = await generateShortPassword();
-
+          
           // 4️⃣ Create EmployeeProfile
           const employeeProfile = new EmployeeProfile({
             organizationId: organization,
@@ -668,14 +671,14 @@ export const updateCandidateStatus = async (req, res) => {
             createdBy: hrId,
           });
 
-          const savedEmployee = await employeeProfile.save();
-
+          await employeeProfile.save();
+          console.log(employeeProfile);
           // 5️⃣ Update candidate
           candidate.status = "Hired";
           candidate.offer = offer._id;
           offer.status = "Accepted";
           await offer.save();
-          candidate.employeeProfile = savedEmployee._id;
+          candidate.employeeProfile = employeeProfile._id;
           candidate.lastUpdated = new Date();
           candidate.stageHistory.push({
             stage: "Hired",
@@ -689,8 +692,7 @@ export const updateCandidateStatus = async (req, res) => {
         }
         return res.status(200).json({
           success: true,
-          message: "Candidate moved to Hired stage, EmployeeProfile created",
-          candidate,
+          message: "candidate moved to Hired stage and employee Account created",
         });
         break;
       case "Rejected":
@@ -701,7 +703,7 @@ export const updateCandidateStatus = async (req, res) => {
           // 1️⃣ Fetch candidate
           const candidate = await Candidate.findOne({ _id: candidateId, organization });
           if (!candidate) return res.status(404).json({ message: "Candidate not found" });
-           // Ensure candidate has at least one interview stage
+          // Ensure candidate has at least one interview stage
           const hasInterview = candidate.stageHistory.some(stage =>
             stage.stage === "Interview_Scheduled" || stage.stage === "Interview_Completed"
           );
@@ -759,6 +761,32 @@ export const updateCandidateStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Internal server error.",
+    });
+  }
+};
+
+export const getCandidatesList = async (req, res) => {
+  try {
+    const { orgId } = req.orgUser;
+
+    // Fetch only candidates belonging to this organization
+    const candidates = await Candidate.find(
+      { organization: orgId },
+      { _id: 1, email: 1 } // only these two fields
+    ).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "Candidates list fetched successfully",
+      success: true,
+      count: candidates.length,
+      candidates,
+    });
+  } catch (err) {
+    console.error("Error fetching candidates list:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching candidates list",
+      error: err.message,
     });
   }
 };

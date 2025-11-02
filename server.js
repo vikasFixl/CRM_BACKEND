@@ -48,6 +48,9 @@ import DepartmentRouter from "./src/routes/HRM/Employee/department.js";
 import CandidateRouter from "./src/routes/HRM/recruitemnt/candidateRoute.js";
 import OfferRouter from "./src/routes/HRM/recruitemnt/offerRoute.js";
 import PositionRouter from "./src/routes/HRM/Employee/positionRoute.js";
+import InterviewRouter from "./src/routes/HRM/recruitemnt/interviewRoute.js";
+import EmployeeRouter from "./src/routes/HRM/Employee/employeeRoute.js";
+import OnboardingRouter from "./src/routes/HRM/Employee/onboardingRoute.js";
 
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
@@ -115,10 +118,15 @@ app.use("/api/platform/billingplan",BillingRouter)
 app.use("/api/platform/Auth",AdminAuth)
 // hrm routes 
 app.use("/api/recruitment/jobs",JobRouter)
-app.use("/api/recruitment/candidate", CandidateRouter);
-app.use("/api/recruitment/Offer", OfferRouter);
+app.use("/api/recruitment/candidates", CandidateRouter);
+app.use("/api/recruitment/Offers", OfferRouter);
+app.use("/api/recruitment/interviews",InterviewRouter);
 app.use("/api/organization/positions", PositionRouter);
-app.use("/api/organization/department", DepartmentRouter);
+app.use("/api/organization/departments", DepartmentRouter);
+app.use("/api/employees", EmployeeRouter);
+// Onboarding / Offboarding
+app.use("/api/employees/onboarding", OnboardingRouter);
+// app.use("/api/employees/offboarding", OffboardingRouter);
 
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;
@@ -142,15 +150,31 @@ app.all("*", (req, res) => res.status(404).json({ success: false, message: "Rout
 
 // Global error handlers
 app.use(errorHandler);
-process.on("unhandledRejection", (reason, p) => console.log("Unhandled Rejection:", reason));
-process.on("uncaughtException", (err) => console.log("Uncaught Exception:", err));
-process.on("uncaughtExceptionMonitor", (err) => console.log("Uncaught Exception Monitor:", err));
+process.on("unhandledRejection", (reason) => {
+  console.error("🔥 Unhandled Promise Rejection →", reason);
+  // exit so we don't continue running in a half-broken state
+  process.exit(1);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("💥 Uncaught Exception →", err);
+  process.exit(1);
+});
+
+process.on("SIGTERM", () => {
+  console.log("Shutting down gracefully...");
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  console.log("Shutting down gracefully...");
+  process.exit(0);
+});
 
 // Start server
 httpServer.listen(PORT, async () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
   await connectDB();
- 
 });
 await connectDB();
 startUserCleanupCron();

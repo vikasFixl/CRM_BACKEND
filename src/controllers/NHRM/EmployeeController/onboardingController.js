@@ -1,141 +1,198 @@
 import { Onboarding } from "../../../models/NHRM/employeeManagement/onboarding.js";
-import {EmployeeProfile} from "../../../models/NHRM/employeeManagement/employeeProfile.js";
+import { EmployeeProfile } from "../../../models/NHRM/employeeManagement/employeeProfile.js";
 
-/**
- * Create onboarding record (if not exists)
- */
 export const initiateOnboarding = async (req, res) => {
   try {
-    const { organizationId, employeeId, initiatedBy } = req.body;
+    const { employeeId } = req.params;
+    const organizationId = req.orgUser.orgId;
+    const initiatedBy = req.user.userId;
+
+
+    if (!employeeId) {
+      return res.status(400).json({ message: " employeeId is required" });
+    }
+    const employee = await EmployeeProfile.findById(employeeId);
+    if (!employee) return res.status(404).json({ message: "Employee profile not found" });
 
     // Check existing onboarding
-    const existing = await Onboarding.findOne({ employeeId, organizationId });
-    if (existing) return res.status(200).json(existing);
+    const existing = await Onboarding.findOne({
+      organizationId,
+      employeeId,
+      status: { $ne: "Completed" }
+    });
 
+    if (existing) return res.status(200).json({ message: "Onboarding already initiated" });
     const onboarding = await Onboarding.create({
       organizationId,
       employeeId,
       initiatedBy,
-      status: "Pending",
-      steps: [
-        { key: "personalInfo", label: "Personal Information" },
-        { key: "documents", label: "Upload Documents" },
-        { key: "bankDetails", label: "Bank Details" },
-      ],
-      checklistProgress: { total: 3 },
+      status: "Initiated",
     });
 
+    employee.onboardingStatus = "Initiated";
+    await employee.save();
     res.status(201).json({ message: "Onboarding initiated", onboarding });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
-
-/**
- * Fetch onboarding by employee
- */
 export const getOnboardingByEmployee = async (req, res) => {
   try {
     const { employeeId } = req.params;
+
     const onboarding = await Onboarding.findOne({ employeeId })
-      .populate("assignedTo initiatedBy")
-      .populate("steps.verifiedBy")
-      .populate("documents.verifiedBy");
+      .populate("organizationId", "name")
+      .populate("employeeId", "firstName lastName email");
 
-    if (!onboarding) return res.status(404).json({ message: "No onboarding found" });
+    if (!onboarding)
+      return res.status(404).json({ message: "Onboarding not found" });
 
-    res.json(onboarding);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(200).json(onboarding);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-/**
- * Update step status (employee fills info)
- */
-export const updateStepStatus = async (req, res) => {
+
+// UPDATE STATUS (Pending → InProgress → Completed → Rejected)
+export const updateOnboardingStatus = async (req, res) => {
   try {
-    const { employeeId, stepKey } = req.params;
-    const { status, note } = req.body;
+    const { onboardingId } = req.params;
+    const reviewedBy = req.user.userId;
+    const organizationId = req.orgUser.orgId;
+    const { status, rejectionReason } = req.body;
 
-    const onboarding = await Onboarding.findOne({ employeeId });
-    if (!onboarding) return res.status(404).json({ message: "Onboarding not found" });
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
 
-    const step = onboarding.steps.find((s) => s.key === stepKey);
-    if (!step) return res.status(400).json({ message: "Invalid step key" });
+    const onboarding = await Onboarding.findOne({
+      _id: onboardingId,
+      organizationId,
+    });
 
-    step.status = status;
-    step.note = note || step.note;
-    if (status === "Completed") step.completedAt = new Date();
+    if (!onboarding) {
+      return res.status(404).json({ message: "Onboarding not found" });
+    }
 
-    // Recalculate progress
-    const total = onboarding.steps.length;
-    const completed = onboarding.steps.filter((s) => s.status === "Completed" || s.status === "Verified").length;
-    const percentage = Math.round((completed / total) * 100);
+    // Prevent updating to same status
+    if (onboarding.status === status) {
+      return res.status(400).json({ message: `Onboarding is already in  '${status} '` });
+    }
 
-    onboarding.checklistProgress = { total, completed, percentage };
-    onboarding.status = percentage === 100 ? "Completed" : "In Progress";
+    // If rejected, reason is mandatory
+    if (status === "Rejected" && !rejectionReason) {
+      return res.status(400).json({
+        message: "Rejection reason is required when rejecting onboarding",
+      });
+    }
 
+    // Fetch employee profile from onboarding doc
+    const employeeProfile = await EmployeeProfile.findOne({
+      _id: onboarding.employeeId,
+      organizationId,
+    });
+
+    if (!employeeProfile) {
+      return res.status(404).json({ message: "Employee profile not found" });
+    }
+
+    // Update onboarding status
+    onboarding.status = status;
+    onboarding.reviewedBy = reviewedBy;
     await onboarding.save();
 
-    res.json({ message: "Step updated", onboarding });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    // Sync employee profile status (keep it consistent)
+    employeeProfile.onboardingStatus = status;
+    await employeeProfile.save();
+    return res.status(200).json({
+      message: `Status updated to '${status}'`,
+      onboarding,
+    });
+
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 
-/**
- * Verify document or step (HR action)
- */
-export const verifyStepOrDocument = async (req, res) => {
-  try {
-    const { employeeId, stepKey } = req.params;
-    const { verifiedBy, note } = req.body;
 
-    const onboarding = await Onboarding.findOne({ employeeId });
-    if (!onboarding) return res.status(404).json({ message: "Onboarding not found" });
 
-    const step = onboarding.steps.find((s) => s.key === stepKey);
-    if (!step) return res.status(400).json({ message: "Invalid step key" });
-
-    step.status = "Verified";
-    step.verifiedAt = new Date();
-    step.verifiedBy = verifiedBy;
-    step.note = note;
-
-    const total = onboarding.steps.length;
-    const completed = onboarding.steps.filter((s) => s.status === "Verified").length;
-    const percentage = Math.round((completed / total) * 100);
-
-    onboarding.checklistProgress = { total, completed, percentage };
-    onboarding.status = percentage === 100 ? "Completed" : "In Progress";
-
-    await onboarding.save();
-
-    res.json({ message: "Step verified", onboarding });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-/**
- * Delete onboarding (soft delete)
- */
+// ✅ DELETE ONBOARDING (ONLY IF COMPLETED)
 export const deleteOnboarding = async (req, res) => {
   try {
     const { onboardingId } = req.params;
-    const { deletedBy } = req.body;
 
     const onboarding = await Onboarding.findById(onboardingId);
-    if (!onboarding) return res.status(404).json({ message: "Not found" });
 
-    onboarding.isDeleted = true;
-    onboarding.deletedAt = new Date();
-    onboarding.deletedBy = deletedBy;
-    await onboarding.save();
+    if (!onboarding) return res.status(404).json({ message: "Onboarding not found" });
 
-    res.json({ message: "Onboarding deleted", onboarding });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (onboarding.status !== "Completed") {
+      return res.status(400).json({
+        message: "Onboarding can only be deleted when status is COMPLETED",
+      });
+    }
+
+    await onboarding.deleteOne();
+
+    res.status(200).json({ message: "Onboarding deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const getOnboardings = async (req, res) => {
+  try {
+    const organizationId = req.orgUser.orgId;
+    const { status, employeeId, page = 1, limit = 10 } = req.query;
+
+    const filter = { organizationId };
+    if (status) filter.status = status;
+    if (employeeId) filter.employeeId = employeeId;
+
+    const skip = (page - 1) * limit;
+
+    const [onboardings, total] = await Promise.all([
+      Onboarding.find(filter)
+        .populate({
+          path: "employeeId",
+          select: "onboardingStatus employeeId personalInfo",
+        })
+
+
+        .populate("initiatedBy", "firstName lastName email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+
+      Onboarding.countDocuments(filter),
+    ]);
+    return res.status(200).json({
+      message: "Onboarding records fetched successfully",
+      success: true,
+      onboardings: onboardings.map((item) => ({
+        onboardingId: item._id,
+        employee: {
+          id: item.employeeId?._id,
+          employeeId: item.employeeId?.employeeId,
+          email: item.employeeId?.email,
+        },
+        status: item.status,
+        bankDetailsVerified: item.bankDetailsVerified,
+        initiatedBy: item.initiatedBy,
+        createdAt: item.createdAt,
+      })),
+      pagination: {
+        totalRecords: total,
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        limit: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

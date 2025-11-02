@@ -43,10 +43,10 @@ export function generateShortPassword() {
 export const createEmployee = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
-    const    employeeId=generateEmployeeId();
-    const created=req.user.userId;
+    const employeeId = generateEmployeeId();
+    const created = req.user.userId;
     const {
-   
+
       firstName,
       lastName,
       email,
@@ -69,18 +69,18 @@ export const createEmployee = async (req, res) => {
     const employee = await EmployeeProfile.create({
       organizationId: orgId,
       employeeId,
-      password:await generateShortPassword(),
+      password: await generateShortPassword(),
       personalInfo: {
         firstName,
         lastName,
-        contact: { email},
+        contact: { email },
       },
       jobInfo: {
         department,
         position,
         employmentType,
       },
-      createdBy:created
+      createdBy: created
     });
 
     // Create onboarding record
@@ -90,9 +90,9 @@ export const createEmployee = async (req, res) => {
       initiatedBy: createdBy,
       status: "Pending",
       steps: [
-        { key: "personalInfo", label: "Personal Information" ,status:"Pending"},
-        { key: "documents", label: "Upload Documents", status:"Pending"},
-        { key: "bankDetails", label: "Bank Details", status:"Pending"},
+        { key: "personalInfo", label: "Personal Information", status: "Pending" },
+        { key: "documents", label: "Upload Documents", status: "Pending" },
+        { key: "bankDetails", label: "Bank Details", status: "Pending" },
       ],
       checklistProgress: { total: 3 },
     });
@@ -169,15 +169,93 @@ export const employeeLogin = async (req, res) => {
  */
 export const getEmployees = async (req, res) => {
   try {
-    const { OrgId } = req.params;
-    const employees = await EmployeeProfile.find({ OrgId }).populate(
-      "jobInfo.department jobInfo.position"
-    );
-    res.json(employees);
+    const orgId = req.orgUser.orgId;
+
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Filters
+    const {
+      email,
+      status,           // jobInfo.status
+      employmentType,   // jobInfo.employmentType
+      department,       // jobInfo.department
+      position,         // jobInfo.position
+      onboarding,       // joinDate exists & endDate is null
+      offboarding       // endDate exists (completed/terminated)
+    } = req.query;
+
+    const filter = { organizationId: orgId };
+
+    if (email) filter.email = { $regex: email, $options: "i" };
+
+    if (status) filter["jobInfo.status"] = status;
+
+    if (employmentType) filter["jobInfo.employmentType"] = employmentType;
+
+    if (department) filter["jobInfo.department"] = department;
+
+    if (position) filter["jobInfo.position"] = position;
+
+    // Filtering onboarding
+    if (onboarding === "true") {
+      filter["onboardingStatus"] = { $in: ["InProgress", "Completed"] };
+    }
+
+    // Filtering not onboarded (optional)
+    if (onboarding === "false") {
+      filter["onboardingStatus"] = "NotStarted";
+    }
+
+    // Filtering offboarding
+    if (offboarding === "true") {
+      filter["offboardingStatus"] = { $in: ["InProgress", "Completed"] };
+    }
+
+    // Filtering not offboarded (optional)
+    if (offboarding === "false") {
+      filter["offboardingStatus"] = "NotStarted";
+    }
+
+    const employees = await EmployeeProfile.find(filter)
+      .populate("jobInfo.department jobInfo.position")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const total = await EmployeeProfile.countDocuments(filter);
+    console.log(employees);
+    const formattedEmployees = employees.map((emp) => ({
+      _id: emp._id,
+      employeeId: emp.employeeId,
+      email: emp.personalInfo?.contact?.email,
+      status: emp.jobInfo?.status || null,
+      employmentType: emp.jobInfo?.employmentType || null,
+      onboarding: Boolean(emp.onboardingStatus && emp.onboardingStatus !== "NotStarted"),
+      offboarding: Boolean(emp.offboardingStatus && emp.offboardingStatus !== "NotStarted"),
+      department: emp.jobInfo?.department?.name || null,
+      position: emp.jobInfo?.position?.title || null,
+    }));
+
+    res.json({
+      message: "employee fetched successfully",
+      success: true,
+      employees: formattedEmployees,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 /**
  * Update Employee (for onboarding form updates)
@@ -196,20 +274,117 @@ export const updateEmployeeProfile = async (req, res) => {
   }
 };
 
-/**
- * Soft Delete Employee
- */
+export const getEmployeeById = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const orgId = req.orgUser.orgId;
+
+    const employee = await EmployeeProfile.findOne({ _id: employeeId, organizationId: orgId })
+      .populate("jobInfo.department", "name")            // Only return department name
+      .populate("jobInfo.position", "title level")
+      .populate("offer", "_id offerDetails")
+      .select(" -password") // Only return relevant fields
+      .lean();
+
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    console.log(employee);
+    // ✅ Transform response structure (complete + frontend friendly)
+    const formatted = {
+      id: employee._id,
+      employeeId: employee.employeeId,
+      organizationId: employee.organizationId,
+      // ✅ Offer Details (NEW)
+      offer: employee.offer,
+      // Personal Info
+      personal: {
+        firstName: employee.personalInfo?.firstName || "",
+        lastName: employee.personalInfo?.lastName || "",
+        fullName: `${employee.personalInfo?.firstName || ""} ${employee.personalInfo?.lastName || ""}`.trim(),
+        gender: employee.personalInfo?.gender || null,
+        maritalStatus: employee.personalInfo?.maritalStatus || null,
+        email: employee.personalInfo?.contact?.email || null,
+        phone: employee.personalInfo?.contact?.phone || null,
+      },
+
+      // Job Info
+      job: {
+        status: employee.jobInfo?.status || "Unknown",
+        department: {
+          id: employee.jobInfo?.department?._id || null,
+          name: employee.jobInfo?.department?.name || null,
+        },
+        position: {
+          id: employee.jobInfo?.position?._id || null,
+          title: employee.jobInfo?.position?.title || null,
+          level: employee.jobInfo?.position?.level || null,
+        },
+        employmentType: employee.jobInfo?.employmentType || null,
+        joinDate: employee.jobInfo?.joinDate || null,
+        endDate: employee.jobInfo?.endDate || null,
+      },
+
+      // Onboarding / Offboarding
+      onboarding: {
+        status: employee.onboardingStatus,
+        completed: employee.onboardingStatus === "Completed",
+      },
+      offboarding: {
+        status: employee.offboardingStatus,
+        completed: employee.offboardingStatus === "Completed",
+      },
+
+      // Documents / Family / Other Nested Data
+      documents: employee.documents || [],
+      family: employee.family || [],
+
+      // Metadata
+      createdBy: employee.createdBy || null,
+      createdAt: employee.createdAt,
+      updatedAt: employee.updatedAt,
+    };
+
+    return res.status(200).json({ message: "Employee fetched successfully", employee: formatted });
+  } catch (err) {
+    console.log("❌ Error fetching employee:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export const deleteEmployee = async (req, res) => {
   try {
     const { employeeId } = req.params;
-    const employee = await EmployeeProfile.findById(employeeId);
-    if (!employee) return res.status(404).json({ message: "Employee not found" });
+    const orgId = req.orgUser.orgId;
 
-    employee.jobInfo.status = "Terminated";
-    await employee.save();
+    const employee = await EmployeeProfile.findOne({
+      _id: employeeId,
+      organizationId: orgId,
+    });
+    if (!employee)
+      return res.status(404).json({ message: "Employee not found" });
 
-    res.json({ message: "Employee terminated successfully" });
+    // ✅ Check onboarding + offboarding completion
+    const isOnboardingDone = employee.onboardingStatus === "Completed";
+    const isOffboardingDone = employee.offboardingStatus === "Completed";
+
+    if (!isOnboardingDone || !isOffboardingDone) {
+      return res.status(400).json({
+        message:
+          "Employee cannot be deleted until both onboarding and offboarding are completed.",
+        onboardingStatus: employee.onboardingStatus,
+        offboardingStatus: employee.offboardingStatus,
+      });
+    }
+
+    // ✅ Delete employee record
+    await EmployeeProfile.findByIdAndDelete(employeeId);
+
+    res.json({ message: "Employee account permanently deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+

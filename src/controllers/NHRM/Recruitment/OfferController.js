@@ -136,6 +136,8 @@ export const updateOfferStatus = async (req, res) => {
     const { offerId } = req.params;
     const { status, acceptedDate } = req.body;
     const organization = req.orgUser.orgId;
+    if(!status) return res.status(400).json({ message: "Status is required" });
+    if(!acceptedDate) return res.status(400).json({ message: "Accepted date is required" });
     const offer = await Offer.findByIdAndUpdate(
       { _id: offerId, organization },
       { status, acceptedDate: acceptedDate || Date.now(), updatedAt: Date.now() },
@@ -155,18 +157,37 @@ export const deleteOffer = async (req, res) => {
   try {
     const { offerId } = req.params;
     const organization = req.orgUser.orgId;
-    const deletedOffer = await Offer.findByIdAndDelete({ _id: offerId, organization });
 
-    if (!deletedOffer) return res.status(404).json({ message: "Offer not found" });
+    // Single query that returns the offer if found
+    const offer = await Offer.findOne({ _id: offerId, organization });
+    if (!offer)
+      return res.status(404).json({ message: "Offer not found" });
 
-    // Remove reference from candidate
-    await Candidate.findByIdAndUpdate(deletedOffer.candidate, { $unset: { offer: "" } });
+    if (offer.status === "Accepted")
+      return res.status(400).json({ message: "Accepted offer cannot be deleted" });
 
-    res.json({ message: "Offer deleted successfully", offer: deletedOffer });
+    if (offer.status === "Pending")
+      return res.status(400).json({ message: "Pending offer cannot be deleted" });
+
+    // Delete offer
+    await offer.deleteOne();
+
+    // Remove reference from candidate (if exists)
+    if (offer.candidate) {
+      await Candidate.findByIdAndUpdate(offer.candidate, {
+        $unset: { offer: "" },
+      });
+    }
+
+    res.json({
+      message: "Offer deleted successfully",
+      offerId,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // ---------------------------- GET OFFERS BY CANDIDATE ID ----------------------------
 export const getOffersByCandidateId = async (req, res) => {
