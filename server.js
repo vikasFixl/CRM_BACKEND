@@ -51,6 +51,8 @@ import PositionRouter from "./src/routes/HRM/Employee/positionRoute.js";
 import InterviewRouter from "./src/routes/HRM/recruitemnt/interviewRoute.js";
 import EmployeeRouter from "./src/routes/HRM/Employee/employeeRoute.js";
 import OnboardingRouter from "./src/routes/HRM/Employee/onboardingRoute.js";
+import AssetRouter from "./src/routes/HRM/resource/AssetRoute.js";
+import AssetAssignmentRouter from "./src/routes/HRM/resource/assetAssignmentroutes.js";
 
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
@@ -127,6 +129,11 @@ app.use("/api/employees", EmployeeRouter);
 // Onboarding / Offboarding
 app.use("/api/employees/onboarding", OnboardingRouter);
 // app.use("/api/employees/offboarding", OffboardingRouter);
+
+// resouces
+app.use("/api/resource/asset", AssetRouter);
+app.use("/api/resource/asset-assignment", AssetAssignmentRouter);
+
 
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;
