@@ -9,7 +9,7 @@ feedbackRouter.route("/").post(isAuthenticated,authenticateOrgToken(),createFeed
 feedbackRouter.route("/all").get(isAuthenticated,authenticateOrgToken(),getAllFeedbacks)
 feedbackRouter.route("/:feedbackId").get(isAuthenticated,authenticateOrgToken(),getFeedbackById)
 feedbackRouter.route("/:feedbackId/delete").get(isAuthenticated,authenticateOrgToken(),deleteFeedback)
-feedbackRouter.route("/my").get(isAuthenticated,authenticateOrgToken(),getEmployeeFeedbacks)
+feedbackRouter.route("/mine").get(isAuthenticated,authenticateOrgToken(),getEmployeeFeedbacks)
 
 
 

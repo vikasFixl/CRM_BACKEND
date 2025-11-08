@@ -22,7 +22,7 @@ export const createGoal = async (req, res) => {
 
     return res.status(201).json({
       message: "Goal created successfully",
-      data: newGoal
+      goal: newGoal
     });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -46,7 +46,7 @@ export const getGoalById = async (req, res) => {
       return res.status(404).json({ message: "Goal not found" });
     }
 
-    return res.status(200).json({ data: goal });
+    return res.status(200).json({ message: "Goal fetched successfully", goal });
 
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -82,7 +82,7 @@ export const getAllGoals = async (req, res) => {
       page,
       limit,
       count: goals.length,
-      data: goals
+       goals
     });
 
   } catch (error) {
@@ -106,8 +106,9 @@ export const getEmployeeGoals = async (req, res) => {
     }).sort({ createdAt: -1 });
 
     return res.status(200).json({
+      message: "Goals fetched successfully",
       count: goals.length,
-      data: goals
+       goals
     });
 
   } catch (error) {
@@ -126,8 +127,9 @@ export const getMyGoals = async (req, res) => {
     }).sort({ createdAt: -1 });
 
     return res.status(200).json({
+        message: "Goals fetched successfully",
       count: goals.length,
-      data: goals
+       goals
     });
 
   } catch (error) {
@@ -154,7 +156,7 @@ export const updateGoal = async (req, res) => {
 
     return res.status(200).json({
       message: "Goal updated successfully",
-      data: goal
+       goal
     });
 
   } catch (error) {

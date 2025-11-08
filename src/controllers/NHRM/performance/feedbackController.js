@@ -91,14 +91,34 @@ export const getAllFeedbacks = async (req, res) => {
             .sort({ createdAt: -1 })  // Newest first – industry standard
             .skip(skip)
             .limit(limit);
-            
+
+        const cleanFeedbacks = feedbacks.map(fb => ({
+            id: fb._id,
+            organization: fb.organization,
+            employee: fb.employee ? {
+                id: fb.employee._id,
+                email: fb.employee.personalInfo?.contact?.email || ""
+            } : null,
+            feedbackFrom: fb.feedbackFrom ? {
+                id: fb.feedbackFrom._id,
+                email: fb.feedbackFrom.personalInfo?.contact?.email || ""
+            } : null,
+            feedbackType: fb.feedbackType,
+            feedbackDate: fb.feedbackDate,
+            rating: fb.rating,
+            comments: fb.comments,
+            createdAt: fb.createdAt,
+            updatedAt: fb.updatedAt
+        }));
+
         return res.status(200).json({
+            message: "feedback fetched succesfully",
+            feedbacks: cleanFeedbacks,
             total,
             page,
             limit,
             totalPages: Math.ceil(total / limit),
-            count: feedbacks.length,
-            feedbacks
+            count: feedbacks.length
         });
     } catch (error) {
         return res.status(500).json({
@@ -112,16 +132,16 @@ export const getAllFeedbacks = async (req, res) => {
 export const getEmployeeFeedbacks = async (req, res) => {
     try {
         const { employeeId } = req.params;
-const organization = req.orgUser.orgId
+        const organization = req.orgUser.orgId
         if (!mongoose.isValidObjectId(employeeId)) {
             return res.status(400).json({ message: 'Invalid employee ID' });
         }
 
-        const feedbacks = await Feedback.find({ employee: employeeId , organization })
+        const feedbacks = await Feedback.find({ employee: employeeId, organization })
             .populate('feedbackFrom', 'name email')
             .populate('organization', 'name');
 
-        return res.status(200).json({ count: feedbacks.length, data: feedbacks });
+        return res.status(200).json({ message: 'Feedbacks retrieved successfully', count: feedbacks.length, feedbacks });
     } catch (error) {
         return res.status(500).json({ message: 'Server error', error: error.message });
     }
