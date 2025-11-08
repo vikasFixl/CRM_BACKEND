@@ -1,43 +1,65 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
-const goalSettingSchema = new Schema({
-  employee: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'EmployeeProfile',
-    required: true,
-  },
-  goal: {
-    type: String,
-    required: true,
-  },
-  keyPerformanceIndicators: [String], // Array of KPIs
-  targetDate: {
-    type: Date,
-    required: true,
-  },
-  status: {
-    type: String,
-    enum: ['In Progress', 'Completed', 'Delayed'],
-    default: 'In Progress',
-    index: true,
-  },
-  progress: {
-    type: Number, // Percentage of completion
-    default: 0,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+const goalSettingSchema = new Schema(
+  {
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+      index: true
+    },
 
-goalSettingSchema.index({ targetDate: 1, status: 1 });
+    employee: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "EmployeeProfile",
+      required: true,
+      index: true,
+    },
 
-const GoalSetting = mongoose.model('GoalSetting', goalSettingSchema);
+    goal: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    keyPerformanceIndicators: {
+      type: [String],
+      default: [],
+    },
+
+    targetDate: {
+      type: Date,
+      required: true,
+      index: true
+    },
+
+    status: {
+      type: String,
+      enum: ["In Progress", "Completed", "Delayed"],
+      default: "In Progress",
+      index: true,
+    },
+
+    progress: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
+    createdBy:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }
+  },
+  { timestamps: true }
+);
+
+// Important indexes
+goalSettingSchema.index({ organization: 1, employee: 1 });
+goalSettingSchema.index({ status: 1 });
+goalSettingSchema.index({ targetDate: 1 });
+
+const GoalSetting = mongoose.model("GoalSetting", goalSettingSchema);
 
 export default GoalSetting;

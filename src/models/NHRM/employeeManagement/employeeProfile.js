@@ -40,6 +40,11 @@ const employeeSchema = new Schema({
       email: { type: String, required: true },
       phone: String,
       address: String,
+      //   address: String,
+      // city: String,
+      // state: String,
+      // country: String,
+      // pincode: String,
     },
   },
   jobInfo: {

@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const improvementPlanSchema = new Schema({
   employee: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'EmployeeProfile',
+    ref: 'EmployeeProfile', //  mostly HR will create improvement plan or manager
     required: true,
   },
   planDate: {

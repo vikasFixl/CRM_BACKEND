@@ -53,6 +53,8 @@ import EmployeeRouter from "./src/routes/HRM/Employee/employeeRoute.js";
 import OnboardingRouter from "./src/routes/HRM/Employee/onboardingRoute.js";
 import AssetRouter from "./src/routes/HRM/resource/AssetRoute.js";
 import AssetAssignmentRouter from "./src/routes/HRM/resource/assetAssignmentroutes.js";
+import feedbackRouter from "./src/routes/HRM/performance/feedbackRoute.js";
+import goalRouter from "./src/routes/HRM/performance/goalsRoute.js";
 
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
@@ -134,7 +136,9 @@ app.use("/api/employees/onboarding", OnboardingRouter);
 app.use("/api/resource/asset", AssetRouter);
 app.use("/api/resource/asset-assignment", AssetAssignmentRouter);
 
-
+// performance
+app.use("/api/performace/feedback",feedbackRouter)
+app.use("/api/performace/goals ",goalRouter)
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;
 
