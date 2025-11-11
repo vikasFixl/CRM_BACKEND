@@ -134,13 +134,11 @@ export const getEmployeeFeedbacks = async (req, res) => {
         const { employeeId } = req.params;
         const organization = req.orgUser.orgId
         if (!mongoose.isValidObjectId(employeeId)) {
-            return res.status(400).json({ message: 'Invalid employee ID' });
+            return res.status(400).json({ message: 'Invalid employee ID or not found' });
         }
-
         const feedbacks = await Feedback.find({ employee: employeeId, organization })
             .populate('feedbackFrom', 'name email')
             .populate('organization', 'name');
-
         return res.status(200).json({ message: 'Feedbacks retrieved successfully', count: feedbacks.length, feedbacks });
     } catch (error) {
         return res.status(500).json({ message: 'Server error', error: error.message });

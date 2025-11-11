@@ -646,23 +646,26 @@ export const updateCandidateStatus = async (req, res) => {
           const offer = await Offer.findOne({ _id: offerId, Organization: organization }).populate("position");
           if (!offer) return res.status(404).json({ message: "Offer not found" });
           // 3️⃣ Generate employee ID & password
-          const employeeId = generateEmployeeId();
-          const password = await generateShortPassword();
-          
+          let employeeId = generateEmployeeId();
+
+          // cross check if employeeid is already used 
+          const empidexist = await EmployeeProfile.findOne({ employeeId, organizationId: organization })
+          if (!empidexist) {
+            employeeId = generateEmployeeId()
+          }
+
           // 4️⃣ Create EmployeeProfile
           const employeeProfile = new EmployeeProfile({
             organizationId: organization,
             employeeId,
-            password,
             offer: offer._id,
             personalInfo: {
               firstName: candidate.firstName,
               lastName: candidate.lastName,
-              contact: {
                 email: candidate.email,
                 phone: candidate.phoneNumber,
-                location: candidate.location,
-              },
+                address: candidate.location,
+              
             },
             jobInfo: {
               position: offer.position._id,

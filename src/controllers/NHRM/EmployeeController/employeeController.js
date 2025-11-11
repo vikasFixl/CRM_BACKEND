@@ -69,11 +69,10 @@ export const createEmployee = async (req, res) => {
     const employee = await EmployeeProfile.create({
       organizationId: orgId,
       employeeId,
-      password: await generateShortPassword(),
       personalInfo: {
         firstName,
         lastName,
-        contact: { email },
+        email,
       },
       jobInfo: {
         department,
@@ -110,7 +109,7 @@ export const employeeLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const employee = await EmployeeProfile.findOne({ "personalInfo.contact.email": email })
+    const employee = await EmployeeProfile.findOne({ "personalInfo.email": email })
       .populate("jobInfo.department jobInfo.position");
 
     if (!employee) return res.status(404).json({ message: "Employee not found" });
@@ -230,7 +229,7 @@ export const getEmployees = async (req, res) => {
     const formattedEmployees = employees.map((emp) => ({
       _id: emp._id,
       employeeId: emp.employeeId,
-      email: emp.personalInfo?.contact?.email,
+      email: emp.personalInfo?.email,
       status: emp.jobInfo?.status || null,
       employmentType: emp.jobInfo?.employmentType || null,
       onboarding: Boolean(emp.onboardingStatus && emp.onboardingStatus !== "NotStarted"),
@@ -305,8 +304,8 @@ export const getEmployeeById = async (req, res) => {
         fullName: `${employee.personalInfo?.firstName || ""} ${employee.personalInfo?.lastName || ""}`.trim(),
         gender: employee.personalInfo?.gender || null,
         maritalStatus: employee.personalInfo?.maritalStatus || null,
-        email: employee.personalInfo?.contact?.email || null,
-        phone: employee.personalInfo?.contact?.phone || null,
+        email: employee.personalInfo?.email || null,
+        phone: employee.personalInfo?.phone || null,
       },
 
       // Job Info

@@ -6,7 +6,7 @@ const goalRouter = express.Router();
 
 goalRouter.route("/").post(isAuthenticated,authenticateOrgToken(),createGoal);
 goalRouter.route("/all").get(isAuthenticated,authenticateOrgToken(),getAllGoals);
-goalRouter.route("/mine").get(isAuthenticated,authenticateOrgToken(),getMyGoals);
+goalRouter.route("/:employeeId/mine").get(isAuthenticated,authenticateOrgToken(),getMyGoals);
 goalRouter.route("/:goalId").get(isAuthenticated,authenticateOrgToken(),getGoalById).patch(isAuthenticated,authenticateOrgToken(),updateGoal).delete(isAuthenticated,authenticateOrgToken(),deleteGoal);
 
 

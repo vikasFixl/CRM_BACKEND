@@ -8,6 +8,9 @@ const ImprovementRouter = express.Router();
 ImprovementRouter.route("/").post(isAuthenticated,authenticateOrgToken(),createImprovementPlan)
 ImprovementRouter.route("/all").get(isAuthenticated,authenticateOrgToken(),getAllImprovementPlans)
 ImprovementRouter.route("/:improvementId").get(isAuthenticated,authenticateOrgToken(),getImprovementPlanById)
-ImprovementRouter.route("/mine").get(isAuthenticated,authenticateOrgToken(),getMyImprovementPlans)
+ImprovementRouter.route("/:employeeId/mine").get(isAuthenticated,authenticateOrgToken(),getMyImprovementPlans)
 ImprovementRouter.route("/:improvementId").patch(isAuthenticated,authenticateOrgToken(),updateImprovementPlan)
 ImprovementRouter.route("/:improvementId/delete").get(isAuthenticated,authenticateOrgToken(),deleteImprovementPlan)
+
+
+export default ImprovementRouter;

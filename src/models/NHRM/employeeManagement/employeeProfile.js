@@ -22,30 +22,25 @@ const documentSchema = new Schema({
   fileUrl: String,
   public_id: String,
 }, { _id: false });
-
 const employeeSchema = new Schema({
   organizationId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
-  offer: { type: mongoose.Schema.Types.ObjectId, ref: 'Offer', required: true }
-  ,
+  offer: { type: mongoose.Schema.Types.ObjectId, ref: 'Offer', required: true },
   employeeId: { type: String, required: true }, // company-assigned unique ID
   userId: { type: Schema.Types.ObjectId, ref: "User" }, // optional link to auth User
-  password: { type: String, required: true }, // temp
   personalInfo: {
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     dob: Date,
     gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male" },
     maritalStatus: { type: String, enum: ["Single", "Married", "Divorced", "Widowed"], default: "Single" },
-    contact: {
       email: { type: String, required: true },
       phone: String,
       address: String,
-      //   address: String,
-      // city: String,
-      // state: String,
-      // country: String,
-      // pincode: String,
-    },
+      city: String,
+      state: String,
+      country: String,
+      pincode: String,
+    
   },
   jobInfo: {
     department: { type: Schema.Types.ObjectId, ref: "Department", required: true },
@@ -59,7 +54,7 @@ const employeeSchema = new Schema({
     type: String,
     enum: [
       "NotStarted",
-      "Initiated",     // HR created onboarding entry
+      "Initiated",  // HR created onboarding entry
       "Pending",       // waiting for employee to submit docs
       "InProgress",    // HR verifying docs
       "Completed",     // done

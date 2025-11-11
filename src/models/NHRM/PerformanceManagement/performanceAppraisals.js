@@ -3,43 +3,31 @@ const { Schema } = mongoose;
 
 const performanceAppraisalSchema = new Schema(
   {
-    organization: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Organization",
-      required: true,
-      index: true
-    },
+    organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
+    employee: { type: mongoose.Schema.Types.ObjectId, ref: "EmployeeProfile", required: true, index: true },
 
-    employee: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "EmployeeProfile",
-      required: true,
-      index: true
-    },
+    period: { type: String, required: true }, // 2025-Q1, 2024-Annual
 
-    appraisalDate: {
-      type: Date,
-      required: true,
-      default: Date.now
-    },
+    rating: { type: Number, min: 1, max: 5, required: true },
 
-    rating: {
-      type: Number,
-      min: 1,
-      max: 5,
-      required: true
-    },
+    criteria: [
+      {
+        label: String,
+        score: { type: Number, min: 1, max: 5 },
+        comments: String
+      }
+    ],
 
-    comments: {
+    comments: { type: String, trim: true, maxLength: 1000 },
+
+    managerComments: { type: String, trim: true, maxLength: 1000 },
+
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+    recommendation: {
       type: String,
-      trim: true,
-      maxLength: 1000
-    },
-
-    managerComments: {
-      type: String,
-      trim: true,
-      maxLength: 1000
+      enum: ["None", "Promotion", "Salary Hike", "Warning", "Training"],
+      default: "None"
     },
 
     status: {
@@ -47,16 +35,12 @@ const performanceAppraisalSchema = new Schema(
       enum: ["Pending", "Completed"],
       default: "Pending",
       index: true
-    }
+    },
+
+    appraisalDate: { type: Date, required: true, default: Date.now }
   },
-  { timestamps: true } // Auto-manages createdAt & updatedAt
+  { timestamps: true }
 );
 
-// Optimized indexes
-performanceAppraisalSchema.index({ organization: 1, employee: 1 });
-performanceAppraisalSchema.index({ appraisalDate: 1 });
-performanceAppraisalSchema.index({ status: 1 });
-
-const PerformanceAppraisal = mongoose.model("PerformanceAppraisal", performanceAppraisalSchema);
-
+export const PerformanceAppraisal = mongoose.model("PerformanceAppraisal", performanceAppraisalSchema);
 export default PerformanceAppraisal;

@@ -9,7 +9,7 @@ return `task-${uuidv4().replace(/-/g, "").substring(0, 3)}`;
 }
 export const generateEmployeeId = () => {
   const short = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6-char hex
-  return `EMP_${short}`; // like EMP_1F2A9C
+  return `EMP${short}`; // like EMP_1F2A9C
 };
  export function generateShortPassword() {
   const lower = "abcdefghijklmnopqrstuvwxyz";

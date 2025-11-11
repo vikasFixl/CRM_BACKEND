@@ -1,5 +1,5 @@
 import ImprovementPlan from "../../../models/NHRM/PerformanceManagement/improvementPlans.js";
-import mongoose, { get } from "mongoose";
+import mongoose from "mongoose";
 export const createImprovementPlan = async (req, res) => {
   try {
     const organization = req.orgUser.orgId;
@@ -23,7 +23,7 @@ export const createImprovementPlan = async (req, res) => {
 
     return res.status(201).json({
       message: "Improvement plan created successfully",
-       newPlan
+      newPlan
     });
 
   } catch (error) {
@@ -51,7 +51,7 @@ export const getImprovementPlanById = async (req, res) => {
       return res.status(404).json({ message: "Improvement plan not found" });
     }
 
-    return res.status(200).json({message: "Improvement plan fetched successfully", plan });
+    return res.status(200).json({ message: "Improvement plan fetched successfully", plan });
 
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -77,20 +77,36 @@ export const getAllImprovementPlans = async (req, res) => {
     const total = await ImprovementPlan.countDocuments(filter);
 
     const plans = await ImprovementPlan.find(filter)
-      .populate("employee", "personalInfo.fullName personalInfo.contact.email")
+      .populate("employee")
       .populate("createdBy", "name email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+    const cleaned = plans.map(item => ({
+      id: item._id,
+      organization: item.organization,
+      employee: {
+        id: item.employee?._id,
+        email: item.employee?.personalInfo?.email,
+        employeeId: item?.employee?.employeeId
 
+      },
+      createdBy: item.createdBy?.email
+      ,
+      planDate: item.planDate,
+      timeline: item.timeline,
+      objectives: item.objectives,
+      actions: item.actions,
+      status: item.status
+    }));
     return res.status(200).json({
-        message: "Improvement plans fetched successfully",
+      message: "Improvement plans fetched successfully",
+      plans: cleaned,
       total,
       totalPages: Math.ceil(total / limit),
       page,
       limit,
       count: plans.length,
-       plans
     });
 
   } catch (error) {
@@ -118,9 +134,9 @@ export const getEmployeeImprovementPlans = async (req, res) => {
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
- message: "Improvement plans fetched successfully",
+      message: "Improvement plans fetched successfully",
       count: plans.length,
-       plans
+      plans
     });
 
   } catch (error) {
@@ -150,7 +166,7 @@ export const updateImprovementPlan = async (req, res) => {
 
     return res.status(200).json({
       message: "Improvement plan updated successfully",
-    plan
+      plan
     });
 
   } catch (error) {
@@ -191,18 +207,37 @@ export const getMyImprovementPlans = async (req, res) => {
   try {
     const createdBy = req.user.userId;
     const organization = req.orgUser.orgId;
+    const { employeeId } = req.params;
 
     const plans = await ImprovementPlan.find({
+      employee: employeeId,
       createdBy,
       organization
     })
-      .populate("employee", "personalInfo.fullName personalInfo.contact.email")
+      .populate("employee")
+      .populate("createdBy", "name email")
       .sort({ createdAt: -1 });
+    const cleaned = plans.map(item => ({
+      id: item._id,
+      organization: item.organization,
+      employee: {
+        id: item.employee?._id,
+        email: item.employee?.personalInfo?.email,
+        employeeId: item?.employee?.employeeId
 
+      },
+      createdBy: item.createdBy?.email
+      ,
+      planDate: item.planDate,
+      timeline: item.timeline,
+      objectives: item.objectives,
+      actions: item.actions,
+      status: item.status
+    }));
     return res.status(200).json({
       message: " improvement plans fetched successfully",
       count: plans.length,
-       plans
+      plans: cleaned
     });
 
   } catch (error) {

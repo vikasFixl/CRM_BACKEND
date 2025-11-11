@@ -1,6 +1,6 @@
 import { Onboarding } from "../../../models/NHRM/employeeManagement/onboarding.js";
 import { EmployeeProfile } from "../../../models/NHRM/employeeManagement/employeeProfile.js";
-
+import { OrgMember } from "../../../models/OrganisationMemberSchema.js"
 export const initiateOnboarding = async (req, res) => {
   try {
     const { employeeId } = req.params;
@@ -102,6 +102,16 @@ export const updateOnboardingStatus = async (req, res) => {
     onboarding.reviewedBy = reviewedBy;
     await onboarding.save();
 
+    // if (status == "Completed") {
+    // user can be either created or we will create the user profile and send credentails to users or we could send that login now
+    //   // menas onboadring is completed and user can be added to organization correct so lets do that 
+    //   await OrgMember.create({
+    //     userId: you, // well add this thing,
+    //     employeeId: employeeProfile.employeeId,
+    //     organizationId,
+    //     role://need to set somehow default permisson to him
+    // })
+    // }
     // Sync employee profile status (keep it consistent)
     employeeProfile.onboardingStatus = status;
     await employeeProfile.save();

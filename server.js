@@ -55,6 +55,8 @@ import AssetRouter from "./src/routes/HRM/resource/AssetRoute.js";
 import AssetAssignmentRouter from "./src/routes/HRM/resource/assetAssignmentroutes.js";
 import feedbackRouter from "./src/routes/HRM/performance/feedbackRoute.js";
 import goalRouter from "./src/routes/HRM/performance/goalsRoute.js";
+import ImprovementRouter from "./src/routes/HRM/performance/improvementRoute.js";
+import ApprasialRouter from "./src/routes/HRM/performance/apprasial.js";
 
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
@@ -137,8 +139,10 @@ app.use("/api/resource/asset", AssetRouter);
 app.use("/api/resource/asset-assignment", AssetAssignmentRouter);
 
 // performance
-app.use("/api/performace/feedback",feedbackRouter)
-app.use("/api/performace/goals ",goalRouter)
+app.use("/api/performance/feedback",feedbackRouter)
+app.use("/api/performance/goals",goalRouter)
+app.use("/api/performance/improvement",ImprovementRouter)
+app.use("/api/performance/appraisal",ApprasialRouter)
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;
 

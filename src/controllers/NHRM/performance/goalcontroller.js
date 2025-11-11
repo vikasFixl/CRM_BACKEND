@@ -1,5 +1,5 @@
 import GoalSetting from "../../../models/NHRM/PerformanceManagement/goalSetting.js";
-
+import mongoose from "mongoose";
 export const createGoal = async (req, res) => {
   try {
     const organization = req.orgUser.orgId;
@@ -77,12 +77,13 @@ export const getAllGoals = async (req, res) => {
       .limit(limit);
 
     return res.status(200).json({
+      message:"goals fetched succesfully",
+      goals,
       total,
       totalPages: Math.ceil(total / limit),
       page,
       limit,
-      count: goals.length,
-       goals
+      count: goals.length
     });
 
   } catch (error) {
@@ -96,10 +97,15 @@ export const getEmployeeGoals = async (req, res) => {
     const { employeeId } = req.params;
     const organization = req.orgUser.orgId;
 
+    console.log(employeeId);
     if (!mongoose.isValidObjectId(employeeId)) {
       return res.status(400).json({ message: "Invalid employee ID" });
     }
+    if(!employeeId){
+      return res.status(400).json({ message: "Invalid employee ID" });
+    }
 
+    // 691307e66957a1b8c06ba964
     const goals = await GoalSetting.find({
       employee: employeeId,
       organization
@@ -120,8 +126,15 @@ export const getMyGoals = async (req, res) => {
   try {
     const createdBy = req.user.userId;
     const organization = req.orgUser.orgId;
-
+     const { employeeId } = req.params;
+    if (!mongoose.isValidObjectId(employeeId)) {
+      return res.status(400).json({ message: "Invalid employee ID" });
+    }
+    if(!employeeId){
+      return res.status(400).json({ message: "Invalid employee ID" });
+    }
     const goals = await GoalSetting.find({
+      employee: employeeId,
       createdBy,
       organization
     }).sort({ createdAt: -1 });
