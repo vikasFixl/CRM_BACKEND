@@ -55,73 +55,224 @@ export const getOnboardingByEmployee = async (req, res) => {
 
 
 // UPDATE STATUS (Pending → InProgress → Completed → Rejected)
+// export const updateOnboardingStatus = async (req, res) => {
+//   try {
+//     const { onboardingId } = req.params;
+//     const reviewedBy = req.user.userId;
+//     const organizationId = req.orgUser.orgId;
+//     const { status, rejectionReason } = req.body;
+
+//     if (!status) {
+//       return res.status(400).json({ message: "Status is required" });
+//     }
+
+//     const onboarding = await Onboarding.findOne({
+//       _id: onboardingId,
+//       organizationId,
+//     });
+
+//     if (!onboarding) {
+//       return res.status(404).json({ message: "Onboarding not found" });
+//     }
+
+//     // Prevent updating to same status
+//     if (onboarding.status === status) {
+//       return res.status(400).json({ message: `Onboarding is already in  '${status} '` });
+//     }
+
+//     // If rejected, reason is mandatory
+//     if (status === "Rejected" && !rejectionReason) {
+//       return res.status(400).json({
+//         message: "Rejection reason is required when rejecting onboarding",
+//       });
+//     }
+
+//     // Fetch employee profile from onboarding doc
+//     const employeeProfile = await EmployeeProfile.findOne({
+//       _id: onboarding.employeeId,
+//       organizationId,
+//     });
+
+//     if (!employeeProfile) {
+//       return res.status(404).json({ message: "Employee profile not found" });
+//     }
+
+//     // Update onboarding status
+//     onboarding.status = status;
+//     onboarding.reviewedBy = reviewedBy;
+//     await onboarding.save();
+
+//     // if (status == "Completed") {
+//     // user can be either created or we will create the user profile and send credentails to users or we could send that login now
+//     //   // menas onboadring is completed and user can be added to organization correct so lets do that 
+//     //   await OrgMember.create({
+//     //     userId: you, // well add this thing,
+//     //     employeeId: employeeProfile.employeeId,
+//     //     organizationId,
+//     //     role://need to set somehow default permisson to him
+//     // })
+//     // }
+//     // Sync employee profile status (keep it consistent)
+//     employeeProfile.onboardingStatus = status;
+//     await employeeProfile.save();
+//     return res.status(200).json({
+//       message: `Status updated to '${status}'`,
+//       onboarding,
+//     });
+
+//   } catch (error) {
+//     return res.status(500).json({ message: error.message });
+//   }
+// };
+
 export const updateOnboardingStatus = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { onboardingId } = req.params;
     const reviewedBy = req.user.userId;
     const organizationId = req.orgUser.orgId;
-    const { status, rejectionReason } = req.body;
+    const { status, rejectionReason, shiftId, attendanceStartDate } = req.body;
 
     if (!status) {
-      return res.status(400).json({ message: "Status is required" });
+      throw new Error("Status is required");
     }
 
-    const onboarding = await Onboarding.findOne({
-      _id: onboardingId,
-      organizationId,
-    });
+    const onboarding = await Onboarding.findOne(
+      { _id: onboardingId, organizationId },
+      null,
+      { session }
+    );
 
     if (!onboarding) {
-      return res.status(404).json({ message: "Onboarding not found" });
+      throw new Error("Onboarding not found");
     }
 
-    // Prevent updating to same status
     if (onboarding.status === status) {
-      return res.status(400).json({ message: `Onboarding is already in  '${status} '` });
+      throw new Error(`Onboarding is already '${status}'`);
     }
 
-    // If rejected, reason is mandatory
     if (status === "Rejected" && !rejectionReason) {
-      return res.status(400).json({
-        message: "Rejection reason is required when rejecting onboarding",
-      });
+      throw new Error("Rejection reason is required");
     }
 
-    // Fetch employee profile from onboarding doc
-    const employeeProfile = await EmployeeProfile.findOne({
-      _id: onboarding.employeeId,
-      organizationId,
-    });
+    const employeeProfile = await EmployeeProfile.findOne(
+      { _id: onboarding.employeeId, organizationId },
+      null,
+      { session }
+    );
 
     if (!employeeProfile) {
-      return res.status(404).json({ message: "Employee profile not found" });
+      throw new Error("Employee profile not found");
     }
 
-    // Update onboarding status
+    /**
+     * ===============================
+     * COMPLETION LOGIC
+     * ===============================
+     */
+    if (status === "Completed") {
+      if (!shiftId || !attendanceStartDate) {
+        throw new Error("shiftId and attendanceStartDate are required");
+      }
+
+      /** 1️⃣ Validate Attendance Policy */
+      const policy = await AttendancePolicy.findOne(
+        { organizationId, isActive: true },
+        null,
+        { session }
+      );
+
+      if (!policy) {
+        throw new Error("Attendance policy not configured for organization");
+      }
+
+      /** 2️⃣ Validate Shift */
+      const shift = await ShiftMaster.findOne(
+        { _id: shiftId, organizationId, isActive: true },
+        null,
+        { session }
+      );
+
+      if (!shift) {
+        throw new Error("Invalid or inactive shift selected");
+      }
+
+      /** 3️⃣ Update Employee Profile */
+      employeeProfile.onboardingStatus = "Completed";
+      employeeProfile.attendanceEnabled = true;
+      employeeProfile.joiningDate = attendanceStartDate;
+      await employeeProfile.save({ session });
+
+      /** 4️⃣ Create Shift Assignment */
+      await EmployeeShiftAssignment.create(
+        [
+          {
+            organizationId,
+            employeeId: employeeProfile._id,
+            shiftId,
+            effectiveFrom: attendanceStartDate,
+            isActive: true
+          }
+        ],
+        { session }
+      );
+
+      /** 5️⃣ Create Leave Balances (Paid only) */
+      const year = new Date(attendanceStartDate).getFullYear();
+
+      const paidLeaveTypes = await LeaveType.find(
+        { organizationId, isActive: true, isPaid: true },
+        null,
+        { session }
+      );
+
+      for (const leaveType of paidLeaveTypes) {
+        await LeaveBalance.create(
+          [
+            {
+              organizationId,
+              employeeId: employeeProfile._id,
+              leaveTypeId: leaveType._id,
+              isPaid: true,
+              year,
+              totalAllocated: leaveType.annualAllocation,
+              used: 0,
+              remaining: leaveType.annualAllocation
+            }
+          ],
+          { session }
+        );
+      }
+    }
+
+    /**
+     * ===============================
+     * FINAL STATUS UPDATE
+     * ===============================
+     */
     onboarding.status = status;
     onboarding.reviewedBy = reviewedBy;
-    await onboarding.save();
+    onboarding.rejectionReason = status === "Rejected" ? rejectionReason : null;
+    await onboarding.save({ session });
 
-    // if (status == "Completed") {
-    // user can be either created or we will create the user profile and send credentails to users or we could send that login now
-    //   // menas onboadring is completed and user can be added to organization correct so lets do that 
-    //   await OrgMember.create({
-    //     userId: you, // well add this thing,
-    //     employeeId: employeeProfile.employeeId,
-    //     organizationId,
-    //     role://need to set somehow default permisson to him
-    // })
-    // }
-    // Sync employee profile status (keep it consistent)
-    employeeProfile.onboardingStatus = status;
-    await employeeProfile.save();
+    await session.commitTransaction();
+    session.endSession();
+
     return res.status(200).json({
-      message: `Status updated to '${status}'`,
-      onboarding,
+      success: true,
+      message: `Onboarding status updated to '${status}'`
     });
 
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 

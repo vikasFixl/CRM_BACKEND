@@ -1,10 +1,78 @@
-const holidaySchema = new Schema({
-  companyId: { type: Schema.Types.ObjectId, required: true },
-  date: { type: Date, required: true },
-  name: String,
-  type: { type: String, enum: ["National", "Optional", "WeeklyOff"] },
-  locationId: Schema.Types.ObjectId,
-  isPaid: Boolean
-}, { timestamps: true });
+import mongoose from "mongoose";
+const { Schema } = mongoose;
 
-export default mongoose.model("HolidayCalendar", holidaySchema);
+const holidaySchema = new Schema(
+  {
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+      index: true
+    },
+
+    date: {
+      type: Date,
+      required: true,
+      index: true
+    },
+
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    /**
+     * Holiday classification
+     */
+    type: {
+      type: String,
+      enum: ["National", "Optional"],
+      required: true
+    },
+
+    /**
+     * Optional: location-specific holiday
+     * null = applies to all
+     */
+    locationId: {
+      type: Schema.Types.ObjectId,
+      default: null,
+      index: true
+    },
+
+    /**
+     * Payroll relevance
+     */
+    isPaid: {
+      type: Boolean,
+      default: true
+    },
+
+    /**
+     * Soft control
+     */
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    }
+  },
+  { timestamps: true }
+);
+
+/* 🔒 Prevent duplicate holidays on same date */
+holidaySchema.index(
+  { organizationId: 1, date: 1, locationId: 1 },
+  { unique: true }
+);
+
+/* ⚡ Monthly attendance queries */
+holidaySchema.index(
+  { organizationId: 1, date: 1 }
+);
+
+export default mongoose.model(
+  "HolidayCalendar",
+  holidaySchema
+);

@@ -10,7 +10,7 @@ const assignmentSchema = new Schema(
       index: true
     },
 
-    employeeId: {
+    employeeId:{
       type: Schema.Types.ObjectId,
       ref: "EmployeeProfile",
       required: true,

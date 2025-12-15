@@ -1,4 +1,4 @@
-import ShiftMaster from "../models/ShiftMaster.js";
+import ShiftMaster from "../../../models/NHRM/TimeAndAttendence/ShiftMaster.js";
 
 /**
  * CREATE SHIFT
@@ -17,7 +17,7 @@ export const createShift = async (req, res) => {
       isNightShift
     } = req.body;
 
-    const organizationId = req.user.organizationId;
+   const organizationId=req.orgUser.orgId;
 
     const shift = await ShiftMaster.create({
       organizationId,
@@ -50,14 +50,14 @@ export const createShift = async (req, res) => {
  */
 export const getActiveShifts = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+   const organizationId=req.orgUser.orgId;
 
     const shifts = await ShiftMaster.find({
       organizationId,
       isActive: true
     }).sort({ shiftType: 1 });
 
-    res.json({ success: true, data: shifts });
+    res.json({ success: true, data: shifts ,message:"Shifts fetched successfully."});
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -69,7 +69,7 @@ export const getActiveShifts = async (req, res) => {
 export const updateShift = async (req, res) => {
   try {
     const { shiftId } = req.params;
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
 
     const updated = await ShiftMaster.findOneAndUpdate(
       { _id: shiftId, organizationId },
@@ -93,7 +93,7 @@ export const updateShift = async (req, res) => {
 export const disableShift = async (req, res) => {
   try {
     const { shiftId } = req.params;
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
 
     const shift = await ShiftMaster.findOneAndUpdate(
       { _id: shiftId, organizationId },

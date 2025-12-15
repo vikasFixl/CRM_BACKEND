@@ -5,7 +5,7 @@ import LeaveRequest from "../models/LeaveRequest.js";
  */
 export const createLeaveRequest = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
     const employeeId = req.user.employeeId;
 
     const {
@@ -58,7 +58,7 @@ export const createLeaveRequest = async (req, res) => {
  */
 export const getPendingLeaveRequests = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
 
     const leaves = await LeaveRequest.find({
       organizationId,
@@ -76,7 +76,7 @@ export const getPendingLeaveRequests = async (req, res) => {
  */
 export const updateLeaveStatus = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
     const approverId = req.user.employeeId;
 
     const { leaveId } = req.params;

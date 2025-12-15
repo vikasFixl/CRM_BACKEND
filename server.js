@@ -57,6 +57,9 @@ import feedbackRouter from "./src/routes/HRM/performance/feedbackRoute.js";
 import goalRouter from "./src/routes/HRM/performance/goalsRoute.js";
 import ImprovementRouter from "./src/routes/HRM/performance/improvementRoute.js";
 import ApprasialRouter from "./src/routes/HRM/performance/apprasial.js";
+import ShiftRouter from "./src/routes/HRM/Attendence/ShiftRoute.js";
+import AttendancePolicyRouter from "./src/routes/HRM/Attendence/AttendancePolicyRoute.js";
+import LeaveTypeRouter from "./src/routes/HRM/Attendence/leaveType.js";
 
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
@@ -143,6 +146,10 @@ app.use("/api/performance/feedback",feedbackRouter)
 app.use("/api/performance/goals",goalRouter)
 app.use("/api/performance/improvement",ImprovementRouter)
 app.use("/api/performance/appraisal",ApprasialRouter)
+app.use("/api/leave/types", LeaveTypeRouter);
+app.use("/api/attendance/shifts", ShiftRouter);
+app.use("/api/attendance/policy", AttendancePolicyRouter);
+
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;
 

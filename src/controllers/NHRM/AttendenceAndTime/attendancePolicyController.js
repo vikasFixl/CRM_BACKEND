@@ -1,4 +1,4 @@
-import AttendancePolicy from "../models/AttendancePolicy.js";
+import AttendancePolicy from "../../../models/NHRM/TimeAndAttendence/AttendancePolicy.js";
 
 /**
  * CREATE / UPDATE POLICY
@@ -6,7 +6,7 @@ import AttendancePolicy from "../models/AttendancePolicy.js";
  */
 export const upsertPolicy = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+    const organizationId=req.orgUser.orgId;
 
     // Deactivate old policy
     await AttendancePolicy.updateMany(
@@ -20,7 +20,7 @@ export const upsertPolicy = async (req, res) => {
       isActive: true
     });
 
-    res.status(201).json({ success: true, data: policy });
+    res.status(201).json({ success: true, data: policy ,message:"Attendance policy created successfully."});
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -31,7 +31,7 @@ export const upsertPolicy = async (req, res) => {
  */
 export const getActivePolicy = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
 
     const policy = await AttendancePolicy.findOne({
       organizationId,

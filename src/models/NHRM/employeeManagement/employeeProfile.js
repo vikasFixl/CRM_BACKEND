@@ -1,93 +1,121 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
-const familyMemberSchema = new Schema({
+/* ---------- SUBSCHEMAS ---------- */
+
+const familySchema = new Schema({
   name: String,
   relationship: String,
   phone: String,
-  dob: Date,
+  dob: Date
 }, { _id: false });
 
-const bankDetailSchema = new Schema({
+const bankSchema = new Schema({
   accountHolder: String,
   bankName: String,
-  accountNumber: String,
-  ifsc: String,
-  branch: String,
+  accountNumber: { type: String, match: /^\d{9,18}$/ },
+  ifsc: { type: String, match: /^[A-Z]{4}0[A-Z0-9]{6}$/ }
 }, { _id: false });
 
 const documentSchema = new Schema({
-  type: { type: String, enum: ["PAN", "AADHAR", "PASSPORT", "DRIVING_LICENSE", "OTHER"] },
+  type: { type: String, enum: ["PAN", "AADHAR", "PASSPORT", "DL", "OTHER"] },
   number: String,
-  fileUrl: String,
-  public_id: String,
+  fileUrl: String
 }, { _id: false });
+
+/* ---------- MAIN ---------- */
+
 const employeeSchema = new Schema({
-  organizationId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
-  offer: { type: mongoose.Schema.Types.ObjectId, ref: 'Offer', required: true },
-  employeeId: { type: String, required: true }, // company-assigned unique ID
-  userId: { type: Schema.Types.ObjectId, ref: "User" }, // optional link to auth User
+  organizationId: {
+    type: Schema.Types.ObjectId,
+    ref: "Organization",
+    required: true,
+    index: true
+  },
+
+  employeeId: {
+    type: String,
+    required: true,
+    immutable: true,
+    match: /^[A-Z]{2,5}-\d{4,6}$/
+  },
+
+  userId: { type: Schema.Types.ObjectId, ref: "User" },
+  offerId: { type: Schema.Types.ObjectId, ref: "Offer", required: true },
+
   personalInfo: {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
+    firstName: String,
+    lastName: String,
+    email: String,
+    phone: String,
+    gender: { type: String, enum: ["Male", "Female", "Other"] },
     dob: Date,
-    gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male" },
-    maritalStatus: { type: String, enum: ["Single", "Married", "Divorced", "Widowed"], default: "Single" },
-      email: { type: String, required: true },
-      phone: String,
-      address: String,
+    address: {
+      line1: String,
       city: String,
       state: String,
       country: String,
-      pincode: String,
-    
+      pincode: String
+    }
   },
+
   jobInfo: {
-    department: { type: Schema.Types.ObjectId, ref: "Department", required: true },
-    position: { type: Schema.Types.ObjectId, ref: "Position", required: true },
+    departmentId: { type: Schema.Types.ObjectId, ref: "Department" },
+    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
     joinDate: Date,
-    endDate: Date,
-    employmentType: { type: String, enum: ["Permanent", "Contract", "Intern", "Consultant"], default: "Permanent" },
-    status: { type: String, enum: ["Active", "Inactive", "OnLeave", "Terminated"], default: "Active" },
+    employmentType: {
+      type: String,
+      enum: ["Permanent", "Contract", "Intern", "Consultant"]
+    }
   },
+
+  employmentStatus: {
+    type: String,
+    enum: ["Active", "Suspended", "Terminated"],
+    default: "Active",
+    index: true
+  },
+
   onboardingStatus: {
     type: String,
-    enum: [
-      "NotStarted",
-      "Initiated",  // HR created onboarding entry
-      "Pending",       // waiting for employee to submit docs
-      "InProgress",    // HR verifying docs
-      "Completed",     // done
-      "Rejected",      // documents failed / not approved
-      "Cancelled"      // onboarding withdrawn or stopped
-    ],
+    enum: ["NotStarted", "InProgress", "Completed", "Rejected"],
     default: "NotStarted",
-    index: true,
+    index: true
   },
 
   offboardingStatus: {
     type: String,
-    enum: [
-      "NotStarted",
-      "Initiated",     // HR created onboarding entry
-      "Pending",       // waiting for employee to submit docs
-      "InProgress",    // HR verifying docs
-      "Completed",     // done
-      "Rejected",      // documents failed / not approved
-      "Cancelled"      // onboarding withdrawn or stopped
-    ],
-    default: "NotStarted",
-    index: true,
+    enum: ["NotStarted", "InProgress", "Completed"],
+    default: "NotStarted"
   },
-  bankDetails: bankDetailSchema,
-  documents: [documentSchema],
-  family: [familyMemberSchema],
 
-  profileImage: String,
-  createdBy: { type: Schema.Types.ObjectId, ref: "User" },
+  attendanceEnabled: { type: Boolean, default: false },
+  attendanceStartDate: Date,
+
+  bankDetails: bankSchema,
+  documents: [documentSchema],
+  family: [familySchema],
+
+  activatedAt: Date,
+  terminatedAt: Date,
+
+  createdBy: { type: Schema.Types.ObjectId, ref: "User" }
 }, { timestamps: true });
 
-employeeSchema.index({ organizationId: 1, employeeId: 1 }, { unique: true });
+employeeSchema.index(
+  { organizationId: 1, employeeId: 1 },
+  { unique: true }
+);
+
+employeeSchema.pre("save", function (next) {
+  if (
+    this.attendanceStartDate &&
+    this.jobInfo?.joinDate &&
+    this.attendanceStartDate < this.jobInfo.joinDate
+  ) {
+    return next(new Error("attendanceStartDate < joinDate"));
+  }
+  next();
+});
 
 export const EmployeeProfile = mongoose.model("EmployeeProfile", employeeSchema);
-

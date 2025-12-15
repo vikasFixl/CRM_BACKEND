@@ -1,5 +1,5 @@
-import EmployeeShiftAssignment from "../models/EmployeeShiftAssignment.js";
-import ShiftMaster from "../models/ShiftMaster.js";
+import EmployeeShiftAssignment from "../../../models/NHRM/TimeAndAttendence/EmployeeShiftAssignment.js";
+import ShiftMaster from "../../../models/NHRM/TimeAndAttendence/ShiftMaster.js";
 
 /**
  * ASSIGN OR CHANGE SHIFT FOR EMPLOYEE
@@ -7,7 +7,7 @@ import ShiftMaster from "../models/ShiftMaster.js";
  */
 export const assignShift = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
     const { employeeId, shiftId, effectiveFrom, locationId } = req.body;
 
     if (!employeeId || !shiftId) {
@@ -85,7 +85,7 @@ export const assignShift = async (req, res) => {
  */
 export const getCurrentShift = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
     const { employeeId } = req.params;
 
     const assignment = await EmployeeShiftAssignment.findOne({
@@ -114,7 +114,7 @@ export const getCurrentShift = async (req, res) => {
  */
 export const disableShiftAssignment = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
     const { assignmentId } = req.params;
 
     const assignment = await EmployeeShiftAssignment.findOneAndUpdate(
@@ -148,7 +148,7 @@ export const disableShiftAssignment = async (req, res) => {
  */
 export const getShiftHistory = async (req, res) => {
   try {
-    const organizationId = req.user.organizationId;
+  const organizationId=req.orgUser.orgId;
     const { employeeId } = req.params;
 
     const history = await EmployeeShiftAssignment.find({
