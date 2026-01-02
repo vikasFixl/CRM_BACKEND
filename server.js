@@ -89,6 +89,17 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
 
+// 3️⃣ 🔥 Performance Logger (MUST be before routes)
+app.use((req, res, next) => {
+  const start = performance.now();
+
+  res.on("finish", () => {
+    const ms = performance.now() - start;
+    console.log(`${req.method} ${req.originalUrl} - ${ms.toFixed(2)}ms`);
+  });
+
+  next();
+});
 // Request logger
 app.use((req, res, next) => {
   console.log(`Request hit: ${req.method} ${req.originalUrl}`);

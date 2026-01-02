@@ -65,6 +65,32 @@ const leaveTypeSchema = new Schema(
       default: true,
       index: true
     }
+,
+  accrualType: {
+  type: String,
+  enum: ["MONTHLY", "YEARLY"],
+  default: "YEARLY"
+},
+
+monthlyAccrual: {
+  type: Number, // e.g. 1 per month
+  default: 0
+},
+
+maxCarryForward: {
+  type: Number, // e.g. 10
+  default: 0
+},
+
+allowEncashment: {
+  type: Boolean,
+  default: false
+},
+
+maxEncashable: {
+  type: Number, // e.g. 10
+  default: 0
+}
   },
   { timestamps: true }
 );

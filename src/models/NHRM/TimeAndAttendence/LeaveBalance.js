@@ -3,84 +3,36 @@ const { Schema } = mongoose;
 
 const leaveBalanceSchema = new Schema(
   {
-    organizationId: {
-      type: Schema.Types.ObjectId,
-      ref: "Organization",
-      required: true,
-      index: true
-    },
+    organizationId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
+    employeeId: { type: Schema.Types.ObjectId, ref: "EmployeeProfile", required: true, index: true },
+    leaveTypeId: { type: Schema.Types.ObjectId, ref: "LeaveType", required: true, index: true },
 
-    employeeId: {
-      type: Schema.Types.ObjectId,
-      ref: "EmployeeProfile",
-      required: true,
-      index: true
-    },
+    isPaid: { type: Boolean, required: true },
 
-    /**
-     * Reference to LeaveType master
-     * (Annual, Sick, LWP, etc.)
-     */
-    leaveTypeId: {
-      type: Schema.Types.ObjectId,
-      ref: "LeaveType",
-      required: true,
-      index: true
-    },
+    year: { type: Number, required: true, index: true },
 
-    /**
-     * Snapshot for payroll safety
-     * (in case LeaveType is edited later)
-     */
-    isPaid: {
-      type: Boolean,
-      required: true
-    },
+    totalAllocated: { type: Number, required: true, min: 0 },
+    used: { type: Number, default: 0, min: 0 },
+    remaining: { type: Number, required: true, min: 0 },
 
-    year: {
+    /* 🔥 Accrual tracking */
+    accruedTillMonth: {
       type: Number,
-      required: true,
-      index: true
+      min: 1,
+      max: 12
     },
 
-    totalAllocated: {
-      type: Number,
-      required: true,
-      min: 0
-    },
+    /* 🔁 Carry forward tracking */
+    carryForwardedFromYear: Number,
 
-    used: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
+    isActive: { type: Boolean, default: true },
 
-    remaining: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-
-    /**
-     * System control flags
-     */
-    isActive: {
-      type: Boolean,
-      default: true
-    },
-
-    lastAdjustedBy: {
-      type: Schema.Types.ObjectId,
-      ref: "EmployeeProfile"
-    },
-
-    adjustmentReason: {
-      type: String,
-      trim: true
-    }
+    lastAdjustedBy: { type: Schema.Types.ObjectId, ref: "EmployeeProfile" },
+    adjustmentReason: { type: String, trim: true }
   },
   { timestamps: true }
 );
+
 
 /* 🔒 One balance per employee per leave type per year */
 leaveBalanceSchema.index(

@@ -123,3 +123,4 @@ export default mongoose.model(
   "DailyAttendance",
   dailyAttendanceSchema
 );
+ 
