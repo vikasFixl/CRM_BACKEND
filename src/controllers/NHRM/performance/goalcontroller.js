@@ -97,7 +97,7 @@ export const getEmployeeGoals = async (req, res) => {
     const { employeeId } = req.params;
     const organization = req.orgUser.orgId;
 
-    console.log(employeeId);
+    logger.info(employeeId);
     if (!mongoose.isValidObjectId(employeeId)) {
       return res.status(400).json({ message: "Invalid employee ID" });
     }

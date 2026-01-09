@@ -27,15 +27,15 @@ const seedTemplates = async () => {
       const exists = await ProjectTemplate.findOne({ name: template.name });
       if (!exists) {
         await ProjectTemplate.create(template);
-        console.log(`✅ Seeded: ${template.name}`);
+        logger.info(`✅ Seeded: ${template.name}`);
       } else {
-        console.log(`⚠️ Already exists: ${template.name}`);
+        logger.info(`⚠️ Already exists: ${template.name}`);
       }
     }
 
     process.exit(0);
   } catch (err) {
-    console.error("Error seeding templates:", err);
+    logger.error("Error seeding templates:", err);
     process.exit(1);
   }
 };

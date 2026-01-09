@@ -1,19 +1,15 @@
-import LeaveRequest from "../models/LeaveRequest.js";
+import LeaveRequest from "../../../models/NHRM/TimeAndAttendence/LeaveRequest.js";
 
-/**
- * EMPLOYEE CREATES LEAVE REQUEST
- */
 export const createLeaveRequest = async (req, res) => {
   try {
-  const organizationId=req.orgUser.orgId;
-    const employeeId = req.user.employeeId;
-
+    const { organizationId, employeeId } = req.user;
     const {
       leaveType,
       startDate,
       endDate,
       isHalfDay,
       halfDaySession,
+      hours,
       reason
     } = req.body;
 
@@ -27,7 +23,24 @@ export const createLeaveRequest = async (req, res) => {
     if (isHalfDay && !halfDaySession) {
       return res.status(400).json({
         success: false,
-        message: "halfDaySession is required for half-day leave"
+        message: "halfDaySession required for half day leave"
+      });
+    }
+
+    // Basic overlap guard (soft)
+    const overlap = await LeaveRequest.findOne({
+      organizationId,
+      employeeId,
+      status: { $in: ["Pending", "Approved"] },
+      $or: [
+        { startDate: { $lte: endDate }, endDate: { $gte: startDate } }
+      ]
+    });
+
+    if (overlap) {
+      return res.status(409).json({
+        success: false,
+        message: "Overlapping leave request already exists"
       });
     }
 
@@ -39,6 +52,7 @@ export const createLeaveRequest = async (req, res) => {
       endDate,
       isHalfDay,
       halfDaySession,
+      hours,
       reason
     });
 
@@ -52,63 +66,64 @@ export const createLeaveRequest = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
-/**
- * HR / MANAGER: GET PENDING LEAVES
- */
-export const getPendingLeaveRequests = async (req, res) => {
+export const getMyLeaveRequests = async (req, res) => {
   try {
-  const organizationId=req.orgUser.orgId;
+    const { organizationId, employeeId } = req.user;
 
-    const leaves = await LeaveRequest.find({
+    const requests = await LeaveRequest.find({
       organizationId,
-      status: "Pending"
+      employeeId
     }).sort({ createdAt: -1 });
 
-    res.json({ success: true, data: leaves });
+    res.json({ success: true, data: requests });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * HR / MANAGER: APPROVE / REJECT LEAVE
- */
-export const updateLeaveStatus = async (req, res) => {
+export const getPendingLeaveRequests = async (req, res) => {
   try {
-  const organizationId=req.orgUser.orgId;
-    const approverId = req.user.employeeId;
+    const organizationId = req.orgUser.orgId;
 
-    const { leaveId } = req.params;
-    const { status } = req.body;
+    const requests = await LeaveRequest.find({
+      organizationId,
+      status: "Pending"
+    }).sort({ createdAt: 1 });
 
-    if (!["Approved", "Rejected"].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status"
-      });
-    }
+    res.json({ success: true, data: requests });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-    const leave = await LeaveRequest.findOneAndUpdate(
-      { _id: leaveId, organizationId },
-      {
-        status,
-        approvedBy: approverId,
-        approvedAt: new Date()
-      },
-      { new: true }
-    );
+export const approveLeaveRequest = async (req, res) => {
+  try {
+    const organizationId = req.orgUser.orgId;
+    const approverId = req.user.userId;
+    const { id } = req.params;
+
+    const leave = await LeaveRequest.findOne({
+      _id: id,
+      organizationId,
+      status: "Pending"
+    });
 
     if (!leave) {
       return res.status(404).json({
         success: false,
-        message: "Leave request not found"
+        message: "Leave request not found or already processed"
       });
     }
 
+    leave.status = "Approved";
+    leave.approvedBy = approverId;
+    leave.approvedAt = new Date();
+
+    await leave.save();
+
     res.json({
       success: true,
-      message: `Leave ${status.toLowerCase()}`,
+      message: "Leave approved",
       data: leave
     });
 
@@ -116,3 +131,42 @@ export const updateLeaveStatus = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const rejectLeaveRequest = async (req, res) => {
+  try {
+    const organizationId = req.orgUser.orgId;
+    const approverId = req.user.userId;
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const leave = await LeaveRequest.findOne({
+      _id: id,
+      organizationId,
+      status: "Pending"
+    });
+
+    if (!leave) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave request not found or already processed"
+      });
+    }
+
+    leave.status = "Rejected";
+    leave.approvedBy = approverId;
+    leave.approvedAt = new Date();
+    leave.reason = reason || leave.reason;
+
+    await leave.save();
+
+    res.json({
+      success: true,
+      message: "Leave rejected",
+      data: leave
+    });
+
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+

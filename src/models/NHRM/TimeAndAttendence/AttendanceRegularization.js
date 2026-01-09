@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
-const regularizationSchema = new Schema(
+const attendanceRegularizationSchema = new Schema(
   {
     organizationId: {
       type: Schema.Types.ObjectId,
@@ -17,26 +17,30 @@ const regularizationSchema = new Schema(
       index: true
     },
 
-    date: {
+    /**
+     * Attendance date (UTC normalized, no time)
+     */
+    attendanceDate: {
       type: Date,
       required: true,
       index: true
     },
 
-    requestedIn: {
-      type: Date
-    },
-
-    requestedOut: {
-      type: Date
-    },
+    /**
+     * Requested correction
+     */
+    requestedIn: Date,
+    requestedOut: Date,
 
     reason: {
       type: String,
-      trim: true
+      trim: true,
+      required: true
     },
 
-    /* 🔑 Policy enforcement helpers */
+    /**
+     * Policy helpers
+     */
     isBackdated: {
       type: Boolean,
       default: false,
@@ -61,25 +65,34 @@ const regularizationSchema = new Schema(
       ref: "EmployeeProfile"
     },
 
-    approvedAt: {
-      type: Date
-    }
+    approvedAt: Date,
+
+    /**
+     * Audit safety
+     */
+    remarks: String
   },
   { timestamps: true }
 );
 
-/* 🔒 Prevent multiple regularizations for same employee & date */
-regularizationSchema.index(
-  { organizationId: 1, employeeId: 1, date: 1 },
+/* 🔒 One request per employee per day */
+attendanceRegularizationSchema.index(
+  { organizationId: 1, employeeId: 1, attendanceDate: 1 },
   { unique: true }
 );
 
-/* ⚡ Common approval queries */
-regularizationSchema.index(
+/* ⚡ HR approval queues */
+attendanceRegularizationSchema.index(
   { organizationId: 1, status: 1 }
 );
 
+/* 🔐 Prevent changes after approval */
+attendanceRegularizationSchema.pre("findOneAndUpdate", function (next) {
+  this.where({ status: "Pending" });
+  next();
+});
+
 export default mongoose.model(
   "AttendanceRegularization",
-  regularizationSchema
+  attendanceRegularizationSchema
 );

@@ -131,12 +131,21 @@ export const updateOnboardingStatus = async (req, res) => {
 
   try {
     const { onboardingId } = req.params;
-    const reviewedBy = req.user.userId;
     const organizationId = req.orgUser.orgId;
-    const { status, rejectionReason, shiftId, attendanceStartDate } = req.body;
+    const reviewedBy = req.user.userId;
 
+    const {
+      status,
+      rejectionReason,
+      shiftId,
+      attendanceStartDate
+    } = req.body;
+
+    /* ===============================
+       BASIC VALIDATION
+    =============================== */
     if (!status) {
-      throw new Error("Status is required");
+      throw new Error("status is required");
     }
 
     const onboarding = await Onboarding.findOne(
@@ -146,133 +155,167 @@ export const updateOnboardingStatus = async (req, res) => {
     );
 
     if (!onboarding) {
-      throw new Error("Onboarding not found");
+      throw new Error("Onboarding record not found");
     }
 
     if (onboarding.status === status) {
-      throw new Error(`Onboarding is already '${status}'`);
+      throw new Error(`Onboarding already in '${status}' state`);
     }
 
-    if (status === "Rejected" && !rejectionReason) {
-      throw new Error("Rejection reason is required");
-    }
-
-    const employeeProfile = await EmployeeProfile.findOne(
+    const employee = await EmployeeProfile.findOne(
       { _id: onboarding.employeeId, organizationId },
       null,
       { session }
     );
 
-    if (!employeeProfile) {
+    if (!employee) {
       throw new Error("Employee profile not found");
     }
 
-    /**
-     * ===============================
-     * COMPLETION LOGIC
-     * ===============================
-     */
-    if (status === "Completed") {
-      if (!shiftId || !attendanceStartDate) {
-        throw new Error("shiftId and attendanceStartDate are required");
+    /* ===============================
+       REJECTION FLOW
+    =============================== */
+    if (status === "Rejected") {
+      if (!rejectionReason) {
+        throw new Error("rejectionReason is mandatory when rejecting onboarding");
       }
 
-      /** 1️⃣ Validate Attendance Policy */
+      onboarding.status = "Rejected";
+      onboarding.rejectionReason = rejectionReason;
+      onboarding.reviewedBy = reviewedBy;
+      await onboarding.save({ session });
+
+      employee.onboardingStatus = "Rejected";
+      await employee.save({ session });
+
+      await session.commitTransaction();
+      return res.json({ success: true, message: "Onboarding rejected" });
+    }
+
+    /* ===============================
+       COMPLETION FLOW (CRITICAL)
+    =============================== */
+    if (status === "Completed") {
+      /* 🔒 Required fields */
+      if (!shiftId) throw new Error("shiftId is required");
+      if (!attendanceStartDate) throw new Error("attendanceStartDate is required");
+
+      const startDate = new Date(attendanceStartDate);
+
+      if (employee.jobInfo?.joinDate && startDate < employee.jobInfo.joinDate) {
+        throw new Error("attendanceStartDate cannot be before joinDate");
+      }
+
+      /* 1️⃣ Attendance Policy */
       const policy = await AttendancePolicy.findOne(
         { organizationId, isActive: true },
         null,
         { session }
       );
+      if (!policy) throw new Error("AttendancePolicy not configured");
 
-      if (!policy) {
-        throw new Error("Attendance policy not configured for organization");
-      }
-
-      /** 2️⃣ Validate Shift */
+      /* 2️⃣ Shift validation */
       const shift = await ShiftMaster.findOne(
         { _id: shiftId, organizationId, isActive: true },
         null,
         { session }
       );
+      if (!shift) throw new Error("Invalid or inactive shift");
 
-      if (!shift) {
-        throw new Error("Invalid or inactive shift selected");
-      }
-
-      /** 3️⃣ Update Employee Profile */
-      employeeProfile.onboardingStatus = "Completed";
-      employeeProfile.attendanceEnabled = true;
-      employeeProfile.joiningDate = attendanceStartDate;
-      await employeeProfile.save({ session });
-
-      /** 4️⃣ Create Shift Assignment */
-      await EmployeeShiftAssignment.create(
-        [
-          {
-            organizationId,
-            employeeId: employeeProfile._id,
-            shiftId,
-            effectiveFrom: attendanceStartDate,
-            isActive: true
-          }
-        ],
-        { session }
-      );
-
-      /** 5️⃣ Create Leave Balances (Paid only) */
-      const year = new Date(attendanceStartDate).getFullYear();
-
+      /* 3️⃣ Paid Leave Types */
       const paidLeaveTypes = await LeaveType.find(
         { organizationId, isActive: true, isPaid: true },
         null,
         { session }
       );
+      if (paidLeaveTypes.length === 0) {
+        throw new Error("No paid leave types configured");
+      }
+
+      /* ===============================
+         EMPLOYEE ACTIVATION
+      =============================== */
+      employee.onboardingStatus = "Completed";
+      employee.attendanceEnabled = true;
+      employee.attendanceStartDate = startDate;
+      employee.activatedAt = new Date();
+      await employee.save({ session });
+
+      /* ===============================
+         SHIFT ASSIGNMENT (SAFE)
+      =============================== */
+      await EmployeeShiftAssignment.updateMany(
+        {
+          organizationId,
+          employeeId: employee._id,
+          isActive: true,
+          effectiveTo: null
+        },
+        {
+          isActive: false,
+          effectiveTo: new Date(startDate.getTime() - 1)
+        },
+        { session }
+      );
+
+      await EmployeeShiftAssignment.create(
+        [{
+          organizationId,
+          employeeId: employee._id,
+          shiftId,
+          effectiveFrom: startDate,
+          isActive: true
+        }],
+        { session }
+      );
+
+      /* ===============================
+         LEAVE BALANCE INITIALIZATION
+      =============================== */
+      const year = startDate.getFullYear();
 
       for (const leaveType of paidLeaveTypes) {
-        await LeaveBalance.create(
-          [
-            {
-              organizationId,
-              employeeId: employeeProfile._id,
-              leaveTypeId: leaveType._id,
-              isPaid: true,
-              year,
-              totalAllocated: leaveType.annualAllocation,
-              used: 0,
-              remaining: leaveType.annualAllocation
-            }
-          ],
-          { session }
+        await LeaveBalance.findOneAndUpdate(
+          {
+            organizationId,
+            employeeId: employee._id,
+            leaveTypeId: leaveType._id,
+            year
+          },
+          {
+            organizationId,
+            employeeId: employee._id,
+            leaveTypeId: leaveType._id,
+            isPaid: true,
+            year,
+            totalAllocated: leaveType.annualAllocation,
+            used: 0,
+            remaining: leaveType.annualAllocation
+          },
+          { upsert: true, session }
         );
       }
+
+      onboarding.status = "Completed";
+      onboarding.reviewedBy = reviewedBy;
+      onboarding.rejectionReason = null;
+      await onboarding.save({ session });
     }
 
-    /**
-     * ===============================
-     * FINAL STATUS UPDATE
-     * ===============================
-     */
-    onboarding.status = status;
-    onboarding.reviewedBy = reviewedBy;
-    onboarding.rejectionReason = status === "Rejected" ? rejectionReason : null;
-    await onboarding.save({ session });
-
     await session.commitTransaction();
-    session.endSession();
-
-    return res.status(200).json({
+    return res.json({
       success: true,
       message: `Onboarding status updated to '${status}'`
     });
 
   } catch (error) {
     await session.abortTransaction();
-    session.endSession();
-
     return res.status(400).json({
       success: false,
       message: error.message
     });
+  } finally {
+    session.endSession();
   }
 };
 

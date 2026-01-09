@@ -12,5 +12,5 @@ const { publicKey, privateKey } = generateKeyPairSync('rsa', {
   }
 });
 
-console.log("Public Key:\n", publicKey);
-console.log("Private Key:\n", privateKey);
+logger.info("Public Key:\n", publicKey);
+logger.info("Private Key:\n", privateKey);

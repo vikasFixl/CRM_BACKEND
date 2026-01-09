@@ -2,7 +2,7 @@ import ActivityModel from "../models/activityModel.js";
 export const getActivitiesByModule = async (req, res) => {
   const { module } = req.params;
   const orgId = req.orgUser.orgId;
-  console.log(req.user)
+  logger.info(req.user)
 
   // Parse query parameters for pagination
   const page = parseInt(req.query.page) || 1;       // default: page 1
@@ -40,7 +40,7 @@ export const getActivitiesByModule = async (req, res) => {
       message: `Activities for module "${module}" fetched successfully.`,
     });
   } catch (error) {
-    console.error("Error fetching activities:", error.message);
+    logger.error("Error fetching activities:", error.message);
     return res.status(500).json({
       success: false,
       code: 500,
@@ -78,7 +78,7 @@ export const deleteActivityById = async (req, res) => {
       message: "Activity deleted successfully.",
     });
   } catch (error) {
-    console.error("Error deleting activity:", error.message);
+    logger.error("Error deleting activity:", error.message);
     return res.status(500).json({
       success: false,
       code: 500,

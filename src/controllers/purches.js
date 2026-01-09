@@ -256,7 +256,7 @@ exports.createInvoice = async (req, res) => {
       });
     }
   } catch (error) {
-    console.log(error);
+    logger.info(error);
     res.status(409).json({ message: "something went wrong." });
   }
 };
@@ -412,7 +412,7 @@ exports.payment = async (req, res) => {
         new: true,
       }
     );
-    console.log(newPay.amountPaid);
+    logger.info(newPay.amountPaid);
     if (newPay.dueAmount < 0) {
       amount = newPay.dueAmount;
       return res.json({ msg: "OverPaid!", amount });
@@ -424,7 +424,7 @@ exports.payment = async (req, res) => {
       message: "Payment Record Inserted Succesfully!",
     });
   } catch (error) {
-    console.log(error);
+    logger.info(error);
     res.status(409).json({ message: "something went wrong." });
   }
 };
@@ -549,7 +549,7 @@ exports.getPurchasebyVender = async (req,res)=>{
           res.status(200).json(purchase);
       }
         } catch (error) {
-          console.error(error);
+          logger.error(error);
           res.status(500).json({ message: "Internal Server Error" });
         }
       
@@ -570,7 +570,7 @@ exports.totalPurchase = async (req, res) => {
         return total + purchase.total;
       }, 0);
   
-      console.log("totalamount", totalAmount);
+      logger.info("totalamount", totalAmount);
   
       return res.status(200).json({
         totalAmount: totalAmount,
@@ -578,7 +578,7 @@ exports.totalPurchase = async (req, res) => {
         success: true,
       });
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       return res.status(500).json({ error: "Something Went Wrong" });
     }
   };

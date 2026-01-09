@@ -107,7 +107,7 @@ export const runAutomations = async (event, payload) => {
       const fn = registry[action.type];
       if (fn) {
         await fn(action, payload).catch((err) =>
-          console.error(`Rule ${rule.name} failed:`, err)
+          logger.error(`Rule ${rule.name} failed:`, err)
         );
       }
     }

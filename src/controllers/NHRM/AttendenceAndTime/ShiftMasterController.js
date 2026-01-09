@@ -33,7 +33,7 @@ export const createShift = async (req, res) => {
       isNightShift
     });
 
-    res.status(201).json({ success: true, data: shift });
+    res.status(201).json({ success: true,message:"Shift created successfully.", data: shift });
   } catch (err) {
     if (err.code === 11000) {
       return res.status(400).json({

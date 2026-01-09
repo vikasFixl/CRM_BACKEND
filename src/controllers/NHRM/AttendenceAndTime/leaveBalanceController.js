@@ -1,12 +1,70 @@
-import LeaveBalance from "../models/LeaveBalance.js";
-import LeaveType from "../models/LeaveType.js";
+import LeaveBalance from "../../../models/NHRM/TimeAndAttendence/LeaveBalance.js";
+import LeaveType from "../../../models/NHRM/TimeAndAttendence/LeaveType.js";
 
-/**
- * =========================================================
- * EMPLOYEE: GET OWN LEAVE BALANCES (READ ONLY)
- * =========================================================
- */
-export const getMyLeaveBalances = async (req, res) => {
+export const initializeLeaveBalanceForEmployee = async ({
+  organizationId,
+  employeeId,
+  joinDate,
+  session
+}) => {
+  const year = new Date(joinDate).getFullYear();
+
+  // Get all active PAID leave types
+  const leaveTypes = await LeaveType.find(
+    { organizationId, isActive: true, isPaid: true },
+    null,
+    { session }
+  );
+
+  const balances = leaveTypes.map((lt) => ({
+    organizationId,
+    employeeId,
+    leaveTypeId: lt._id,
+    isPaid: true,
+    year,
+    totalAllocated: lt.annualAllocation,
+    used: 0,
+    remaining: lt.annualAllocation,
+    accruedTillMonth: new Date(joinDate).getMonth() + 1
+  }));
+
+  if (balances.length) {
+    await LeaveBalance.insertMany(balances, { session });
+  }
+};
+
+export const createLeaveBalanceForNewLeaveType = async ({
+  organizationId,
+  leaveType,
+  session
+}) => {
+  if (!leaveType.isPaid) return;
+
+  const year = new Date().getFullYear();
+
+  const employees = await EmployeeProfile.find(
+    { organizationId, "jobInfo.status": "Active" },
+    "_id",
+    { session }
+  );
+
+  const balances = employees.map((emp) => ({
+    organizationId,
+    employeeId: emp._id,
+    leaveTypeId: leaveType._id,
+    isPaid: true,
+    year,
+    totalAllocated: leaveType.annualAllocation,
+    used: 0,
+    remaining: leaveType.annualAllocation
+  }));
+
+  await LeaveBalance.insertMany(balances, { session });
+};
+
+
+
+export const getMyLeaveBalance = async (req, res) => {
   try {
     const { organizationId, employeeId } = req.user;
     const year = Number(req.query.year) || new Date().getFullYear();
@@ -18,26 +76,15 @@ export const getMyLeaveBalances = async (req, res) => {
       isActive: true
     }).populate("leaveTypeId");
 
-    return res.json({
-      success: true,
-      data: balances
-    });
+    res.json({ success: true, data: balances });
   } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: err.message
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/**
- * =========================================================
- * HR / ADMIN: GET EMPLOYEE LEAVE BALANCES
- * =========================================================
- */
-export const getEmployeeLeaveBalances = async (req, res) => {
+export const getEmployeeLeaveBalance = async (req, res) => {
   try {
-    const { organizationId } = req.user;
+    const organizationId = req.orgUser.orgId;
     const { employeeId } = req.params;
     const year = Number(req.query.year) || new Date().getFullYear();
 
@@ -47,195 +94,8 @@ export const getEmployeeLeaveBalances = async (req, res) => {
       year
     }).populate("leaveTypeId");
 
-    return res.json({
-      success: true,
-      data: balances
-    });
+    res.json({ success: true, data: balances });
   } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-};
-
-/**
- * =========================================================
- * SYSTEM FUNCTION (INTERNAL)
- * CREATE LEAVE BALANCE ON ONBOARDING / YEAR ROLLOVER
- * PAID LEAVES ONLY
- * =========================================================
- */
-export const createLeaveBalance = async ({
-  organizationId,
-  employeeId,
-  leaveTypeId,
-  year,
-  allocated,
-  createdBy
-}) => {
-  const leaveType = await LeaveType.findOne({
-    _id: leaveTypeId,
-    organizationId,
-    isActive: true
-  });
-
-  if (!leaveType) {
-    throw new Error("Invalid leave type");
-  }
-
-  // ❌ NEVER create balance for unpaid leave
-  if (!leaveType.isPaid) return null;
-
-  return LeaveBalance.create({
-    organizationId,
-    employeeId,
-    leaveTypeId,
-    isPaid: leaveType.isPaid,
-    year,
-    totalAllocated: allocated,
-    used: 0,
-    remaining: allocated,
-    lastAdjustedBy: createdBy,
-    adjustmentReason: "Initial allocation"
-  });
-};
-
-/**
- * =========================================================
- * SYSTEM FUNCTION (INTERNAL)
- * DEDUCT BALANCE ON LEAVE APPROVAL
- * =========================================================
- */
-export const deductLeaveBalance = async ({
-  organizationId,
-  employeeId,
-  leaveTypeId,
-  year,
-  days,
-  approvedBy
-}) => {
-  const balance = await LeaveBalance.findOne({
-    organizationId,
-    employeeId,
-    leaveTypeId,
-    year,
-    isActive: true
-  });
-
-  if (!balance) {
-    throw new Error("Leave balance not found");
-  }
-
-  // Unpaid leave → no balance logic
-  if (!balance.isPaid) return null;
-
-  if (balance.remaining < days) {
-    throw new Error("Insufficient leave balance");
-  }
-
-  balance.used += days;
-  balance.lastAdjustedBy = approvedBy;
-  balance.adjustmentReason = "Leave approved";
-
-  await balance.save();
-  return balance;
-};
-
-/**
- * =========================================================
- * HR / ADMIN: MANUAL LEAVE BALANCE ADJUSTMENT
- * =========================================================
- */
-export const adjustLeaveBalance = async (req, res) => {
-  try {
-    const { organizationId, employeeId: hrId } = req.user;
-    const {
-      balanceId,
-      totalAllocated,
-      adjustmentReason
-    } = req.body;
-
-    if (!adjustmentReason) {
-      return res.status(400).json({
-        success: false,
-        message: "Adjustment reason is mandatory"
-      });
-    }
-
-    const balance = await LeaveBalance.findOne({
-      _id: balanceId,
-      organizationId,
-      isActive: true
-    });
-
-    if (!balance) {
-      return res.status(404).json({
-        success: false,
-        message: "Leave balance not found"
-      });
-    }
-
-    if (!balance.isPaid) {
-      return res.status(400).json({
-        success: false,
-        message: "Unpaid leave does not support balance adjustment"
-      });
-    }
-
-    balance.totalAllocated = totalAllocated;
-    balance.lastAdjustedBy = hrId;
-    balance.adjustmentReason = adjustmentReason;
-
-    await balance.save();
-
-    return res.json({
-      success: true,
-      message: "Leave balance adjusted successfully",
-      data: balance
-    });
-
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-};
-
-/**
- * =========================================================
- * HR / SYSTEM: DEACTIVATE LEAVE BALANCE (EMPLOYEE EXIT)
- * =========================================================
- */
-export const deactivateLeaveBalance = async (req, res) => {
-  try {
-    const { organizationId } = req.user;
-    const { balanceId } = req.params;
-
-    const balance = await LeaveBalance.findOneAndUpdate(
-      { _id: balanceId, organizationId },
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!balance) {
-      return res.status(404).json({
-        success: false,
-        message: "Leave balance not found"
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: "Leave balance deactivated",
-      data: balance
-    });
-
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: err.message
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };

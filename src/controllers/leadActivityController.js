@@ -315,7 +315,7 @@ exports.updateLeadActivityComment = async (req, res) => {
       data: existingComment,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({
       message: `Internal Server Error`,
       success: false,
@@ -326,7 +326,7 @@ exports.updateLeadActivityComment = async (req, res) => {
 exports.deleteLeadActivityComment = async (req, res) => {
   const { commentId, userId } = req.query; // Assuming commentId is passed as a route parameter
 
-  console.log(" commentId, userId",  commentId, userId);
+  logger.info(" commentId, userId",  commentId, userId);
   // Validate commentId
   if (!mongoose.Types.ObjectId.isValid(commentId)) {
     return res.status(400).json({
@@ -365,7 +365,7 @@ exports.deleteLeadActivityComment = async (req, res) => {
       data: updatedLeadActivity,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({
       message: `Internal Server Error`,
       success: false,

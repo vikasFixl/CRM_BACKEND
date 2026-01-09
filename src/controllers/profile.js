@@ -126,7 +126,7 @@ exports.deleteProfile = async (req, res) => {
 //   { name: 'Kartik', age: 20},
 //   { name: 'Niharika', age: 20}
 // ]).then(function(){
-//   console.log("Data inserted")  // Success
+//   logger.info("Data inserted")  // Success
 // }).catch(function(error){
-//   console.log(error)      // Failure
+//   logger.info(error)      // Failure
 // });

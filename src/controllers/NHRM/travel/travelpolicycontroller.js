@@ -37,7 +37,7 @@ export const createTravelPolicy = async (req, res) => {
 
     res.status(201).json({ success: true, data: policy });
   } catch (error) {
-    console.error("Error creating travel policy:", error);
+    logger.error("Error creating travel policy:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -58,7 +58,7 @@ export const getTravelPolicies = async (req, res) => {
 
     res.status(200).json({ success: true, data: policies });
   } catch (error) {
-    console.error("Error fetching travel policies:", error);
+    logger.error("Error fetching travel policies:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -77,7 +77,7 @@ export const getTravelPolicyById = async (req, res) => {
 
     res.status(200).json({ success: true, data: policy });
   } catch (error) {
-    console.error("Error fetching travel policy:", error);
+    logger.error("Error fetching travel policy:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -103,7 +103,7 @@ export const updateTravelPolicy = async (req, res) => {
 
     res.status(200).json({ success: true, data: policy });
   } catch (error) {
-    console.error("Error updating travel policy:", error);
+    logger.error("Error updating travel policy:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -122,7 +122,7 @@ export const deleteTravelPolicy = async (req, res) => {
 
     res.status(200).json({ success: true, message: "Policy deleted successfully" });
   } catch (error) {
-    console.error("Error deleting travel policy:", error);
+    logger.error("Error deleting travel policy:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -3,9 +3,9 @@ const attendenceModel = require("../models/attendenceModel");
 exports.attendence = async (req, res) => {
   try {
     const empid = req.params.eid;
-    //console.log(empid);
+    //logger.info(empid);
     const check = await attendenceModel.findOne({ eid: empid });
-    //console.log(check);
+    //logger.info(check);
     if (!check) {
       const Attendence = new attendenceModel({
         eid: empid,
@@ -50,22 +50,22 @@ exports.markExit = async (req, res) => {
   try {
     const empid = req.params.eid;
     const data = await attendenceModel.findOne({ eid: empid });
-    console.log(req.body.exit.slice(0, 10));
+    logger.info(req.body.exit.slice(0, 10));
     for (var i = 0; i <= data.attendence.length - 1; i++) {
-      //console.log(i);
+      //logger.info(i);
       if (
         data.attendence[i].date.toISOString().slice(0, 10) ===
         req.body.exit.slice(0, 10)
       ) {
-        //console.log("hwiqhro");
+        //logger.info("hwiqhro");
         // data.attendence[i].exit=req.body.exit
-        // console.log(data.attendence[i].exit);
+        // logger.info(data.attendence[i].exit);
         const d = await attendenceModel.updateOne(
           { "attendence.exit": data.attendence[i].exit },
           { $set: { "attendence.$.exit": req.body.exit } }
         );
         break;
-        //console.log(d);
+        //logger.info(d);
       }
     }
     res.status(200).json({
@@ -92,7 +92,7 @@ exports.leave = async (req, res) => {
         message: "leaves Asked.",
       });
     }
-    //console.log(check);
+    //logger.info(check);
     else {
       const data = await attendenceModel.updateOne(
         { eid: empid },
@@ -162,7 +162,7 @@ exports.updateLeaves = async (req, res) => {
     const empid = req.params.eid;
     const data = await attendenceModel.findOne({ eid: empid });
     for (var i = 0; i <= data.leaves.length - 1; i++) {
-      //console.log(data.leaves[i].adminStatus);
+      //logger.info(data.leaves[i].adminStatus);
       if (data.leaves[i].adminStatus === "Awaiting") {
         const up = await attendenceModel.updateOne(
           { eid: empid, "leaves.adminStatus": data.leaves[i].adminStatus },

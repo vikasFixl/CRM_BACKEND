@@ -54,7 +54,7 @@ export const createAppraisal = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Error creating appraisal:", err);
+        logger.error("Error creating appraisal:", err);
         res.status(500).json({ success: false, message: err.message });
     }
 };
@@ -102,7 +102,7 @@ export const getAppraisals = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Error fetching appraisals:", err);
+    logger.error("Error fetching appraisals:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -122,7 +122,7 @@ export const getAppraisalById = async (req, res) => {
 
         res.status(200).json({ success: true, data: appraisal });
     } catch (err) {
-        console.error("Error getting appraisal:", err);
+        logger.error("Error getting appraisal:", err);
         res.status(500).json({ success: false, message: err.message });
     }
 };
@@ -158,7 +158,7 @@ export const updateAppraisal = async (req, res) => {
 
         res.status(200).json({ success: true, data: updated });
     } catch (err) {
-        console.error("Error updating appraisal:", err);
+        logger.error("Error updating appraisal:", err);
         res.status(500).json({ success: false, message: err.message });
     }
 };
@@ -176,7 +176,7 @@ export const deleteAppraisal = async (req, res) => {
 
         res.status(200).json({ success: true, message: "Deleted" });
     } catch (err) {
-        console.error("Error deleting appraisal:", err);
+        logger.error("Error deleting appraisal:", err);
         res.status(500).json({ success: false, message: err.message });
     }
 };

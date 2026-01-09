@@ -168,7 +168,7 @@ export const createProject = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in createProject:", error);
+    logger.error("Error in createProject:", error);
     await session.endSession();
 
     return res.status(error?.status || 500).json({
@@ -183,7 +183,7 @@ export const updateProject = async (req, res) => {
 
     res.status(200).json({ message: "updateProject route hit" });
   } catch (error) {
-    console.error("Error in updateProject:", error);
+    logger.error("Error in updateProject:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -209,7 +209,7 @@ export const deleteProject = async (req, res) => {
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
-    console.log(project);
+    logger.info(project);
     const team = Team.find({ projectId: projectId }).session(session)
     const teamIds = team.map(t => t._id);
     await ProjectMember.deleteMany({ projectId }).session(session);
@@ -225,7 +225,7 @@ export const deleteProject = async (req, res) => {
     return res.status(200).json({ message: "Project deleted successfully" });
   } catch (error) {
     await session.abortTransaction();
-    console.error("Error in deleteProject:", error);
+    logger.error("Error in deleteProject:", error);
     return res.status(500).json({ message: "Internal server error" });
   } finally {
     session.endSession();
@@ -237,7 +237,7 @@ export const archiveProject = async (req, res) => {
     // TODO: Archive a project
     res.status(200).json({ message: "archiveProject route hit" });
   } catch (error) {
-    console.error("Error in archiveProject:", error);
+    logger.error("Error in archiveProject:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -292,7 +292,7 @@ export const getAllProjectsByWorkspace = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error in getAllProjectsByWorkspace:", error);
+    logger.error("Error in getAllProjectsByWorkspace:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -328,7 +328,7 @@ export const getMyProjectsByWorkspace = async (req, res) => {
       projects,
     });
   } catch (error) {
-    console.error("Error in getMyProjectsByWorkspace:", error);
+    logger.error("Error in getMyProjectsByWorkspace:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -404,7 +404,7 @@ export const getProjectById = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error in getProjectById:", error);
+    logger.error("❌ Error in getProjectById:", error);
 
     // ✅ Better error differentiation
     if (error instanceof ZodError) {
@@ -477,7 +477,7 @@ export const getAssignableMembers = async (req, res) => {
       members: assignableMembers,
     });
   } catch (error) {
-    console.error("Error in getAssignableMembers:", error);
+    logger.error("Error in getAssignableMembers:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -580,7 +580,7 @@ export const getProjectAnalytics = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error in getProjectAnalytics:", error);
+    logger.error("Error in getProjectAnalytics:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

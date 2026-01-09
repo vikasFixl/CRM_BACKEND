@@ -1,76 +1,119 @@
-import DailyAttendance from "../models/DailyAttendance.js";
+import DailyAttendance from "../../../models/NHRM/TimeAndAttendence/DailyAttendance.js";
 
-/**
- * SYSTEM: CREATE OR UPDATE DAILY ATTENDANCE
- * (called by attendance calculation engine)
- */
-export const upsertDailyAttendance = async ({
-  organizationId,
-  employeeId,
-  date,
-  data
-}) => {
-  const record = await DailyAttendance.findOne({
-    organizationId,
-    employeeId,
-    date
-  });
+export const getMyAttendance = async (req, res) => {
+  try {
+    const { organizationId, employeeId } = req.user;
+    const { from, to } = req.query;
 
-  if (record && record.isLocked) {
-    return record; // do nothing if locked
-  }
+    if (!from || !to) {
+      return res.status(400).json({
+        success: false,
+        message: "from and to dates are required"
+      });
+    }
 
-  return DailyAttendance.findOneAndUpdate(
-    { organizationId, employeeId, date },
-    {
+    const data = await DailyAttendance.find({
       organizationId,
       employeeId,
-      date,
-      ...data
-    },
-    {
-      upsert: true,
-      new: true
-    }
-  );
+      attendanceDate: {
+        $gte: new Date(from),
+        $lte: new Date(to)
+      }
+    })
+      .sort({ attendanceDate: 1 })
+      .lean();
+
+    return res.json({ success: true, data });
+
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };
 
-export const getEmployeeDailyAttendance = async (req, res) => {
+
+export const getEmployeeAttendance = async (req, res) => {
   try {
-    const { organizationId } = req.user;
+    const organizationId = req.orgUser.orgId;
     const { employeeId } = req.params;
     const { from, to } = req.query;
 
-    const query = {
-      organizationId,
-      employeeId
-    };
-
-    if (from && to) {
-      query.date = {
-        $gte: new Date(from),
-        $lte: new Date(to)
-      };
+    if (!from || !to) {
+      return res.status(400).json({
+        success: false,
+        message: "from and to dates are required"
+      });
     }
 
-    const records = await DailyAttendance.find(query)
-      .sort({ date: 1 });
+    const data = await DailyAttendance.find({
+      organizationId,
+      employeeId,
+      attendanceDate: {
+        $gte: new Date(from),
+        $lte: new Date(to)
+      }
+    })
+      .populate("shiftAssignmentId")
+      .sort({ attendanceDate: 1 });
 
-    res.json({ success: true, data: records });
+    return res.json({ success: true, data });
+
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-export const lockAttendance = async (req, res) => {
+export const overrideAttendance = async (req, res) => {
   try {
-    const { organizationId, employeeId: hrId } = req.user;
+    const organizationId = req.orgUser.orgId;
+    const { attendanceId } = req.params;
+    const { status, remarks } = req.body;
+
+    const attendance = await DailyAttendance.findOne({
+      _id: attendanceId,
+      organizationId,
+      isLocked: false
+    });
+
+    if (!attendance) {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance not found or already locked"
+      });
+    }
+
+    attendance.status = status;
+    attendance.source = "manual";
+    attendance.remarks = remarks;
+
+    await attendance.save();
+
+    return res.json({
+      success: true,
+      message: "Attendance overridden successfully",
+      data: attendance
+    });
+
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const lockAttendanceForPayroll = async (req, res) => {
+  try {
+    const organizationId = req.orgUser.orgId;
     const { from, to } = req.body;
 
-    const result = await DailyAttendance.updateMany(
+    if (!from || !to) {
+      return res.status(400).json({
+        success: false,
+        message: "from and to dates are required"
+      });
+    }
+
+    await DailyAttendance.updateMany(
       {
         organizationId,
-        date: {
+        attendanceDate: {
           $gte: new Date(from),
           $lte: new Date(to)
         }
@@ -78,16 +121,17 @@ export const lockAttendance = async (req, res) => {
       {
         isLocked: true,
         lockedAt: new Date(),
-        lockedBy: hrId
+        lockedBy: req.user.userId
       }
     );
 
-    res.json({
+    return res.json({
       success: true,
-      message: "Attendance locked",
-      modified: result.modifiedCount
+      message: "Attendance locked for payroll"
     });
+
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
+

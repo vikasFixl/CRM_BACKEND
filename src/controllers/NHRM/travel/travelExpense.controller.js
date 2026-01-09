@@ -37,7 +37,7 @@ export const createTravelExpense = async (req, res) => {
 
     res.status(201).json({ success: true, data: expense });
   } catch (error) {
-    console.error('Error creating travel expense:', error);
+    logger.error('Error creating travel expense:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -66,7 +66,7 @@ export const getTravelExpenses = async (req, res) => {
 
     res.status(200).json({ success: true, data: expenses });
   } catch (error) {
-    console.error('Error fetching travel expenses:', error);
+    logger.error('Error fetching travel expenses:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -93,7 +93,7 @@ export const updateExpenseStatus = async (req, res) => {
 
     res.status(200).json({ success: true, data: expense });
   } catch (error) {
-    console.error('Error updating expense status:', error);
+    logger.error('Error updating expense status:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

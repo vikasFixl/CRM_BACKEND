@@ -141,7 +141,7 @@ export const getClients = async (req, res, next) => {
     if(deleted){
       filter.deleted = deleted
     }
-    // console.log(filter);
+    // logger.info(filter);
     /* ---------- counts & slice ---------- */
     const total      = await ClientModel.countDocuments(filter);
     const totalPages = Math.ceil(total / limit) || 1;
@@ -180,7 +180,7 @@ export const updateClient = async (req, res) => {
     const { id: _id } = req.params;
     const parsed = updateClientSchema.safeParse(req.body);
     if (!parsed.success) {
-      console.log("Validation error:", parsed.error);
+      logger.info("Validation error:", parsed.error);
       return res.status(400).json({
         message: "Validation error",
         errors: parsed.error.errors.map((e) => e.message),
@@ -240,7 +240,7 @@ export const updateClient = async (req, res) => {
       message: "Client updated successfully!",
     });
   } catch (error) {
-    console.error("updateClient error:", error.message);
+    logger.error("updateClient error:", error.message);
     res.status(500).json({
       message: "Internal server error",
       success: false,
@@ -290,7 +290,7 @@ export const MoveClientToTrash = async (req, res) => {
       message: "Client moved to trash successfully",
     });
   } catch (err) {
-    console.error("MoveClientToTrash error:", err.message);
+    logger.error("MoveClientToTrash error:", err.message);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -314,7 +314,7 @@ export const getClientsByUser = async (req, res) => {
 
     res.status(200).json({ data: clients });
   } catch (error) {
-    console.error("Error in getClientsByUser:", error);
+    logger.error("Error in getClientsByUser:", error);
     res.status(500).json({ message: "Failed to fetch clients." });
   }
 };

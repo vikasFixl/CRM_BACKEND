@@ -14,7 +14,7 @@ exports.postDedDetails=async(req,res)=>{
             bonus:req.body.bonus,
             tds:req.body.tds
         })
-        console.log(formData);
+        logger.info(formData);
         await ded.save();
         res.status(201).json({
             success:true,

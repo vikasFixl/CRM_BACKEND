@@ -12,7 +12,7 @@ export const getAllSessions = async (req, res) => {
         sessions,
     });
   } catch (error) {
-    console.error("Error fetching sessions:", error);
+    logger.error("Error fetching sessions:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -49,7 +49,7 @@ export const deleteUserSession = async (req, res) => {
 
     res.json({ message: 'Session deleted successfully' });
   } catch (error) {
-    console.error("Error deleting user session:", error);
+    logger.error("Error deleting user session:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -74,7 +74,7 @@ export const sendSessionDeletionOTP = async (req, res) => {
 
     res.json({ message: 'OTP sent to email successfully' , otp});
   } catch (error) {
-    console.error("Error sending session deletion OTP:", error);
+    logger.error("Error sending session deletion OTP:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

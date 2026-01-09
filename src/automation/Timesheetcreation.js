@@ -21,7 +21,7 @@ function getLastWeekRange() {
 // Main function to generate timesheets
 async function generateWeeklyTimesheets() {
   const { start, end } = getLastWeekRange();
-  console.log(`Generating timesheets for: ${start.toDateString()} - ${end.toDateString()}`);
+  logger.info(`Generating timesheets for: ${start.toDateString()} - ${end.toDateString()}`);
 
   const employees = await EmployeeProfile.find({}); // all employees
   for (const emp of employees) {
@@ -61,7 +61,7 @@ async function generateWeeklyTimesheets() {
       status: 'Draft',
     });
 
-    console.log(`Timesheet created for employee ${emp._id}`);
+    logger.info(`Timesheet created for employee ${emp._id}`);
   }
 }
 
@@ -69,8 +69,8 @@ async function generateWeeklyTimesheets() {
 cron.schedule('0 1 * * 1', async () => {
   try {
     await generateWeeklyTimesheets();
-    console.log('Weekly timesheet automation completed.');
+    logger.info('Weekly timesheet automation completed.');
   } catch (err) {
-    console.error('Timesheet automation error:', err);
+    logger.error('Timesheet automation error:', err);
   }
 });

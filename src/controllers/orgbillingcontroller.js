@@ -54,7 +54,7 @@ export const startTrial = async (req, res) => {
 
         res.status(201).json({ message: "Trial started successfully", billing: newBilling });
     } catch (error) {
-        console.error("Start trial error:", error);
+        logger.error("Start trial error:", error);
         res.status(500).json({ message: "Failed to start trial", error: error.message });
     }
 };
@@ -94,7 +94,7 @@ export const changePlan = async (req, res) => {
 
         res.status(200).json({ message: "Plan changed successfully", billing });
     } catch (error) {
-        console.error("Change plan error:", error);
+        logger.error("Change plan error:", error);
         res.status(500).json({ message: "Failed to change plan", error: error.message });
     }
 };
@@ -120,7 +120,7 @@ export const cancelSubscription = async (req, res) => {
 
         res.status(200).json({ message: "Subscription canceled", billing });
     } catch (error) {
-        console.error("Cancel subscription error:", error);
+        logger.error("Cancel subscription error:", error);
         res.status(500).json({ message: "Failed to cancel subscription", error: error.message });
     }
 };
@@ -150,7 +150,7 @@ export const checkTrialStatus = async (req, res) => {
             trialEndDate: billing.trialEndDate,
         });
     } catch (error) {
-        console.error("Check trial error:", error);
+        logger.error("Check trial error:", error);
         res.status(500).json({ message: "Failed to check trial status", error: error.message });
     }
 };
@@ -195,14 +195,14 @@ export const processTrialExpirations = async () => {
             await org.save();
         }
     } catch (error) {
-        console.error("Process trial expirations error:", error);
+        logger.error("Process trial expirations error:", error);
     }
 };
 
 export const getCurrentPlanDetails = async (req, res) => {
     try {
         const orgId = req.orgUser.orgId;
-        console.log("orgId", orgId);
+        logger.info("orgId", orgId);
 
         // Populate the current billing reference
         const organization = await Org.findById(orgId)
@@ -228,7 +228,7 @@ export const getCurrentPlanDetails = async (req, res) => {
             billingPlanTemplate: currentBilling.billingPlanId || null, // optional
         });
     } catch (error) {
-        console.error("Error fetching current plan:", error);
+        logger.error("Error fetching current plan:", error);
         res.status(500).json({ message: "Internal server error", error: error.message });
     }
 };
@@ -253,7 +253,7 @@ export const getBillingHistory = async (req, res) => {
             billingHistories,
         });
     } catch (error) {
-        console.error("Error fetching billing history:", error);
+        logger.error("Error fetching billing history:", error);
         res.status(500).json({ message: "Internal server error", error: error.message });
     }
 };

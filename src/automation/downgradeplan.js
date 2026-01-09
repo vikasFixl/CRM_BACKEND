@@ -4,7 +4,7 @@ import cron from "node-cron"
 import mongoose from "mongoose";
 
 export const downgradeExpiredTrials = cron.schedule("0 0 * * *", async () => {
-  console.log("🚀 Cron job started: Checking expired trials");
+  logger.info(" Cron job started: Checking expired trials");
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -19,7 +19,7 @@ export const downgradeExpiredTrials = cron.schedule("0 0 * * *", async () => {
     }).session(session);
 
     if (!expiredTrials.length) {
-      console.log("ℹ️ No expired trials found");
+      logger.info("ℹ No expired trials found");
       await session.endSession();
       return;
     }
@@ -66,14 +66,14 @@ export const downgradeExpiredTrials = cron.schedule("0 0 * * *", async () => {
         { session }
       );
 
-      console.log(`✅ Org ${trial.organizationId} downgraded from TRIAL to FREE`);
+      logger.info(`✅ Org ${trial.organizationId} downgraded from TRIAL to FREE`);
     }
 
     await session.commitTransaction();
-    console.log("🎯 Cron job finished successfully");
+    logger.info("🎯 Cron job finished successfully");
   } catch (err) {
     await session.abortTransaction();
-    console.error("❌ Error downgrading expired trials:", err);
+    logger.error("❌ Error downgrading expired trials:", err);
   } finally {
     session.endSession();
   }

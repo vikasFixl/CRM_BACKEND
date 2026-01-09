@@ -38,7 +38,7 @@ export const uploadImageToCloudinary = async ({
     transformation: [{ width: 800, crop: "scale" }],
   });
 
-  console.log(result);
+  logger.info(result);
   return {
     url: result.secure_url,
     public_id: result.public_id,
@@ -56,7 +56,7 @@ export const uploadFileToCloudinary = async ({
     throw new Error("File is required for upload");
   }
 
-  console.log("file", file);
+  logger.info("file", file);
   // If an old file needs to be replaced
   if (oldPublicId) {
     try {
@@ -74,7 +74,7 @@ export const uploadFileToCloudinary = async ({
     resource_type: "auto", // Support all file types
   });
 
-  console.log(result, "resukltl ");
+  logger.info(result, "resukltl ");
 
   return {
     url: result.secure_url,
@@ -93,7 +93,7 @@ export const deleteCloudinaryAsset = async (publicId) => {
     );
     return result;
   } catch (error) {
-    console.error("Failed to delete Cloudinary asset:", error.message);
+    logger.error("Failed to delete Cloudinary asset:", error.message);
     throw new Error("Could not delete asset");
   }
 };

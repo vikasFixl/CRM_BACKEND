@@ -53,7 +53,7 @@ export const createTravelRequest = async (req, res) => {
 
     res.status(201).json({ success: true, data: newRequest });
   } catch (error) {
-    console.error('Error creating travel request:', error);
+    logger.error('Error creating travel request:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -83,7 +83,7 @@ export const getTravelRequests = async (req, res) => {
 
     res.status(200).json({ success: true, data: requests });
   } catch (error) {
-    console.error('Error fetching travel requests:', error);
+    logger.error('Error fetching travel requests:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -105,7 +105,7 @@ export const getTravelRequestById = async (req, res) => {
 
     res.status(200).json({ success: true, data: request });
   } catch (error) {
-    console.error('Error fetching travel request:', error);
+    logger.error('Error fetching travel request:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -136,7 +136,7 @@ export const updateTravelStatus = async (req, res) => {
 
     res.status(200).json({ success: true, data: request });
   } catch (error) {
-    console.error('Error updating travel status:', error);
+    logger.error('Error updating travel status:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

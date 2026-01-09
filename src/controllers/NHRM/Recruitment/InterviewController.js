@@ -117,7 +117,7 @@ export const createInterview = async (req, res) => {
       interview: savedInterview,
     });
   } catch (err) {
-    console.error('Interview creation error:', err);
+    logger.error('Interview creation error:', err);
     res.status(500).json({
       success: false,
       message: 'Server error while scheduling interview',
@@ -173,7 +173,7 @@ export const deleteInterview = async (req, res) => {
       interview: deletedInterview,
     });
   } catch (err) {
-    console.error('Delete interview error:', err);
+    logger.error('Delete interview error:', err);
     res.status(500).json({
       success: false,
       message: 'Server error while deleting interview',
@@ -241,7 +241,7 @@ export const getInterviews = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Error fetching interviews:", err);
+    logger.error("Error fetching interviews:", err);
     res.status(500).json({
       success: false,
       message: "Server error fetching interviews",
@@ -297,7 +297,7 @@ export const getInterview = async (req, res) => {
       interview,
     });
   } catch (err) {
-    console.error('Error fetching interview:', err);
+    logger.error('Error fetching interview:', err);
     res.status(500).json({
       success: false,
       message: 'Server error while fetching interview',
@@ -360,7 +360,7 @@ export const updateInterviewFeedback = async (req, res) => {
       interview,
     });
   } catch (err) {
-    console.error('Feedback update error:', err);
+    logger.error('Feedback update error:', err);
     res.status(500).json({
       success: false,
       message: 'Server error while updating feedback',
@@ -423,7 +423,7 @@ export const updateInterviewStatus = async (req, res) => {
       interview,
     });
   } catch (err) {
-    console.error("Error updating interview status:", err);
+    logger.error("Error updating interview status:", err);
     res.status(500).json({
       success: false,
       message: "Server error while updating interview status",

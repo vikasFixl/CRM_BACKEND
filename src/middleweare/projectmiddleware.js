@@ -45,7 +45,7 @@ export const checkProjectPermission = (action) => {
           .status(403)
           .json({ message: "You are not a member of this project" });
       }
-      //   console.log("projectMember", projectMember.role?.permissions);
+      //   logger.info("projectMember", projectMember.role?.permissions);
       // ✅ Get effective permissions
       let allowedActions = [];
 
@@ -74,7 +74,7 @@ export const checkProjectPermission = (action) => {
 
       next();
     } catch (error) {
-      console.error("Permission check error:", error);
+      logger.error("Permission check error:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   };

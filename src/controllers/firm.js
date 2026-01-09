@@ -8,6 +8,7 @@ import Firm from "../models/FirmModel.js";
 import ActivityModel from "../models/activityModel.js";
 import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js";
 import { paginateQuery } from "../utils/pagination.js";
+import logger from "../../config/logger.js";
 
 export const createFirm = async (req, res) => {
   try {
@@ -15,11 +16,11 @@ export const createFirm = async (req, res) => {
     const loggedinuserEmail = req.user.email;
     const orgId = req.orgUser.orgId;
     const empid = req.orgUser.employeeId;
-    // console.log(userId, orgId, empid, loggedinuserEmail, "createFirm");
+    // logger.info(userId, orgId, empid, loggedinuserEmail, "createFirm");
     // ✅ Validate with Zod
     const parsed = firmValidationSchema.safeParse(req.body);
     if (!parsed.success) {
-      console.log(parsed.error);
+      logger.info(parsed.error);
       return res.status(400).json({
         message: "Validation error",
         errors: parsed.error.errors.map((e) => e.message),
@@ -116,7 +117,7 @@ export const createFirm = async (req, res) => {
         // only if replacing
       });
 
-      // console.log(cloudinaryResponse, "cloudinaryResponse");
+      // logger.info(cloudinaryResponse, "cloudinaryResponse");
       newFirm.FirmLogo = {
         url: cloudinaryResponse.url,
         public_id: cloudinaryResponse.public_id,
@@ -142,7 +143,7 @@ export const createFirm = async (req, res) => {
       success: true,
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     return res.status(500).json({
       message: "Internal server error.",
       code: 500,
@@ -195,7 +196,7 @@ export const getFirmbyId = async (req, res) => {
       code: 200,
     });
   } catch (err) {
-    console.error("Error in getFirm:", err);
+    logger.error("Error in getFirm:", err);
     return res.status(500).json({
       message: "Internal server error.",
       code: 500,
@@ -222,7 +223,7 @@ export const getFirmList = async (req, res) => {
       _id: firm._id,
       FirmName: firm.FirmName,
     }));
-    // console.log("finaldata",finaldata)
+    // logger.info("finaldata",finaldata)
     return res.status(200).json({
       message: "Firm list fetched successfully!",
       success: true,
@@ -230,7 +231,7 @@ export const getFirmList = async (req, res) => {
       firms,
     });
   } catch (err) {
-    console.error("Error in getFirmList:", err);
+    logger.error("Error in getFirmList:", err);
     return res.status(500).json({
       message: "Internal server error.",
       code: 500,
@@ -282,7 +283,7 @@ export const updateFirm = async (req, res) => {
       code: 200,
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({
       message: "Internal server error.",
       code: 500,
@@ -334,7 +335,7 @@ export const deleteFirm = async (req, res) => {
       success: true,
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({
       message: "Internal server error.",
       code: 500,
@@ -362,7 +363,7 @@ export const getAllFirm = async (req, res) => {
       firms,
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({
       message: "Internal server error.",
       code: 500,
@@ -428,7 +429,7 @@ export const RestoreFirm = async (req, res) => {
       code: 200,
     });
   } catch (error) {
-    console.error("Error in restoreFirm:", error);
+    logger.error("Error in restoreFirm:", error);
     return res.status(500).json({
       message: "Internal server error.",
       success: false,
@@ -458,7 +459,7 @@ export const getAllDeletedFirm = async (req, res) => {
       firms,
     });
   } catch (error) {
-    console.error("Error in getAllDeletedFirm:", error);
+    logger.error("Error in getAllDeletedFirm:", error);
     return res.status(500).json({
       success: false,
       code: 500,
@@ -507,7 +508,7 @@ export const logo = async (req, res) => {
       message: "Logo updated successfully!",
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({
       message: "Internal server error.",
       code: 500,

@@ -34,9 +34,9 @@ exports.createSubscription = async(req,res)=>{
 
         user1.findByIdAndUpdate(id, {$set:{role: planName}},{new:true}, (err, user) => {
             if (err) {
-              console.error("Error updating user role:", err);
+              logger.error("Error updating user role:", err);
             } else {
-              console.log("User role updated successfully:", user.role);
+              logger.info("User role updated successfully:", user.role);
             }
           });
         await subscription.save();
@@ -48,7 +48,7 @@ exports.createSubscription = async(req,res)=>{
         });
     
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         res.status(500).json({
           success: false,
           message: 'Error creating subscription',
@@ -67,7 +67,7 @@ exports.getAllSubscription =async(req,res)=>{
           subscriptions,
         });
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         res.status(500).json({
           success: false,
           message: 'Error retrieving subscriptions',

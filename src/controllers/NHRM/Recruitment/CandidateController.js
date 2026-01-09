@@ -55,7 +55,7 @@ import { Position } from "../../../models/NHRM/employeeManagement/postition.js";
 //       data: inserted,
 //     });
 //   } catch (err) {
-//     console.error(err);
+//     logger.error(err);
 //     res.status(500).json({ success: false, error: err.message });
 //   }
 // };
@@ -142,7 +142,7 @@ export const uploadCandidates = async (req, res) => {
       count: result.length,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({ success: false, message: "Error processing file.", error: error.message });
   }
 };
@@ -439,7 +439,7 @@ export const moveToHired = async (req, res) => {
       employeeProfile: savedEmployee,
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -630,7 +630,7 @@ export const updateCandidateStatus = async (req, res) => {
           let candidate = await Candidate.findOne({ _id: candidateId, organization });
           if (!candidate) return res.status(404).json({ message: "Candidate not found" });
           if (candidate.status === "Hired") return res.status(400).json({ message: "Candidate is already hired" });
-          console.log(candidate);
+          logger.info(candidate);
           // Ensure candidate has at least one interview stage
           const hasInterview = candidate.stageHistory.some(stage =>
             stage.stage === "Interview_Scheduled" || stage.stage === "Interview_Completed"
@@ -675,7 +675,7 @@ export const updateCandidateStatus = async (req, res) => {
           });
 
           await employeeProfile.save();
-          console.log(employeeProfile);
+          logger.info(employeeProfile);
           // 5️⃣ Update candidate
           candidate.status = "Hired";
           candidate.offer = offer._id;
@@ -760,7 +760,7 @@ export const updateCandidateStatus = async (req, res) => {
       candidate,
     });
   } catch (error) {
-    console.error("Error updating candidate status:", error);
+    logger.error("Error updating candidate status:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error.",
@@ -785,7 +785,7 @@ export const getCandidatesList = async (req, res) => {
       candidates,
     });
   } catch (err) {
-    console.error("Error fetching candidates list:", err);
+    logger.error("Error fetching candidates list:", err);
     res.status(500).json({
       success: false,
       message: "Server error while fetching candidates list",

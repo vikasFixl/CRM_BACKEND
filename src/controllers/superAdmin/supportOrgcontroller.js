@@ -16,7 +16,7 @@ export const getOrganization = async (req, res) => {
 
     res.status(200).json({ organization: org });
   } catch (error) {
-    console.error("Error fetching organization:", error);
+    logger.error("Error fetching organization:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -64,7 +64,7 @@ export const getFirms = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching firms:', error);
+    logger.error('Error fetching firms:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -170,7 +170,7 @@ export const getClients = async (req, res, next) => {
     if(deleted){
       filter.deleted = deleted
     }
-    // console.log(filter);
+    // logger.info(filter);
     /* ---------- counts & slice ---------- */
     const total      = await ClientModel.countDocuments(filter);
     const totalPages = Math.ceil(total / limit) || 1;

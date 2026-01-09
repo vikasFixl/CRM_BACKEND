@@ -12,8 +12,8 @@ import { connectDB } from "./config/db.config.js";
 import { startUserCleanupCron } from "./src/automation/UserDeleteAutomation.js";
 import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
 import { errorHandler } from "./src/middleweare/errorhandler.js";
-import {downgradeExpiredTrials} from "./src/automation/downgradeplan.js"
-
+import { downgradeExpiredTrials } from "./src/automation/downgradeplan.js"
+import logger from "./config/logger.js";
 // Routes
 import userRoutes from "./src/routes/userRoute.js";
 import orgRoutes from "./src/routes/orgRoute.js";
@@ -60,6 +60,14 @@ import ApprasialRouter from "./src/routes/HRM/performance/apprasial.js";
 import ShiftRouter from "./src/routes/HRM/Attendence/ShiftRoute.js";
 import AttendancePolicyRouter from "./src/routes/HRM/Attendence/AttendancePolicyRoute.js";
 import LeaveTypeRouter from "./src/routes/HRM/Attendence/leaveType.js";
+import holidayRouter from "./src/routes/HRM/Attendence/holiday.js";
+import employeeShiftAssignmentRouter from "./src/routes/HRM/Attendence/shiftassignment.js";
+import RawTimeLogRouter from "./src/routes/HRM/Attendence/rawtimelog.js";
+import DailyAttendanceRouter from "./src/routes/HRM/Attendence/dailyattendence.js";
+import Regularizationrouter from "./src/routes/HRM/Attendence/attendenceRegularization.js";
+import LeaveBalanceRouter from "./src/routes/HRM/Attendence/leavebalance.js";
+import LeaveRequestRouter from "./src/routes/HRM/Attendence/leaveRequest.js";
+import MonthlyAttendanceRouter from "./src/routes/HRM/Attendence/monthlyattendence.js";
 
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
@@ -89,23 +97,23 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(helmet());
 
-// 3️⃣ 🔥 Performance Logger (MUST be before routes)
+// 3️Performance Logger (MUST be before routes)
 app.use((req, res, next) => {
   const start = performance.now();
 
   res.on("finish", () => {
     const ms = performance.now() - start;
-    console.log(`${req.method} ${req.originalUrl} - ${ms.toFixed(2)}ms`);
+    logger.info(`${req.method} ${req.originalUrl} - ${ms.toFixed(2)}ms`);
   });
 
   next();
 });
 // Request logger
 app.use((req, res, next) => {
-  console.log(`Request hit: ${req.method} ${req.originalUrl}`);
-  if (Object.keys(req.params).length) console.log("Params:", req.params);
-  if (req.body && Object.keys(req.body).length) console.log("Body:", req.body);
-  console.log("Client IP:", req.ip);
+  logger.info(`Request hit: ${req.method} ${req.originalUrl}`);
+  if (Object.keys(req.params).length) logger.info("Params:", req.params);
+  if (req.body && Object.keys(req.body).length) logger.info("Body:", req.body);
+  logger.info("Client IP:", req.ip);
   next();
 });
 
@@ -130,17 +138,17 @@ app.use("/api/workflow", WorkflowRouter);
 app.use("/api/documents", DocumentRouter);
 app.use("/api/teams", TeamRouter);
 app.use("/api/project-templates", ProjectTemplateRouter);
-app.use("/api/OrgBilling",OrgBillingRouter)
+app.use("/api/OrgBilling", OrgBillingRouter)
 app.use("/api/session", router);
-app.use("/api/platform/ticket",Ticket)
-app.use("/api/platform/support",SupportRouter)
-app.use("/api/platform/billingplan",BillingRouter)
-app.use("/api/platform/Auth",AdminAuth)
+app.use("/api/platform/ticket", Ticket)
+app.use("/api/platform/support", SupportRouter)
+app.use("/api/platform/billingplan", BillingRouter)
+app.use("/api/platform/Auth", AdminAuth)
 // hrm routes 
-app.use("/api/recruitment/jobs",JobRouter)
+app.use("/api/recruitment/jobs", JobRouter)
 app.use("/api/recruitment/candidates", CandidateRouter);
 app.use("/api/recruitment/Offers", OfferRouter);
-app.use("/api/recruitment/interviews",InterviewRouter);
+app.use("/api/recruitment/interviews", InterviewRouter);
 app.use("/api/organization/positions", PositionRouter);
 app.use("/api/organization/departments", DepartmentRouter);
 app.use("/api/employees", EmployeeRouter);
@@ -153,13 +161,28 @@ app.use("/api/resource/asset", AssetRouter);
 app.use("/api/resource/asset-assignment", AssetAssignmentRouter);
 
 // performance
-app.use("/api/performance/feedback",feedbackRouter)
-app.use("/api/performance/goals",goalRouter)
-app.use("/api/performance/improvement",ImprovementRouter)
-app.use("/api/performance/appraisal",ApprasialRouter)
+app.use("/api/performance/feedback", feedbackRouter)
+app.use("/api/performance/goals", goalRouter)
+app.use("/api/performance/improvement", ImprovementRouter)
+app.use("/api/performance/appraisal", ApprasialRouter)
 app.use("/api/leave/types", LeaveTypeRouter);
+app.use("/api/leave/balance", LeaveBalanceRouter);
+app.use("/api/leave/request", LeaveRequestRouter); 
 app.use("/api/attendance/shifts", ShiftRouter);
 app.use("/api/attendance/policy", AttendancePolicyRouter);
+app.use("/api/attendance/holidays", holidayRouter);
+app.use(
+  "/api/attendance/shift-assignments",
+  employeeShiftAssignmentRouter
+);
+app.use("/api/attendance/raw-logs", RawTimeLogRouter);
+app.use("/api/attendance/daily", DailyAttendanceRouter);
+app.use("/api/attendance/regularization", Regularizationrouter);
+app.use("/api/attendance/monthly", MonthlyAttendanceRouter);
+
+
+
+
 
 app.get('/notify/:userId', (req, res) => {
   const userId = req.params.userId;
@@ -184,29 +207,29 @@ app.all("*", (req, res) => res.status(404).json({ success: false, message: "Rout
 // Global error handlers
 app.use(errorHandler);
 process.on("unhandledRejection", (reason) => {
-  console.error("🔥 Unhandled Promise Rejection →", reason);
+  logger.error(" Unhandled Promise Rejection →", reason);
   // exit so we don't continue running in a half-broken state
   process.exit(1);
 });
 
 process.on("uncaughtException", (err) => {
-  console.error("💥 Uncaught Exception →", err);
+  logger.error(" Uncaught Exception →", err);
   process.exit(1);
 });
 
 process.on("SIGTERM", () => {
-  console.log("Shutting down gracefully...");
+  logger.info("Shutting down gracefully...");
   process.exit(0);
 });
 
 process.on("SIGINT", () => {
-  console.log("Shutting down gracefully...");
+  logger.info("Shutting down gracefully...");
   process.exit(0);
 });
 
 // Start server
 httpServer.listen(PORT, async () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  logger.info(` Server running at http://localhost:${PORT}`);
   await connectDB();
 });
 await connectDB();

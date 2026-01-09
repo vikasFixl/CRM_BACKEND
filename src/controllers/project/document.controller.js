@@ -10,7 +10,7 @@ export const uploadDocument = async (req, res) => {
         const organizationId = req.orgUser.orgId;
         const uploadedBy = req.user.userId;
 
-        console.log("Incoming files:", req.files); // Debug log
+        logger.info("Incoming files:", req.files); // Debug log
 
         // Validate files exist and are properly structured
         if (!req.files || Object.keys(req.files).length === 0) {
@@ -63,7 +63,7 @@ export const uploadDocument = async (req, res) => {
                 file: image,
                 folder: "documents/images"
             });
-            console.log("cloudImg", cloudImg);
+            logger.info("cloudImg", cloudImg);
 
             documentData.file = documentData.file || {}; // Ensure file exists
             documentData.image = {
@@ -72,7 +72,7 @@ export const uploadDocument = async (req, res) => {
                 size: cloudImg.bytes
             };
         }
-        console.log("documentData", documentData);
+        logger.info("documentData", documentData);
 
         // Final validation
         if (!documentData.file && !documentData.image) {
@@ -89,7 +89,7 @@ export const uploadDocument = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Upload error:", {
+        logger.error("Upload error:", {
             message: err.message,
             stack: err.stack,
             receivedFiles: req.files ? Object.keys(req.files) : null
@@ -184,7 +184,7 @@ export const getStorageUsage = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Storage usage error:", err);
+        logger.error("Storage usage error:", err);
         res.status(500).json({
             success: false,
             message: "Failed to calculate storage usage",

@@ -3,34 +3,39 @@ import dotenv from "dotenv";
 
 // dotenv.config({ path: "../../.env" }); /// use while seedeing 
 dotenv.config();
-// console.log(process.env.Mongo_URI);
-export const url =
- process.env.Mongo_URI
+// logger.info(process.env.Mongo_URI);
 
-mongoose.Promise = global.Promise;
-const options = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
-  autoIndex: false,
-  maxPoolSize: 10,
-  socketTimeoutMS: 45000,
-  family: 4,
-};
-export const connectDB = async () => {
-  try {
-    await mongoose.connect(url, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
-      autoIndex: false,
-      maxPoolSize: 10,
-      socketTimeoutMS: 45000,
-      family: 4,
-    });
-    console.log("Connected to MongoDB",mongoose.connection.readyState);
-  } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
-    process.exit(1);
+import logger from './logger.js';
+
+const cached = (global.mongoose = global.mongoose || { conn: null, promise: null });
+
+export async function connectDB() {
+  if (cached.conn) return cached.conn;
+
+  if (!process.env.MONGO_URI) {
+    throw new Error('MONGO_URI not defined in environment');
   }
-};
+
+  if (!cached.promise) {
+    cached.promise = mongoose
+      .connect(process.env.MONGO_URI, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 10_000,
+      })
+      .then((m) => {
+        logger.info('MongoDB connected successfully');
+        if (process.env.MONGOOSE_DEBUG === 'true') mongoose.set('debug', logger.debug.bind(logger));
+        m.connection.on('error', (e) => logger.error('MongoDB error:', e));
+        m.connection.on('disconnected', () => logger.warn('MongoDB disconnected'));
+        return m;
+      })
+      .catch((err) => {
+        cached.promise = null;
+        logger.error('MongoDB connection failed:', err);
+        throw err;
+      });
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
+}

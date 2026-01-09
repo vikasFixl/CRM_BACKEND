@@ -27,10 +27,10 @@ export const sendEmail = async (to, subject, html) => {
   
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully!");
+    logger.info("Email sent successfully!");
     return info;
   } catch (error) {
-    console.error("Error sending email:", error.message);
+    logger.error("Error sending email:", error.message);
     throw error;
   }
 };
@@ -57,10 +57,10 @@ export const sendCustomEmail = async ({
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log("Custom email sent successfully!");
+    logger.info("Custom email sent successfully!");
     return info;
   } catch (error) {
-    console.error("Error sending custom email:", error.message);
+    logger.error("Error sending custom email:", error.message);
     throw error;
   }
 };

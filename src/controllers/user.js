@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../config/nodemailer.config.js";
+import logger from "../../config/logger.js";
 import {
 
   generateOrgAccessToken,
@@ -27,6 +28,8 @@ import { uploadImageToCloudinary } from "../utils/helperfuntions/uploadimage.js"
 import { Session } from "../models/sessionModel.js";
 import twilio from 'twilio';
 import { SupportOrgSession } from "../models/superadmin/supportorgsession.js";
+import { AppError } from "../middleweare/errorhandler.js";
+import { asyncWrapper } from "../middleweare/middleware.js";
 // Initialize Twilio client
 const accountSid = process.env.TWILLO_ACCOUNTSID;
 const authToken = process.env.TWILLO_AUTHTOKEN;
@@ -41,7 +44,7 @@ function getDeviceAndLocation(req) {
   const result = parser.getResult();
 
   const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  console.log("ip", ip);
+  logger.info("ip", ip);
   const geo = geoip.lookup(ip);
 
   return {
@@ -67,7 +70,7 @@ const sendSmsOTP = async (phoneNumber, otp) => {
       to: phoneNumber
     });
   } catch (err) {
-    console.error('Twilio SMS Error:', err);
+    logger.error('Twilio SMS Error:', err);
     throw new Error('Failed to send SMS');
   }
 };
@@ -83,10 +86,9 @@ const verifyPhoneExistence = async (phone) => {
     throw err; // Re-throw other errors
   }
 };
-export const login = async (req, res) => {
+export const login =asyncWrapper( async (req, res) => {
   const { email, password } = req.body || {};
   const { userAgent, ip, location, deviceId, deviceType } = getDeviceAndLocation(req);
-
   // Validate input
   if (!email?.trim() || !password?.trim()) {
     return res.status(400).json({ message: "Please enter email and password" });
@@ -235,13 +237,14 @@ export const login = async (req, res) => {
       exp: expiresAt.getTime(),
     });
   } catch (error) {
-    console.error("Login error:", error);
+    logger.error("Login error:", error);
     res.status(500).json({
       message: "Something went wrong",
       error: error.message,
     });
   }
-};
+}
+)
 
 
 export const signup = async (req, res) => {
@@ -286,7 +289,7 @@ export const signup = async (req, res) => {
         // only if replacing
       });
 
-      // console.log(cloudinaryResponse, "cloudinaryResponse");
+      // logger.info(cloudinaryResponse, "cloudinaryResponse");
       user.avatar = {
         url: cloudinaryResponse.url,
         public_id: cloudinaryResponse.public_id,
@@ -372,7 +375,7 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     const resetUrl = `${frontendUrl}/reset-password/${token}`;
-    console.log("resetUrl", resetUrl);
+    logger.info("resetUrl", resetUrl);
 
     const html = await resetPasswordTemplate(user.firstName, resetUrl);
 
@@ -390,7 +393,7 @@ export const forgotPassword = async (req, res) => {
       return res.status(500).json({ error: "Failed to send reset email" });
     }
   } catch (error) {
-    console.log(error, "email error");
+    logger.info(error, "email error");
     return res.status(500).json({ error: "Server error" });
   }
 };
@@ -398,7 +401,7 @@ export const forgotPassword = async (req, res) => {
 // RESET PASSWORD
 export const resetPassword = async (req, res) => {
   const { password, token } = req.body;
-  // console.log(token);
+  // logger.info(token);
   try {
     const user = await User.findOne({
       resetPasswordToken: token,
@@ -410,18 +413,18 @@ export const resetPassword = async (req, res) => {
         .status(422)
         .json({ message: "Password reset link expired.generate new link" });
 
-    // console.log( "before update", user);
+    // logger.info( "before update", user);
     user.password = password;
     user.loginAttempts = 0;
     user.resetPasswordExpires = undefined;
     user.resetPasswordToken = undefined;
     await user.save();
 
-    // console.log( "after update", user);
+    // logger.info( "after update", user);
 
     res.status(200).json({ message: "Password reset successfully" });
   } catch (err) {
-    console.log(err);
+    logger.info(err);
     res.status(500).json({ message: "Server error", details: err.message });
   }
 };
@@ -514,7 +517,7 @@ export const deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
-    console.log(user);
+    logger.info(user);
 
     // Soft delete the user
     user.isDeleted = true;
@@ -526,7 +529,7 @@ export const deleteUser = async (req, res) => {
 
     res.json({ message: "User deleted successfully." });
   } catch (error) {
-    console.error("Error in soft delete:", error);
+    logger.error("Error in soft delete:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -558,7 +561,7 @@ export const updateUser = async (req, res) => {
       return res.status(404).json({ message: "User not found." });
     }
 
-    console.log(parseResult);
+    logger.info(parseResult);
     const updateData = { ...parseResult.data };
 
     // Handle image upload if present
@@ -633,7 +636,7 @@ export const updateProfileImage = async (req, res) => {
       profilePhoto: user.avatar.url,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return res.status(500).json({
       message: "Something went wrong while updating profile photo.",
       error: error.message || JSON.stringify(error),
@@ -694,7 +697,7 @@ export const enableSupportAccess = async (req, res) => {
       sessionId: newSession._id
     });
   } catch (error) {
-    console.error('Error enabling support access:', error);
+    logger.error('Error enabling support access:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -723,7 +726,7 @@ export const verifyOtp = async (req, res) => {
       message: `${type === 'email' ? 'Email' : 'Phone'} verified successfully.`,
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     return res.status(500).json({ message: 'Server error' });
   }
 };
@@ -732,7 +735,7 @@ export const sendVerificationOtp = async (req, res) => {
   try {
     const { type } = req.body; // 'email' or 'phone'
     const user = await User.findById(req.user.userId).select("otp otpExpires email phone phoneVerified emailVerified isActive");
-    console.log(user);
+    logger.info(user);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -773,7 +776,7 @@ export const sendVerificationOtp = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error('OTP Send Error:', err);
+    logger.error('OTP Send Error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
 };
@@ -786,7 +789,7 @@ export const getSupportsession = async (req, res) => {
     if (!session) return res.status(404).json({ message: "Session not found" });
     return res.status(200).json({ message: "no active support session ", session });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     return res.status(500).json({ message: "Server error" });
   }
 }
@@ -800,7 +803,7 @@ export const revokeaccess = async (req, res) => {
   
     return res.status(200).json({ message: "Access revoked" });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     return res.status(500).json({ message: "Server error" });
   }
 }

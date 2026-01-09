@@ -69,7 +69,7 @@ export const createCustomRolePermission = async (req, res) => {
       data: newRolePermission,
     });
   } catch (error) {
-    console.error("Error creating custom role permission:", error);
+    logger.error("Error creating custom role permission:", error);
     return res
       .status(500)
       .json({ message: "Server error", error: error.message });
@@ -108,13 +108,13 @@ export const getAllRolePermissions = async (req, res) => {
 
 
     // Save these to your database/config file
-    // console.log("Store these IVs securely:", ivs);
+    // logger.info("Store these IVs securely:", ivs);
     const allRoles = [...systemRoles, ...customRoles];
 
     // 🔐 Encrypt the data
     const encrypted = encryptData(allRoles, process.env.All_Roles_IV);
     const decrypted = decryptData(encrypted.data, encrypted.iv);
-    console.log("Decrypted:", decrypted);
+    logger.info("Decrypted:", decrypted);
     return res.status(200).json({
       message: "Role permissions fetched successfully",
       total: systemRoles.length + customRoles.length,
@@ -122,7 +122,7 @@ export const getAllRolePermissions = async (req, res) => {
       iv: encrypted.iv,
     });
   } catch (error) {
-    console.error("Error fetching role permissions:", error);
+    logger.error("Error fetching role permissions:", error);
     return res
       .status(500)
       .json({ message: "Server error", error: error.message });
@@ -175,7 +175,7 @@ export const getRoleNamesList = async (req, res) => {
       iv: encrypted.iv,
     });
   } catch (error) {
-    console.error("Error fetching role names:", error);
+    logger.error("Error fetching role names:", error);
     return res.status(500).json({
       message: "Failed to fetch role names",
       error: error.message,
@@ -206,7 +206,7 @@ export const deleteRole = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Custom role deleted" });
   } catch (error) {
-    console.error("Error deleting role:", error);
+    logger.error("Error deleting role:", error);
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });
@@ -240,7 +240,7 @@ export const updateRole = async (req, res) => {
       role: updatedRole,
     });
   } catch (error) {
-    console.error("Error updating role:", error);
+    logger.error("Error updating role:", error);
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });

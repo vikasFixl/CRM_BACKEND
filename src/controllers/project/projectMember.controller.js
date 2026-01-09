@@ -94,7 +94,7 @@ export const assignMember = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error assigning member:", error);
+    logger.error("Error assigning member:", error);
     return res
       .status(500)
       .json({ message: "Error assigning member", error: error.message });
@@ -157,7 +157,7 @@ export const getAllProjectMembers = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching project members:", error);
+    logger.error("Error fetching project members:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -213,7 +213,7 @@ export const UpdateProjectMember = async (req, res) => {
       member,
     });
   } catch (error) {
-    console.error("updateProjectMember error:", error);
+    logger.error("updateProjectMember error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -252,7 +252,7 @@ export const RemoveProjectMember = async (req, res) => {
       removedMemberId: memberId,
     });
   } catch (error) {
-    console.error("Error removing project member:", error);
+    logger.error("Error removing project member:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

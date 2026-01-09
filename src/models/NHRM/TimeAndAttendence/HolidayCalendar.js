@@ -32,8 +32,8 @@ const holidaySchema = new Schema(
     },
 
     /**
-     * Optional: location-specific holiday
-     * null = applies to all
+     * Location-specific holiday
+     * null = applies to all locations
      */
     locationId: {
       type: Schema.Types.ObjectId,
@@ -61,18 +61,13 @@ const holidaySchema = new Schema(
   { timestamps: true }
 );
 
-/* 🔒 Prevent duplicate holidays on same date */
+/* 🔒 Prevent duplicate holidays */
 holidaySchema.index(
   { organizationId: 1, date: 1, locationId: 1 },
   { unique: true }
 );
 
-/* ⚡ Monthly attendance queries */
-holidaySchema.index(
-  { organizationId: 1, date: 1 }
-);
+/* ⚡ Attendance queries */
+holidaySchema.index({ organizationId: 1, date: 1 });
 
-export default mongoose.model(
-  "HolidayCalendar",
-  holidaySchema
-);
+export default mongoose.model("HolidayCalendar", holidaySchema);

@@ -607,7 +607,7 @@ export const workspacemember = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error("Error at workspace member:", error);
+    logger.error("Error at workspace member:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -673,7 +673,7 @@ export const AddworkspaceMember = async (req, res) => {
       member
     });
   } catch (error) {
-    console.error("Error at AddMember:", error);
+    logger.error("Error at AddMember:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -732,7 +732,7 @@ export const RemoveworkspaceMember = async (req, res) => {
       });
 
     } catch (emailError) {
-      console.error("Error sending removal email:", emailError.message);
+      logger.error("Error sending removal email:", emailError.message);
       // don’t block the API just because email failed
     }
 
@@ -748,7 +748,7 @@ export const RemoveworkspaceMember = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Error at RemoveworkspaceMember:", error);
+    logger.error("Error at RemoveworkspaceMember:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

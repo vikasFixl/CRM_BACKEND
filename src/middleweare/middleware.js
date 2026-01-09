@@ -25,7 +25,7 @@ export const isAdminOrSelf = (req, res, next) => {
   const paramId = req.params.id; // from route like /delete/:id
   const role = req.user.role; // assuming role is 'admin' or 'user'
 
-  console.log(userId, paramId, role);
+  logger.info(userId, paramId, role);
   if (role === "admin" || userId === paramId) {
     return next();
   }
@@ -89,10 +89,13 @@ export const isAdminOrSelf = (req, res, next) => {
 //       await ActivityModel.create({ module: moduleName, activity });
 //       next();
 //     } catch (error) {
-//       console.error(`Error logging activity: ${error}`);
+//       logger.error(`Error logging activity: ${error}`);
 //       next(error);
 //     }
 //   };
 // };
 
 
+// utils/asyncWrapper.js
+export const asyncWrapper = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);

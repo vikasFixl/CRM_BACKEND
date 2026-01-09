@@ -65,7 +65,7 @@ export const getWorkflow = async (req, res) => {
       workflow,
     });
   } catch (error) {
-    console.error('Error in getWorkflow:', error);
+    logger.error('Error in getWorkflow:', error);
     return res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ message: 'Failed to retrieve workflow' });
@@ -135,7 +135,7 @@ export const updateWorkflow = async (req, res) => {
       data: workflow,
     });
   } catch (err) {
-    console.error('Workflow update error:', err);
+    logger.error('Workflow update error:', err);
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: 'Unable to update workflow',
@@ -185,7 +185,7 @@ export const getWorkflowForBoard = async (req, res) => {
       workflows,
     });
   } catch (error) {
-    console.error("Error fetching workflows for board:", error);
+    logger.error("Error fetching workflows for board:", error);
     return res.status(500).json({
       message: "Internal server error while fetching workflows",
       error: error.message,

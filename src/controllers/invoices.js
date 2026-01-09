@@ -184,7 +184,7 @@ export const createInvoice = async (req, res) => {
       data: savedInvoice,
     });
   } catch (error) {
-    console.error("Invoice Creation Error:", error);
+    logger.error("Invoice Creation Error:", error);
     res.status(500).json({
       success: false,
       code: 500,
@@ -223,7 +223,7 @@ export const getAllInvoices = async (req, res) => {
   const orgId = req.orgUser.orgId;
 
   const { page = 1, limit = 10, status, startDate, endDate } = req.query;
-  console.log(req.query);
+  logger.info(req.query);
   try {
     const query = {
       orgId,
@@ -248,7 +248,7 @@ export const getAllInvoices = async (req, res) => {
         query.createdAt.$lte = end;
       }
     }
-    console.log(startDate, endDate);
+    logger.info(startDate, endDate);
 
     // Pagination logic
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -326,7 +326,7 @@ export const getAllDeletedInvoices = async (req, res) => {
       ...result, // includes total, page, totalPages, limit, data
     });
   } catch (error) {
-    console.error("Error fetching deleted invoices:", error);
+    logger.error("Error fetching deleted invoices:", error);
     res.status(500).json({
       success: false,
       code: 500,
@@ -362,7 +362,7 @@ export const getInvoiceByClient = async (req, res) => {
     })
       .sort({ invoiceDate: -1 })
       .lean();
-    console.log(invoices);
+    logger.info(invoices);
 
     res.status(200).json({
       success: true,
@@ -371,7 +371,7 @@ export const getInvoiceByClient = async (req, res) => {
       data: invoices,
     });
   } catch (error) {
-    console.error("Error fetching invoices by client:", error);
+    logger.error("Error fetching invoices by client:", error);
     res.status(500).json({
       success: false,
       code: 500,
@@ -448,7 +448,7 @@ export const listInvoiceNo = async (req, res) => {
       message: "Invoice number list fetched successfully.",
     });
   } catch (error) {
-    console.error("Error listing invoice numbers:", error);
+    logger.error("Error listing invoice numbers:", error);
     return res.status(500).json({
       success: false,
       code: 500,
@@ -491,7 +491,7 @@ export const getSingleInvoice = async (req, res) => {
       message: "Single invoice fetched successfully.",
     });
   } catch (error) {
-    console.error("Error fetching invoice:", error);
+    logger.error("Error fetching invoice:", error);
     return res.status(500).json({
       success: false,
       code: 500,
@@ -526,7 +526,7 @@ export const getAllCancelInvoices = async (req, res) => {
       ...result, // Includes: total, page, limit, totalPages, data
     });
   } catch (error) {
-    console.error("Error fetching cancelled invoices:", error);
+    logger.error("Error fetching cancelled invoices:", error);
     res.status(500).json({
       success: false,
       code: 500,
@@ -589,7 +589,7 @@ export const cancelInvoice = async (req, res) => {
       data: updatedInvoice,
     });
   } catch (error) {
-    console.error("Error canceling invoice:", error);
+    logger.error("Error canceling invoice:", error);
     res.status(500).json({
       success: false,
       code: 500,
@@ -660,7 +660,7 @@ export const restoreInvoice = async (req, res) => {
       data: restoredInvoice,
     });
   } catch (error) {
-    console.error("Restore Invoice Error:", error);
+    logger.error("Restore Invoice Error:", error);
     res.status(500).json({
       success: false,
       code: 500,
@@ -753,7 +753,7 @@ export const moveToTrashInvoice = async (req, res) => {
       data: deletedInvoice,
     });
   } catch (error) {
-    console.error("Soft Delete Error:", error);
+    logger.error("Soft Delete Error:", error);
     res.status(500).json({
       message: "Something went wrong while deleting the invoice",
       success: false,
@@ -811,7 +811,7 @@ export const restoreCancelInvoice = async (req, res) => {
       code: 200,
     });
   } catch (error) {
-    console.error("Restore Cancel Invoice Error:", error);
+    logger.error("Restore Cancel Invoice Error:", error);
     res.status(500).json({
       message: "Something went wrong while restoring the invoice",
       success: false,
@@ -865,7 +865,7 @@ export const permanentDeleteInvoice = async (req, res) => {
       code: 200,
     });
   } catch (error) {
-    console.error("Invoice Deletion Error:", error);
+    logger.error("Invoice Deletion Error:", error);
     res.status(500).json({
       message: "An error occurred while deleting the invoice.",
       success: false,
@@ -918,7 +918,7 @@ export const getDrafts = async (req, res) => {
       Invoice: formatted,
     });
   } catch (error) {
-    console.error("Error fetching draft invoices:", error);
+    logger.error("Error fetching draft invoices:", error);
     res.status(500).json({
       message: "Internal server error while fetching drafts.",
       success: false,
@@ -945,7 +945,7 @@ export const getCancel = async (req, res) => {
       message: "Canceled invoices retrieved successfully.",
     });
   } catch (error) {
-    console.error("Error fetching canceled invoices:", error);
+    logger.error("Error fetching canceled invoices:", error);
     res.status(500).json({
       message: "Internal server error while fetching canceled invoices.",
       success: false,
@@ -1000,7 +1000,7 @@ export const finalizeDraftInvoice = async (req, res) => {
       data: updatedInvoice,
     });
   } catch (error) {
-    console.error("Error converting draft to invoice:", error);
+    logger.error("Error converting draft to invoice:", error);
     res.status(500).json({
       message: "Internal server error",
       success: false,
@@ -1031,7 +1031,7 @@ export const getDraftById = async (req, res) => {
       status: 200,
     });
   } catch (error) {
-    console.error("Error fetching invoice by ID:", error);
+    logger.error("Error fetching invoice by ID:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -1100,7 +1100,7 @@ export const updateInvoiceStatus = async (req, res) => {
       data: updatedInvoice,
     });
   } catch (error) {
-    console.error("Error updating invoice status:", error);
+    logger.error("Error updating invoice status:", error);
     res.status(500).json({
       message: "Internal server error",
       success: false,
@@ -1117,10 +1117,10 @@ export const payment = async (req, res) => {
 
     const details = await InvoiceModel.findById(_id);
     if (!details) return res.status(404).json({ message: "Invoice not found" });
-    console.log(details);
-    console.log(req.body);
+    logger.info(details);
+    logger.info(req.body);
     const paymentAmount = parseFloat(req.body.amountPaid);
-    console.log(paymentAmount);
+    logger.info(paymentAmount);
     if (isNaN(paymentAmount) || paymentAmount <= 0)
       return res.status(400).json({ message: "Invalid amountPaid" });
 
@@ -1157,7 +1157,7 @@ export const payment = async (req, res) => {
       message: "Payment record inserted successfully!",
     });
   } catch (error) {
-    console.error("Payment error:", error);
+    logger.error("Payment error:", error);
     res.status(500).json({ message: "Something went wrong." });
   }
 };
@@ -1186,7 +1186,7 @@ export const payment = async (req, res) => {
 //         new: true,
 //       }
 //     );
-//     console.log(newPay.amountPaid);
+//     logger.info(newPay.amountPaid);
 //     if (newPay.dueAmount < 0) {
 //       amount = newPay.dueAmount;
 //       return res.json({ msg: "OverPaid!", amount });
@@ -1198,7 +1198,7 @@ export const payment = async (req, res) => {
 //       message: "Payment Record Inserted Succesfully!",
 //     });
 //   } catch (error) {
-//     console.log(error);
+//     logger.info(error);
 //     res.status(409).json({ message: "something went wrong." });
 //   }
 // };
@@ -1244,7 +1244,7 @@ export const payment = async (req, res) => {
 //       return total + purchase.total;
 //     }, 0);
 
-//     console.log("totalamount", totalAmount);
+//     logger.info("totalamount", totalAmount);
 
 //     return res.status(200).json({
 //       totalAmount: totalAmount,
@@ -1252,7 +1252,7 @@ export const payment = async (req, res) => {
 //       success: true,
 //     });
 //   } catch (error) {
-//     console.error(error);
+//     logger.error(error);
 //     return res.status(500).json({ error: "Something Went Wrong" });
 //   }
 // };

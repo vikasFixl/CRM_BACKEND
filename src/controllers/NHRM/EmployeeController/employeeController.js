@@ -13,6 +13,71 @@ const generateEmployeeId = () => {
   const short = crypto.randomBytes(3).toString("hex").toUpperCase(); // 6-char hex
   return `EMP_${short}`; // like EMP_1F2A9C
 };
+export const hrmLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) return res.status(401).json({ message: "Invalid credentials" });
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return res.status(401).json({ message: "Invalid credentials" });
+
+  const memberships = await OrgMember.find({
+    userId: user._id,
+    isActive: true
+  }).populate("organizationId");
+
+  if (memberships.length === 0) {
+    return res.status(403).json({
+      message: "User not assigned to any organization"
+    });
+  }
+
+  if (memberships.length === 1) {
+    const m = memberships[0];
+    const token = generateHRMToken(user._id, m.organizationId._id, m.role);
+
+    return res.json({
+      success: true,
+      token,
+      autoSelected: true
+    });
+  }
+
+  return res.json({
+    success: true,
+    autoSelected: false,
+    organizations: memberships.map(m => ({
+      organizationId: m.organizationId._id,
+      name: m.organizationId.name,
+      role: m.role
+    }))
+  });
+};
+export const selectOrganization = async (req, res) => {
+  const { userId } = req.user;
+  const { organizationId } = req.body;
+
+  const membership = await OrgMember.findOne({
+    userId,
+    organizationId,
+    isActive: true
+  });
+
+  if (!membership) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const token = generateHRMToken(
+    userId,
+    organizationId,
+    membership.role
+  );
+
+  res.json({ success: true, token });
+};
+
+
 export function generateShortPassword() {
   const lower = "abcdefghijklmnopqrstuvwxyz";
   const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -225,7 +290,7 @@ export const getEmployees = async (req, res) => {
       .sort({ createdAt: -1 });
 
     const total = await EmployeeProfile.countDocuments(filter);
-    console.log(employees);
+    logger.info(employees);
     const formattedEmployees = employees.map((emp) => ({
       _id: emp._id,
       employeeId: emp.employeeId,
@@ -289,7 +354,7 @@ export const getEmployeeById = async (req, res) => {
       return res.status(404).json({ message: "Employee not found" });
     }
 
-    console.log(employee);
+    logger.info(employee);
     // ✅ Transform response structure (complete + frontend friendly)
     const formatted = {
       id: employee._id,
@@ -347,7 +412,7 @@ export const getEmployeeById = async (req, res) => {
 
     return res.status(200).json({ message: "Employee fetched successfully", employee: formatted });
   } catch (err) {
-    console.log("❌ Error fetching employee:", err);
+    logger.info("❌ Error fetching employee:", err);
     res.status(500).json({ error: err.message });
   }
 };

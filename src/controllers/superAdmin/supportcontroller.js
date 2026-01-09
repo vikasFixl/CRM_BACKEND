@@ -12,7 +12,7 @@ export const supportAgentLogin = async (req, res) => {
         // 1. Find the support agent user
         const user = await User.findOne({ email, userType: 'supportAgent' })
         if (!user) return res.status(404).json({ message: 'Support agent not found' });
-        console.log(user)
+        logger.info(user)
         // 2. Validate password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
@@ -40,7 +40,7 @@ export const supportAgentLogin = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in supportAgentLogin:', error);
+        logger.error('Error in supportAgentLogin:', error);
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -89,7 +89,7 @@ export const supportOrgLogin = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in supportOrgLogin:', error);
+        logger.error('Error in supportOrgLogin:', error);
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 };

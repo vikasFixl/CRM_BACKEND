@@ -13,7 +13,7 @@ export const listTemplates = async (req, res) => {
     try {
         const { category, recommended } = req.query;
         const organization = req.user.currentOrganization;
-        console.log(req.user)
+        logger.info(req.user)
 
         const parseBool = (val) => val === "true";
 
@@ -41,7 +41,7 @@ export const listTemplates = async (req, res) => {
             Templates: allTemplates
         });
     } catch (err) {
-        console.error("Error listing templates:", err);
+        logger.error("Error listing templates:", err);
         return sendErr(res, StatusCodes.INTERNAL_SERVER_ERROR, "Failed to list templates");
     }
 };
@@ -59,7 +59,7 @@ export const createTemplate = async (req, res) => {
     try {
         // 1. fast validation -------------------------------------------------------
         const { data, error } = createSchema.safeParse(req.body);
-        console.log(error)
+        logger.info(error)
         if (error) return sendErr(res, StatusCodes.BAD_REQUEST, error.errors[0]?.message);
 
         const { name, organization } = data;
@@ -90,7 +90,7 @@ export const createTemplate = async (req, res) => {
 
         return res.status(StatusCodes.CREATED).json({ success: true, data: template });
     } catch (err) {
-        console.error('Template creation failed:', err);
+        logger.error('Template creation failed:', err);
         return sendErr(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create template');
     }
 };

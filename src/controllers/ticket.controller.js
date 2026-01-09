@@ -44,7 +44,7 @@ export const CreateTicket = async (req, res) => {
         return res.status(201).json({ message: "Ticket created successfully", });
 
     } catch (error) {
-        console.log(error);
+        logger.info(error);
         return res.status(500).json({ message: error.message });
 
     }
@@ -110,7 +110,7 @@ export const getAllTickets = async (req, res) => {
         res.status(200).json(response);
     } catch (error) {
         // Handle errors
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -123,7 +123,7 @@ export const getTicketById = async (req, res) => {
         }
         res.status(200).json(ticket);
     } catch (error) {
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -133,7 +133,7 @@ export const getMyTickets = async (req, res) => {
         const tickets = await ticketModel.find({ requester: req.user.userId }).populate('createdBy').populate("organization", "name email ");
         res.status(200).json(tickets);
     } catch (error) {
-        console.log("error in getMyTickets", error);
+        logger.info("error in getMyTickets", error);
         return res.status(500).json({ message: "Internal server error" });
 
     }

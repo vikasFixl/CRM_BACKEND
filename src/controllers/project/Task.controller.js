@@ -123,7 +123,7 @@ export const createTask = async (req, res) => {
 
     return res.status(201).json({ message: "Task created successfully", task });
   } catch (err) {
-    console.error("createTask error:", err);
+    logger.error("createTask error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
@@ -173,7 +173,7 @@ export const getAllTasks = async (req, res) => {
       tasks: cleanedTasks,
     });
   } catch (error) {
-    console.error("Error in getAllTasks:", error);
+    logger.error("Error in getAllTasks:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -256,7 +256,7 @@ export const deleteTask = async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    console.error("Error deleting task:", error);
+    logger.error("Error deleting task:", error);
     return res.status(500).json({ message: "Internal server error", error });
   }
 };
@@ -299,7 +299,7 @@ export const GetAllSubTasks = async (req, res) => {
       tasks: subTasks,
     });
   } catch (error) {
-    console.error("GetAllSubTasks error:", error);
+    logger.error("GetAllSubTasks error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -315,13 +315,13 @@ export const getTaskById = async (req, res) => {
         .json({ message: "Task ID required" });
     }
     const task = await Task.findOne({ _id: taskId, isDeleted: false }).populate("projectId", "name _id").populate("assignedTeamId", "name _id")
-    // console.log(task)
+    // logger.info(task)
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
     return res.status(200).json({ task, message: "Task fetched successfully" });
   } catch (error) {
-    console.error("Error in getTaskById:", error);
+    logger.error("Error in getTaskById:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -367,7 +367,7 @@ export const updateTask = async (req, res) => {
     }
 
     const { status, ...updateData } = parsed.data;
-    console.log("parseddata", parsed.data);
+    logger.info("parseddata", parsed.data);
 
     // Fetch task with populated board and workflow (inside board) 
     const task = await Task.findOne({ _id: taskId, isDeleted: false, projectId })
@@ -386,7 +386,7 @@ export const updateTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found or task not part of project" });
     }
 
-    console.log("task at ", task)
+    logger.info("task at ", task)
     // Handle status update if present in request
     if (status !== undefined) {
       if (!task.boardId) {
@@ -507,9 +507,9 @@ export const updateTask = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in updateTask:", error);
-    await session.abortTransaction().catch(err => console.error('Abort transaction error:', err));
-    session.endSession().catch(err => console.error('Session end error:', err));
+    logger.error("Error in updateTask:", error);
+    await session.abortTransaction().catch(err => logger.error('Abort transaction error:', err));
+    session.endSession().catch(err => logger.error('Session end error:', err));
     return res.status(500).json({
       message: "Failed to update task",
       error: error.message,
@@ -651,7 +651,7 @@ export const reorderTasks = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error moving task:", error);
+    logger.error("Error moving task:", error);
     await session.abortTransaction().catch(() => { });
     session.endSession().catch(() => { });
     return res.status(500).json({
@@ -696,8 +696,8 @@ export const getTasksByBoardColumn = async (req, res) => {
       return res.status(404).json({ message: "Board not found" });
     }
 
-    console.log("boaard", board)
-    console.log("task raw", tasksRaw);
+    logger.info("boaard", board)
+    logger.info("task raw", tasksRaw);
 
     // Create column structure
     const columns = (board.columns || [])
@@ -750,7 +750,7 @@ export const getTasksByBoardColumn = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in getTasksByBoardColumn:", error);
+    logger.error("Error in getTasksByBoardColumn:", error);
     return res.status(500).json({
       message: "Failed to fetch tasks",
       error: error.message

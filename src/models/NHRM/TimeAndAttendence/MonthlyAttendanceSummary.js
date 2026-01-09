@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
-const monthlySummarySchema = new Schema(
+const monthlyAttendanceSummarySchema = new Schema(
   {
     organizationId: {
       type: Schema.Types.ObjectId,
@@ -17,9 +17,6 @@ const monthlySummarySchema = new Schema(
       index: true
     },
 
-    /**
-     * Month identity (safe & queryable)
-     */
     year: {
       type: Number,
       required: true,
@@ -34,72 +31,42 @@ const monthlySummarySchema = new Schema(
       index: true
     },
 
-    /**
-     * Attendance aggregates
-     */
-    presentDays: {
+    /* 🔢 Calendar metrics */
+    totalCalendarDays: {
       type: Number,
-      default: 0,
+      required: true,
+      min: 28,
+      max: 31
+    },
+
+    totalWorkingDays: {
+      type: Number,
+      required: true,
       min: 0
     },
 
-    absentDays: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
+    /* 🟢 Attendance breakup */
+    presentDays: { type: Number, default: 0 },
+    absentDays: { type: Number, default: 0 },
 
-    leaveDays: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
+    leaveDays: { type: Number, default: 0 },
+    paidLeaveDays: { type: Number, default: 0 },
+    unpaidLeaveDays: { type: Number, default: 0 },
 
-    paidLeaveDays: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
+    holidays: { type: Number, default: 0 },
+    weekendDays: { type: Number, default: 0 },
 
-    unpaidLeaveDays: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
+    /* ⏱ Time-based */
+    overtimeMinutes: { type: Number, default: 0 },
 
-    holidays: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-
-    weekendDays: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-
-    /**
-     * Time aggregates
-     */
-    overtimeMinutes: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-
-    /**
-     * Payroll-facing metrics
-     */
+    /* 💰 Payroll-facing */
     payableDays: {
       type: Number,
-      default: 0,
+      required: true,
       min: 0
     },
 
-    /**
-     * Payroll lock (CRITICAL)
-     */
+    /* 🔒 Payroll lock */
     lockedForPayroll: {
       type: Boolean,
       default: false,
@@ -116,17 +83,17 @@ const monthlySummarySchema = new Schema(
 );
 
 /* 🔒 One summary per employee per month */
-monthlySummarySchema.index(
+monthlyAttendanceSummarySchema.index(
   { organizationId: 1, employeeId: 1, year: 1, month: 1 },
   { unique: true }
 );
 
-/* ⚡ Payroll batch queries */
-monthlySummarySchema.index(
+/* ⚡ Payroll batch */
+monthlyAttendanceSummarySchema.index(
   { organizationId: 1, year: 1, month: 1 }
 );
 
 export default mongoose.model(
   "MonthlyAttendanceSummary",
-  monthlySummarySchema
+  monthlyAttendanceSummarySchema
 );

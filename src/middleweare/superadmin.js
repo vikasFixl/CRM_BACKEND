@@ -28,7 +28,7 @@ export const verifySupportoken = async (req, res, next) => {
         next();
 
     } catch (error) {
-        console.error('Error verifying support org token:', error);
+        logger.error('Error verifying support org token:', error);
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -64,7 +64,7 @@ export const verifySupporOrgtoken = async (req, res, next) => {
         next();
 
     } catch (error) {
-        console.error('Error verifying support org token:', error);
+        logger.error('Error verifying support org token:', error);
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 };

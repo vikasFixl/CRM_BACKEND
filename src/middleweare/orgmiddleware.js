@@ -11,10 +11,10 @@ dotenv.config({ path: "../../.env" });
 export const authenticateOrgToken = () => {
   return (req, res, next) => {
     const token = req.cookies?._fxl_1A2B3C;
-// console.log("token", token);
+// logger.info("token", token);
     const userAgent = req.headers['user-agent']; 
 
-    // console.log("userAgent", userAgent);
+    // logger.info("userAgent", userAgent);
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     if (!token) {
       return res.status(401).json({ message: "invalid token" });
@@ -60,14 +60,14 @@ export const checkPermission = (moduleName, actionName) => {
           },
         });
 
-      // const permisionscheck=member.role.permissions.map(perm=>console.log(perm));
+      // const permisionscheck=member.role.permissions.map(perm=>logger.info(perm));
       if (!member) {
         return res
           .status(403)
           .json({ error: "User not part of this organization" });
       }
 
-      // console.log("member", member);
+      // logger.info("member", member);
       let permissions = [];
 
       // Use custom override if it exists
@@ -76,9 +76,9 @@ export const checkPermission = (moduleName, actionName) => {
       } else if (member.role && member.role.permissions) {
         permissions = member.role.permissions;
       }
-      // console.log("permissions", member.role?.permissions);
+      // logger.info("permissions", member.role?.permissions);
       const modulePerm = permissions.find((perm) => perm.module === moduleName);
-      // console.log("modulePerm", modulePerm);
+      // logger.info("modulePerm", modulePerm);
 
       if (!modulePerm || !modulePerm.actions.includes(actionName)) {
         return res
@@ -90,7 +90,7 @@ export const checkPermission = (moduleName, actionName) => {
 
       next();
     } catch (error) {
-      console.error("Permission middleware error:", error);
+      logger.error("Permission middleware error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   };

@@ -16,7 +16,7 @@ exports.createRole = async (req, res) => {
       message: "Role created successfully!",
     });
   } catch (error) {
-    console.log(error);
+    logger.info(error);
     res.status(400).json({ message: "something went wrong! " });
   }
 };

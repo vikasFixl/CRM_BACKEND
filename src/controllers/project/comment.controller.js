@@ -34,7 +34,7 @@ export const createComment = async (req, res) => {
     res.status(201).json(comment);
   } catch (err) {
     await session.abortTransaction();
-    console.error("Create comment failed:", err);
+    logger.error("Create comment failed:", err);
     res.status(500).json({ error: "Failed to create comment" });
   } finally {
     session.endSession();
@@ -69,7 +69,7 @@ export const getCommentsByTask = async (req, res) => {
 
     res.json(roots);
   } catch (err) {
-    console.error("Fetch comments failed:", err);
+    logger.error("Fetch comments failed:", err);
     res.status(500).json({ error: "Failed to fetch comments" });
   }
 };
@@ -82,7 +82,7 @@ export const deleteComment = async (req, res) => {
     await Comment.findByIdAndUpdate(commentId, { isDeleted: true });
     res.json({ message: "Comment deleted" });
   } catch (err) {
-    console.error("Delete comment failed:", err);
+    logger.error("Delete comment failed:", err);
     res.status(500).json({ error: "Failed to delete comment" });
   }
 };

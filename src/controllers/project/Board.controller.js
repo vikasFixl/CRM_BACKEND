@@ -499,7 +499,7 @@ export const updateColumn = async (req, res) => {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    console.error("Error updating column:", err);
+    logger.error("Error updating column:", err);
     return res.status(500).json({
       error: "Internal server error",
       details: err.message

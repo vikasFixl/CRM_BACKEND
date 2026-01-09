@@ -129,7 +129,7 @@ export const createTeam = async (req, res) => {
     res.status(201).json({ message: "Team created and linked to project board", success: true, team, teamtoken: teamtoken });
   } catch (err) {
     await session.abortTransaction();
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ success: false, message: "Failed to create team", error: err.message });
   } finally {
     session.endSession();
@@ -464,7 +464,7 @@ export const changeMemberRoleInTeam = async (req, res) => {
       formattedData,
     });
   } catch (error) {
-    console.error("Error in changeMemberRoleInTeam:", error);
+    logger.error("Error in changeMemberRoleInTeam:", error);
     return res
       .status(500)
       .json({ message: "Internal server error", error: error.message });
@@ -551,7 +551,7 @@ export const deleteTeam = async (req, res) => {
       .json({ success: true, message: 'Team, members, task references, and related board/workflow removed' });
   } catch (error) {
     await session.abortTransaction();
-    console.error('Delete team error:', error);
+    logger.error('Delete team error:', error);
     return res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ success: false, message: 'Failed to delete team', error: error.message });
@@ -602,7 +602,7 @@ export const getMyTeamsByWorkspace = async (req, res) => {
       teams,
     });
   } catch (error) {
-    console.error('getMyTeamsByWorkspace:', error);
+    logger.error('getMyTeamsByWorkspace:', error);
     return sendErr(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Internal server error');
   }
 };
@@ -627,7 +627,7 @@ export const getTeamById = async (req, res) => {
     if (!team) return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Team not found' });
     return res.status(StatusCodes.OK).json({ success: true, team });
   } catch (error) {
-    console.error('getTeamById:', error);
+    logger.error('getTeamById:', error);
     return sendErr(res, StatusCodes.INTERNAL_SERVER_ERROR, 'Internal server error');
   }
 };
@@ -658,7 +658,7 @@ export const getAssignableMembersForTeam = async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error("getAssignableMembersForTeam error:", err);
+    logger.error("getAssignableMembersForTeam error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };

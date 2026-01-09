@@ -51,12 +51,12 @@ export const generate2FAQr = async (req, res) => {
     // Generate and display QR code in the terminal
     qrcode.toString(otpauth, { type: 'terminal', small: true }, (err, url) => {
         if (err) {
-            console.error('Error generating QR code:', err);
+            logger.error('Error generating QR code:', err);
             return;
         }
 
-        console.log('Scan the following QR code with your authenticator app:');
-        console.log(url);
+        logger.info('Scan the following QR code with your authenticator app:');
+        logger.info(url);
     });
 
 
@@ -73,9 +73,9 @@ export const verify2FASetup = async (req, res) => {
     const user = await User.findById(req.user.userId).select("+twoFAEnabled +twoFASecret");
 
     if (!user.twoFASecret) return res.status(400).json({ message: 'No secret found in session.' });
-    console.log(user.twoFASecret);
+    logger.info(user.twoFASecret);
     const secret = user.twoFASecret
-    console.log(otp)
+    logger.info(otp)
     const isValid = authenticator.verify({ token: otp, secret });
 
 

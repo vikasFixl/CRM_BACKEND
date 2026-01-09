@@ -22,11 +22,11 @@ exports.paySlipgen = async (req, res) => {
             "role": userData.role,
             "phone": userData.phone
         }
-        //console.log(userDetails);
+        //logger.info(userDetails);
         const salDetails = salData.basicPay
-        //console.log(typeof (salDetails));
+        //logger.info(typeof (salDetails));
         const daAmount = (parseInt(salDetails) * parseInt(dedData.da)) / 100
-        //console.log(dedData);
+        //logger.info(dedData);
         const esicAmount = (salDetails * dedData.esic) / 100
         const taAmount = ((salDetails) * (dedData.ta)) / 100
         const hraAmount = ((salDetails) * (dedData.hra)) / 100

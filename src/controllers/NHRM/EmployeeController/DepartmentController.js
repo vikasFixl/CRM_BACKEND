@@ -83,7 +83,7 @@ export const getDepartments = async (req, res) => {
       departments: formattedDepartments,
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -102,7 +102,7 @@ export const GetDepartmentList = async (req, res) => {
     });
   }
   catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ success: false, error: err.message });
   }
 }

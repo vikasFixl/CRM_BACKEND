@@ -19,7 +19,7 @@ export const addTaxInFirm = async (req, res) => {
     // };
 
     const parsed = taxSchema.safeParse(req.body);
-    console.log("zod data", parsed);
+    logger.info("zod data", parsed);
     if (!parsed.success) {
       return res.status(400).json({
         message: "Validation error",
@@ -57,7 +57,7 @@ export const addTaxInFirm = async (req, res) => {
       message: "Firm tax updated successfully!",
     });
   } catch (error) {
-    console.log(error);
+    logger.info(error);
     res.status(500).json({
       success: false,
       message: "Server error",
@@ -113,7 +113,7 @@ export const postGlobalTax = async (req, res) => {
       message: "Global tax updated successfully!",
     });
   } catch (error) {
-    console.error("Error in postGlobalTax:", error);
+    logger.error("Error in postGlobalTax:", error);
 
     if (error.name === "ZodError") {
       return res.status(422).json({
@@ -181,7 +181,7 @@ export const getGlobalTaxs = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.error("Error fetching global taxes:", error.message);
+    logger.error("Error fetching global taxes:", error.message);
     res.status(500).json({
       message: "Failed to fetch global taxes.",
       success: false,
@@ -225,7 +225,7 @@ export const updateTaxRateById = async (req, res) => {
   try {
     const taxRateId = req.params.id; // ✅ taxRates[].id here taxRateId is taxrates._id for individual tax
     const { newRate } = req.body;
-    console.log(newRate, taxRateId);
+    logger.info(newRate, taxRateId);
     if (!taxRateId || !mongoose.Types.ObjectId.isValid(taxRateId)) {
       return res.status(400).json({
         message: "Tax rate ID not found or invalid id",
@@ -243,7 +243,7 @@ export const updateTaxRateById = async (req, res) => {
 
     // Find the tax document that contains this taxRateId
     const data = await taxModel.findOne({ "taxRates._id": taxRateId });
-    console.log(data);
+    logger.info(data);
 
     if (!data) {
       return res.status(404).json({
@@ -318,7 +318,7 @@ export const disabletaxRate = async (req, res) => {
       data: updatedTax,
     });
   } catch (error) {
-    console.error("Error disabling tax rate:", error);
+    logger.error("Error disabling tax rate:", error);
     return res.status(500).json({
       message: "Internal server error",
       success: false,

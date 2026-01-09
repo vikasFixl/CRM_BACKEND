@@ -187,7 +187,7 @@ export const createOrganization = async (req, res) => {
       orgtoken,
     });
   } catch (error) {
-    console.error("Organization creation failed:", error);
+    logger.error("Organization creation failed:", error);
     return res.status(500).json({
       message: "Error creating organization and billing",
       error: error.message,
@@ -220,7 +220,7 @@ export const switchOrg = async (req, res) => {
       .populate("role") // populate role name + permissions
       .lean();
 
-    console.log("member", member);
+    logger.info("member", member);
     if (!member) {
       return res
         .status(403)
@@ -270,7 +270,7 @@ export const switchOrg = async (req, res) => {
 
     })
   } catch (err) {
-    console.error("Switch Org Error:", err);
+    logger.error("Switch Org Error:", err);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -327,7 +327,7 @@ export const getUserOrganizations = async (req, res) => {
 
     });
   } catch (error) {
-    console.error("Error fetching user organizations:", error);
+    logger.error("Error fetching user organizations:", error);
     return res.status(500).json({
       message: "Failed to fetch organizations",
       success: false,
@@ -421,7 +421,7 @@ export const getAllUserInOrg = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error in getAllUserInOrg:", error);
+    logger.error("Error in getAllUserInOrg:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -514,7 +514,7 @@ export const getOrganizationBYId = async (req, res) => {
       isOwner,
     });
   } catch (error) {
-    console.error("Error in getOrganizationBYId:", error);
+    logger.error("Error in getOrganizationBYId:", error);
     return res.status(500).json({ error: "Failed to get organization" });
   }
 };
@@ -533,7 +533,7 @@ export const UpdateOrganizationUser = async (req, res) => {
     if (!member) {
       return res.status(404).json({ message: "User is not part of org " });
     }
-    // console.log("memberexist", member);
+    // logger.info("memberexist", member);
     // ✅ 1. Prevent Org Creator from changing their own role
     const organization = await Org.findById(orgId);
     if (!organization) {
@@ -551,7 +551,7 @@ export const UpdateOrganizationUser = async (req, res) => {
 
     const currentRole = member.role?.role;
     const isRoleChanged = currentRole !== Role;
-    console.log("isRoleChanged", isRoleChanged);
+    logger.info("isRoleChanged", isRoleChanged);
     let updates = {};
 
     // ✅ 3. Handle role change
@@ -591,7 +591,7 @@ export const UpdateOrganizationUser = async (req, res) => {
     Object.assign(member, updates);
     await member.save();
     const permission = member.hasCustomPermission ? member.permissionsOverride : member.permissions
-    console.log(member)
+    logger.info(member)
     const formateddata = {
       memberId: member._id,
       role: member.role?.role,
@@ -606,7 +606,7 @@ export const UpdateOrganizationUser = async (req, res) => {
       formateddata,
     });
   } catch (error) {
-    console.error("UpdateOrganizationUser error:", error);
+    logger.error("UpdateOrganizationUser error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -640,7 +640,7 @@ export const DeleteOrganizationUser = async (req, res) => {
       message: "User removed from organization successfully",
     });
   } catch (error) {
-    console.error("Error removing user from organization:", error);
+    logger.error("Error removing user from organization:", error);
     return res.status(500).json({
       message: "Internal server error while removing user from organization",
     });
@@ -711,7 +711,7 @@ export const CreateInvite = async (req, res) => {
 
     // Construct join link
     const INVITE_LINK = `${frontendUrl}/accept-invite?token=${token}`;
-    console.log("INVITE_LINK", INVITE_LINK);
+    logger.info("INVITE_LINK", INVITE_LINK);
     const html = await InviteEmailTemplate(
       organization.name,
       role,
@@ -720,7 +720,7 @@ export const CreateInvite = async (req, res) => {
     );
 
     // Send reset email (mocked)
-    console.log("Invite link:", INVITE_LINK); // for testing/dev
+    logger.info("Invite link:", INVITE_LINK); // for testing/dev
     try {
       await sendEmail(email, "Organization Invite", html);
       return res.status(200).json({
@@ -732,7 +732,7 @@ export const CreateInvite = async (req, res) => {
       return res.status(500).json({ error: "Failed to send invite email" });
     }
   } catch (error) {
-    console.log(error, "email error");
+    logger.info(error, "email error");
     return res.status(500).json({ error: "Server error" });
   }
 };
@@ -741,7 +741,7 @@ export const acceptInvite = async (req, res) => {
   try {
     const { token } = req.params;
 
-    // console.log("token", token);
+    // logger.info("token", token);
 
     // 1. Find invite by token & check it's still valid (not expired & pending)
     const invite = await OrganizationInvite.findOne({
@@ -750,7 +750,7 @@ export const acceptInvite = async (req, res) => {
       status: "pending",
     });
 
-    // console.log("invite", invite);
+    // logger.info("invite", invite);
     if (!invite) {
       return res
         .status(404)
@@ -759,7 +759,7 @@ export const acceptInvite = async (req, res) => {
 
     // 2. Find the user by email from the invite
     let existingUser = await User.findOne({ email: invite.email });
-    // console.log("existingUser", existingUser);
+    // logger.info("existingUser", existingUser);
     if (!existingUser) {
       return res
         .status(404)
@@ -771,13 +771,13 @@ export const acceptInvite = async (req, res) => {
     if (!organization) {
       return res.status(404).json({ message: "Organization not found." });
     }
-    console.log("organization", organization);
+    logger.info("organization", organization);
     // 4. Check if user already in org using member
     const alreadyMember = await OrgMember.findOne({
       userId: existingUser._id,
       organizationId: organization._id,
     });
-    // console.log("alreadyMember", alreadyMember);
+    // logger.info("alreadyMember", alreadyMember);
     if (alreadyMember) {
       return res
         .status(400)
@@ -786,7 +786,7 @@ export const acceptInvite = async (req, res) => {
 
     // 5. Find role permissions
     const roles = await RolePermission.findOne({ role: invite.role });
-    // console.log("roles", roles);
+    // logger.info("roles", roles);
     const employeeId = generateEmployeeId(organization._id);
 
     const newmember = await OrgMember.create({
@@ -799,22 +799,22 @@ export const acceptInvite = async (req, res) => {
 
     existingUser.currentOrganization = organization._id;
     await existingUser.save();
-    // console.log("newmember", newmember);
+    // logger.info("newmember", newmember);
     await newmember.save();
-    console.log("after update", existingUser);
+    logger.info("after update", existingUser);
 
     // 8. Mark invite as accepted
     invite.status = "accepted";
     invite.expiresAt = null;
     invite.token = "";
-    // console.log("aftertoken", invite);
+    // logger.info("aftertoken", invite);
     await invite.save();
 
     return res
       .status(200)
       .json({ message: "Successfully joined the organization." });
   } catch (error) {
-    console.error("Error in acceptInvite:", error);
+    logger.error("Error in acceptInvite:", error);
     return res.status(500).json({
       message: "Internal server error in acceptInvite",
       error: error.message,
@@ -845,7 +845,7 @@ export const declineInvite = async (req, res) => {
       .status(200)
       .json({ message: "Invite declined and invalidated successfully." });
   } catch (error) {
-    console.error("Error in declineInvite:", error);
+    logger.error("Error in declineInvite:", error);
     return res.status(500).json({
       message: "Internal server error in declineInvite",
       error: error.message,
@@ -870,7 +870,7 @@ export const getOrganizationInvite = async (req, res) => {
       .status(200)
       .json({ message: "Invite fetched successfully.", invitations });
   } catch (error) {
-    console.error("Error in fetching invite:", error); // Add this
+    logger.error("Error in fetching invite:", error); // Add this
     res.status(500).json({
       message: "Internal server error in fetching invite",
       error: error.message,
@@ -905,7 +905,7 @@ export const UpdateOrgDetails = async (req, res) => {
     })
 
     await org.save();
-    console.log("organization", organization);
+    logger.info("organization", organization);
 
     res.status(200).json({ message: "Organization details updated successfully" });
 
