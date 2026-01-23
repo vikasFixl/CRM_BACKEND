@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
-
+import logger from './logger.js';
 dotenv.config();
 
 
@@ -13,8 +13,11 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS, // Use App Password
   },
 });
-export const sendEmail = async (to, subject, html) => {
-
+export const sendEmail = async ({to, subject, html}) => {
+logger.info("Preparing to send email to:", to);
+logger.info("Email subject:", subject);
+logger.info("Email HTML content:", html);
+logger.info(process.env.EMAIL_USER);
  
  
   const mailOptions = {

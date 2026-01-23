@@ -3,14 +3,14 @@ import { connectDB } from "../../config/db.config.js";
 import { RolePermission } from "../models/RolePermission.js"; // Adjust if your export differs
 import { ROLES, ROLE_SCOPES_MAP } from "../enums/role.enums.js";
 import { rolepermission } from "../utils/role-permission.js";
-
+import logger from "../../config/logger.js";
 import dotenv from "dotenv";
 
 dotenv.config({ path: "../../.env" });
-logger.info(process.env.Mongo_URI);
+
 
 const seedRoles = async () => {
-  logger.info("🌱 Seeding roles started...");
+  logger.info(" Seeding roles started...");
   await connectDB();
 
   const session = await mongoose.startSession();
@@ -45,16 +45,16 @@ const seedRoles = async () => {
         }
       );
 
-      logger.info(`✅ Role '${role}' seeded/updated.`); // Use role instead of roleName
+      logger.info(` Role '${role}' seeded/updated.`); // Use role instead of roleName
     }
 
     await session.commitTransaction();
     session.endSession();
-    logger.info("✅ Role seeding completed.");
+    logger.info(" Role seeding completed.");
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    logger.error("❌ Error seeding roles:", error.message);
+    logger.error(" Error seeding roles:", error.message);
     process.exit(1); // Exit with failure
   } finally {
     mongoose.disconnect(); // Ensure mongoose connection is closed

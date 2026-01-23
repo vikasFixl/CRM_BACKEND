@@ -257,11 +257,6 @@ export const signup = async (req, res) => {
     }
 
     const data = result.data;
-
-    const phoneExists = await verifyPhoneExistence(data.phone);
-    if (!phoneExists) {
-      return res.status(400).json({ message: "Phone number not valid" });
-    }
     // Check for existing user
     const existingUser = await User.findOne({ email: data.email, isDeleted: false, phone: data.phone });
     if (existingUser) {
@@ -474,36 +469,6 @@ export const getUser = async (req, res) => {
   }
 };
 
-// get all organization users
-// export const getAllusers = async (req, res) => {
-//   try {
-//     const { orgId } = req.params;
-//     const { email } = req.body;
-
-//     const org = await Org.findById(orgId);
-//     if (!org)
-//       return res
-//         .status(404)
-//         .json({ message: "Organization not found", data: [] });
-
-//     if (org.orgEmail !== email) {
-//       return res.status(403).json({ message: "Unauthorized", data: [] });
-//     }
-
-//     const data = await User.find({ orgId })
-//       .select("-password")
-//       .sort({ _id: -1 });
-
-//     res.status(200).json({
-//       data,
-//       success: true,
-//       code: 200,
-//       message: "All users fetched successfully",
-//     });
-//   } catch (error) {
-//     res.status(409).json({ message: error.message });
-//   }
-// };
 
 export const deleteUser = async (req, res) => {
   const _id = req.params.id;

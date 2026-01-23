@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
 const offerSchema = new Schema({
-  Organization: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
+  organization: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
   candidate: { type: mongoose.Schema.Types.ObjectId, ref: 'Candidate', required: true },
   jobPosting: { type: mongoose.Schema.Types.ObjectId, ref: 'JobPosting', required: true },
   position: { type: mongoose.Schema.Types.ObjectId, ref: 'Position', required: true },
@@ -21,9 +21,8 @@ const offerSchema = new Schema({
 }
 ,
   signedDocumentUrl: String,
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-});
+ 
+}, { timestamps: true });
 
 offerSchema.index({ offerDate: 1, status: 1 });
 

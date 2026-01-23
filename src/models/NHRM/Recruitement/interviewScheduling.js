@@ -19,10 +19,9 @@ const interviewSchema = new Schema({
     createdAt: { type: Date, default: Date.now },
   }]
   ,
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
+  
   followUp: String, // Follow-up actions or notes
-});
+}, { timestamps: true });
 
 interviewSchema.index({ scheduledDate: 1, status: 1 });
 

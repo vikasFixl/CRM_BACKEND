@@ -3,29 +3,24 @@ const { Schema } = mongoose;
 
 /* ---------- SUBSCHEMAS ---------- */
 
-const familySchema = new Schema({
-  name: String,
-  relationship: String,
-  phone: String,
-  dob: Date
-}, { _id: false });
-
 const bankSchema = new Schema({
   accountHolder: String,
   bankName: String,
-  accountNumber: { type: String, match: /^\d{9,18}$/ },
-  ifsc: { type: String, match: /^[A-Z]{4}0[A-Z0-9]{6}$/ }
+  accountNumber: String,
+  ifsc: String
 }, { _id: false });
 
 const documentSchema = new Schema({
-  type: { type: String, enum: ["PAN", "AADHAR", "PASSPORT", "DL", "OTHER"] },
+  name: String,        // PAN / Aadhar / Offer Letter / Resume
   number: String,
-  fileUrl: String
+  fileUrl: String,
+  verified: { type: Boolean, default: false }
 }, { _id: false });
 
-/* ---------- MAIN ---------- */
+/* ---------- MAIN SCHEMA ---------- */
 
 const employeeSchema = new Schema({
+  /* Organization */
   organizationId: {
     type: Schema.Types.ObjectId,
     ref: "Organization",
@@ -33,89 +28,137 @@ const employeeSchema = new Schema({
     index: true
   },
 
-  employeeId: {
+  employeeCode: {
     type: String,
     required: true,
     immutable: true,
-    match: /^[A-Z]{2,5}-\d{4,6}$/
+    index: true
   },
 
-  userId: { type: Schema.Types.ObjectId, ref: "User" },
-  offerId: { type: Schema.Types.ObjectId, ref: "Offer", required: true },
-
-  personalInfo: {
-    firstName: String,
-    lastName: String,
-    email: String,
-    phone: String,
-    gender: { type: String, enum: ["Male", "Female", "Other"] },
-    dob: Date,
-    address: {
-      line1: String,
-      city: String,
-      state: String,
-      country: String,
-      pincode: String
-    }
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: "User"
   },
 
-  jobInfo: {
-    departmentId: { type: Schema.Types.ObjectId, ref: "Department" },
-    positionId: { type: Schema.Types.ObjectId, ref: "Position" },
-    joinDate: Date,
-    employmentType: {
-      type: String,
-      enum: ["Permanent", "Contract", "Intern", "Consultant"]
-    }
-  },
+  /* Personal */
+  firstName: { type: String, required: true },
+  lastName: String,
+  email: { type: String, index: true },
+  phone: String,
+  gender: String,
+  dob: Date,
 
-  employmentStatus: {
+  /* Job */
+  departmentId: { type: Schema.Types.ObjectId, ref: "Department" },
+  positionId: { type: Schema.Types.ObjectId, ref: "Position" },
+  reportingManagerId: { type: Schema.Types.ObjectId, ref: "EmployeeProfile" },
+
+  joinDate: { type: Date, required: true },
+  employmentType: {
     type: String,
-    enum: ["Active", "Suspended", "Terminated"],
+    enum: ["Permanent", "Contract", "Intern"]
+  },
+
+  workLocation: {
+    type: String,
+    enum: ["Onsite", "Remote", "Hybrid"],
+    default: "Onsite"
+  },
+
+  /* Access & Status */
+  role: {
+    type: String,
+    enum: ["Employee", "Manager", "Admin"],
+    default: "Employee"
+  },
+
+  status: {
+    type: String,
+    enum: ["Active", "Suspended", "Exited"],
     default: "Active",
     index: true
   },
 
-  onboardingStatus: {
-    type: String,
-    enum: ["NotStarted", "InProgress", "Completed", "Rejected"],
-    default: "NotStarted",
-    index: true
-  },
+  isActive: { type: Boolean, default: true },
 
-  offboardingStatus: {
-    type: String,
-    enum: ["NotStarted", "InProgress", "Completed"],
-    default: "NotStarted"
-  },
-
-  attendanceEnabled: { type: Boolean, default: false },
-  attendanceStartDate: Date,
-
+  /* Payroll */
   bankDetails: bankSchema,
+
+  salary: {
+    ctc: Number,
+    currency: { type: String, default: "INR" }
+  },
+
+  /* Compliance */
   documents: [documentSchema],
-  family: [familySchema],
+  kycStatus: {
+    type: String,
+    enum: ["Pending", "Verified"],
+    default: "Pending"
+  },
 
-  activatedAt: Date,
-  terminatedAt: Date,
+  /* Audit */
+  createdBy: { type: Schema.Types.ObjectId, ref: "User" },
+  deletedAt: Date
 
-  createdBy: { type: Schema.Types.ObjectId, ref: "User" }
 }, { timestamps: true });
 
+/* ---------- INDEXES ---------- */
+
+/* ---------- INDEXES ---------- */
+
+// Unique employee per organization
 employeeSchema.index(
-  { organizationId: 1, employeeId: 1 },
+  { organizationId: 1, employeeCode: 1 },
   { unique: true }
 );
 
-employeeSchema.pre("save", function (next) {
-  if (
-    this.attendanceStartDate &&
-    this.jobInfo?.joinDate &&
-    this.attendanceStartDate < this.jobInfo.joinDate
-  ) {
-    return next(new Error("attendanceStartDate < joinDate"));
-  }
-  next();
+// Core HR dashboard queries
+employeeSchema.index({
+  organizationId: 1,
+  status: 1,
+  isActive: 1
 });
+
+// Department-wise listing
+employeeSchema.index({
+  organizationId: 1,
+  departmentId: 1
+});
+
+// Manager → Team lookup
+employeeSchema.index({
+  reportingManagerId: 1,
+  isActive: 1
+});
+
+// Quick employee search
+employeeSchema.index({ email: 1 });
+employeeSchema.index({ phone: 1 });
+
+// Payroll runs
+employeeSchema.index({
+  organizationId: 1,
+  isActive: 1
+});
+
+// Role-based access
+employeeSchema.index({
+  organizationId: 1,
+  role: 1
+});
+
+// Soft delete filtering
+employeeSchema.index({ deletedAt: 1 });
+
+// Text search (optional – for name search)
+employeeSchema.index({
+  firstName: "text",
+  lastName: "text",
+  employeeCode: "text"
+});
+
+
+
 
 export const EmployeeProfile = mongoose.model("EmployeeProfile", employeeSchema);

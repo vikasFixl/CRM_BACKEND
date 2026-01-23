@@ -12,7 +12,7 @@ export const createJobPosting = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { title, description, qualifications,position, responsibilities, department, location, employmentType, tags, closingDate } = req.body;
+    const { title, description, qualifications,position, responsibilities, department, location, employmentType, tags, closingDate, openingCount } = req.body;
 
 
     if(!title || !description || !department || !position || !location, !employmentType) {
@@ -42,6 +42,7 @@ export const createJobPosting = async (req, res) => {
       tags,
       closingDate,
       createdBy: userId,
+      openingCount
     });
 
     const savedJob = await job.save({ session });

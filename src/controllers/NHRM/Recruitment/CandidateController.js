@@ -4,9 +4,10 @@ import { JobPosting } from "../../../models/NHRM/Recruitement/jobPostings.js";
 import { Interview } from "../../../models/NHRM/Recruitement/interviewScheduling.js";
 import { candidateSchema, updateCandidateSchema } from "../../../validations/hrm/candidate.js";
 import { EmployeeProfile } from "../../../models/NHRM/employeeManagement/employeeProfile.js";
-import { generateEmployeeId, generateShortPassword } from "../../../utils/helperfuntions/generateInviteCode.js";
+import { generateEmployeeCode, generateTempPassword } from "../../../utils/helperfuntions/generateInviteCode.js";
 import { sendEmail } from "../../../../config/nodemailer.config.js";
 import { Position } from "../../../models/NHRM/employeeManagement/postition.js";
+import logger from "../../../../config/logger.js";
 // Create a new Candidate (HR adds manually)
 // Example data (from form or file)
 // export const createCandidates = async (req, res) => {
@@ -210,46 +211,72 @@ export const deleteCandidate = async (req, res) => {
 // Get all Candidates (filterable)
 export const getCandidates = async (req, res) => {
   try {
-    const { jobId, status, page = 1, limit = 10 } = req.query; // default page=1, limit=10
+    const { jobId, status, page = 1, limit = 10 } = req.query;
     const { orgId } = req.orgUser;
 
-    // 1️⃣ Build filter
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    /** 1️⃣ Build filter */
     const filter = { organization: orgId };
     if (jobId) filter.jobApplication = jobId;
     if (status) filter.status = status;
 
-    // 2️⃣ Convert page and limit to numbers
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    const skip = (pageNumber - 1) * limitNumber;
-
-    // 3️⃣ Fetch candidates with pagination
+    /** 2️⃣ Query (LIGHTWEIGHT) */
     const candidates = await Candidate.find(filter)
-      .populate("jobApplication")
-      .populate("interviews")
-      .populate("offer")
+      .select(
+        "firstName lastName email phoneNumber status experience expectedSalary lastUpdated jobApplication interviews offer"
+      )
+      .populate({
+        path: "jobApplication",
+        select: "title"
+      })
+      .populate({
+        path: "offer",
+        select: "status"
+      })
       .sort({ appliedDate: -1 })
       .skip(skip)
-      .limit(limitNumber);
+      .limit(limitNumber)
+      .lean();
 
-    // 4️⃣ Total count for pagination
+    /** 3️⃣ Transform response */
+    const formattedCandidates = candidates.map(c => ({
+      _id: c._id,
+      name: `${c.firstName} ${c.lastName}`,
+      email: c.email,
+      phone: c.phoneNumber,
+      status: c.status,
+      experience: c.experience,
+      expectedSalary: c.expectedSalary,
+      jobTitle: c.jobApplication?.title || null,
+      interviewCount: c.interviews?.length || 0,
+      offerStatus: c.offer?.status || null,
+      lastUpdated: c.lastUpdated
+    }));
+
+    /** 4️⃣ Pagination count */
     const totalCandidates = await Candidate.countDocuments(filter);
     const totalPages = Math.ceil(totalCandidates / limitNumber);
 
-    // 5️⃣ Response
-    res.json({
+    return res.json({
       success: true,
-      message: "Candidates fetched successfully with pagination",
       page: pageNumber,
       limit: limitNumber,
       totalCandidates,
       totalPages,
-      candidates,
+      candidates: formattedCandidates
     });
+
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
+
 
 
 // Get single Candidate
@@ -269,504 +296,458 @@ export const getCandidate = async (req, res) => {
 };
 
 // Add Interview to Candidate
-export const MovetoInterview = async (req, res) => {
+export const moveCandidateToInterviewStage = async (req, res) => {
   try {
     const { candidateId } = req.params;
+    const { interviewId } = req.body;
     const { orgId } = req.orgUser;
-    const { interviewerId, scheduledDate, interviewType, panel } = req.body;
-    let candidate = await Candidate.findOne({ _id: candidateId, organization: orgId });
-    if (!candidate) return res.status(404).json({ message: "Candidate not found" });
-    const interview = new Interview({
-      candidate: candidateId,
-      jobPosting: candidate.jobApplication,
-      interviewer: interviewerId,       // from HR input
-      scheduledDate,
-      interviewType,
-      panel,
-      status: "Scheduled",
+
+    if (!interviewId) {
+      return res.status(400).json({
+        success: false,
+        message: "interviewId is required"
+      });
+    }
+
+    // 1️⃣ Fetch candidate
+    const candidate = await Candidate.findOne({
+      _id: candidateId,
+      organization: orgId
     });
-    await interview.save();
 
-    await candidate.updateOne({ $push: { interviews: interview._id }, status: "Interview_Scheduled", lastUpdated: new Date() });
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        message: "Candidate not found"
+      });
+    }
 
+    // 2️⃣ Fetch interview
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      organization: orgId,
+      candidate: candidateId
+    });
 
-    res.json({ message: "candidate moved to interview stage" });
+    if (!interview) {
+      return res.status(404).json({
+        success: false,
+        message: "Interview not found for this candidate"
+      });
+    }
+
+    // 3️⃣ Prevent duplicate transition
+    if (candidate.status === "Interview_Scheduled") {
+      return res.status(400).json({
+        success: false,
+        message: "Candidate is already in Interview Scheduled stage"
+      });
+    }
+
+    // 4️⃣ Update candidate
+    await Candidate.updateOne(
+      { _id: candidateId },
+      {
+        status: "Interview_Scheduled",
+        lastUpdated: new Date(),
+        $addToSet: { interviews: interview._id }, // 🔒 no duplicates
+        $push: {
+          stageHistory: {
+            stage: "Interview_Scheduled",
+            changedAt: new Date(),
+            changedBy: req.user.userId
+          }
+        }
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Candidate moved to Interview Scheduled stage",
+      interviewId: interview._id
+    });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
+
 
 // Move Candidate to Offer
 export const moveToOffer = async (req, res) => {
   try {
     const { candidateId } = req.params;
     const { orgId: organization } = req.orgUser;
-    const { offerData, jobApplicationId, positionId } = req.body; // Expect salary, bonus, benefits, jobTitle, location, payFrequency, etc.
-    if (!offerData || !offerData.baseSalary) {
-      return res.status(400).json({ message: "Incomplete offer data" });
-    }
-    if (!jobApplicationId || !positionId) {
-      return res.status(400).json({ message: "Job Application ID and Position ID are required" });
-    }
+
+    const {
+      offerId,
+      offerData,
+      jobApplicationId,
+      positionId
+    } = req.body;
+
     if (!candidateId) {
       return res.status(400).json({ message: "Candidate ID is required" });
     }
 
-    let candidate = await Candidate.findOne({ _id: candidateId, organization });
-    if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+    // 1️⃣ Fetch candidate
+    const candidate = await Candidate.findOne({ _id: candidateId, organization });
+    if (!candidate) {
+      return res.status(404).json({ message: "Candidate not found" });
+    }
 
+    let offer;
 
-    const jobApplication = await JobPosting.findById(jobApplicationId);
-    if (!jobApplication) return res.status(404).json({ message: "Job Application not found" });
-    const position = await Position.findById(positionId);
-    if (!position) return res.status(404).json({ message: "Position not found" });
+    // ============================
+    // CASE 1: EXISTING OFFER
+    // ============================
+    if (offerId) {
+      offer = await Offer.findById(offerId).populate("position");
 
-    // Create Offer for the candidate
-    const offer = await Offer.create({
-      candidate: candidateId,
-      jobPosting: jobApplicationId,
-      position: positionId,
-      offerDate: new Date(),
-      status: "Pending",
-      offerDetails: {
-        baseSalary: offerData.baseSalary,
-        bonus: offerData.bonus || 0,
-        currency: offerData.currency || "INR",
-        payFrequency: offerData.payFrequency || "Monthly",
-        benefits: offerData.benefits || [],
-        jobTitle: offerData.jobTitle,
-        location: offerData.location,
-      },
-    });
+      if (!offer) {
+        return res.status(404).json({ message: "Offer not found" });
+      }
 
+      if (offer.candidate.toString() !== candidateId) {
+        return res.status(400).json({
+          message: "Offer does not belong to this candidate"
+        });
+      }
+    }
+
+    // ============================
+    // CASE 2: CREATE NEW OFFER
+    // ============================
+    else {
+      if (!offerData || !offerData.baseSalary) {
+        return res.status(400).json({ message: "Incomplete offer data" });
+      }
+
+      if (!jobApplicationId || !positionId) {
+        return res.status(400).json({
+          message: "Job Application ID and Position ID are required"
+        });
+      }
+
+      const jobApplication = await JobPosting.findById(jobApplicationId);
+      if (!jobApplication) {
+        return res.status(404).json({ message: "Job Application not found" });
+      }
+
+      const position = await Position.findById(positionId);
+      if (!position) {
+        return res.status(404).json({ message: "Position not found" });
+      }
+
+      offer = await Offer.create({
+        organization,
+        candidate: candidateId,
+        jobPosting: jobApplicationId,
+        position: positionId,
+        offerDate: new Date(),
+        status: "Pending",
+        offerDetails: {
+          baseSalary: offerData.baseSalary,
+          bonus: offerData.bonus || 0,
+          currency: offerData.currency || "INR",
+          payFrequency: offerData.payFrequency || "Monthly",
+          benefits: offerData.benefits || [],
+          jobTitle: offerData.jobTitle,
+          location: offerData.location
+        }
+      });
+
+      await offer.populate("position");
+    }
+
+    // ============================
+    // UPDATE CANDIDATE
+    // ============================
     candidate.status = "Offered";
     candidate.offer = offer._id;
     candidate.lastUpdated = new Date();
-    // Send professional email to candidate with offer details
+    await candidate.save();
+
+    // ============================
+    // SEND EMAIL
+    // ============================
     await sendEmail({
       to: candidate.email,
       subject: "Your Offer Letter from Our Company",
       html: `
         <p>Hi ${candidate.firstName} ${candidate.lastName},</p>
-        <p>Congratulations! We are excited to offer you the position of <strong>${offer.offerDetails.jobTitle}</strong> at <strong>${offer.offerDetails.location}</strong>.</p>
-        <p><strong>Offer Details:</strong></p>
+        <p>We are excited to offer you the position of
+        <strong>${offer.offerDetails.jobTitle}</strong>
+        at <strong>${offer.offerDetails.location}</strong>.</p>
+
         <ul>
-          <li>Base Salary: ${offer.offerDetails.currency} ${offer.offerDetails.baseSalary.toLocaleString()}</li>
-          <li>Bonus: ${offer.offerDetails.currency} ${offer.offerDetails.bonus.toLocaleString()}</li>
+          <li>Base Salary: ${offer.offerDetails.currency}
+            ${offer.offerDetails.baseSalary.toLocaleString()}</li>
+          <li>Bonus: ${offer.offerDetails.currency}
+            ${offer.offerDetails.bonus.toLocaleString()}</li>
           <li>Pay Frequency: ${offer.offerDetails.payFrequency}</li>
           <li>Benefits: ${offer.offerDetails.benefits.join(", ") || "N/A"}</li>
         </ul>
-        <p>Please review the offer and respond at your earliest convenience. We look forward to welcoming you to the team!</p>
-        <p>Best regards,<br/>HR Team</p>
-      `,
+
+        <p>Please review and respond at your earliest convenience.</p>
+        <p>Regards,<br/>HR Team</p>
+      `
+  });
+    res.json({
+      message: "Candidate moved to offer stage and email sent"
     });
 
-    res.json({ message: "Candidate moved to offer stage and email sent", candidate, offer });
   } catch (err) {
     res.status(500).json({ error: err.message });
+    logger.error(err,"error in offer stage");
   }
 };
 
+
 export const moveToHired = async (req, res) => {
   try {
-    const { candidateId, offerId } = req.body;
+    const { candidateId } = req.params;
+    const {
+      offerId,
+      joiningDate,
+      reportingManagerId,
+      departmentId,
+      positionId
+    } = req.body;
+
     const hrId = req.user.userId;
-    const { orgId: organization } = req.orgUser;
+    const organizationId = req.orgUser.orgId;
 
-    // 1️⃣ Fetch candidate
-    const candidate = await Candidate.find({ _id: candidateId, organization });
-    if (!candidate) return res.status(404).json({ message: "Candidate not found" });
-    if (candidate.status === "Hired") return res.status(400).json({ message: "Candidate is already hired" });
-
-
-
-
-
-
-    const offer = await Offer.findById(offerId).populate("position").populate("department")
-    if (!offer) return res.status(404).json({ message: "Offer not found " });
-    // generate employe id
-    const employeeId = generateEmployeeId();
-    const password = await generateShortPassword();
-    // 3️⃣ Create EmployeeProfile
-    const employeeProfile = new EmployeeProfile({
-      organizationId: req.orgUser?.orgId,
-      employeeId,
-      password,
-      personalInfo: {
-        firstName: candidate.firstName,
-        lastName: candidate.lastName,
-        contact: {
-          email: candidate.email,
-          phone: candidate.phoneNumber,
-          location: candidate.location,
-        }
-      },
-      jobInfo: {
-        position: offer.position,
-      }
-      ,
-      createdBy: hrId,
+    /* 1️⃣ Fetch candidate */
+    const candidate = await Candidate.findOne({
+      _id: candidateId,
+      organization: organizationId
     });
-    const savedEmployee = await employeeProfile.save();
 
-    // 4️⃣ Update candidate
+    if (!candidate)
+      return res.status(404).json({ message: "Candidate not found" });
+
+    if (candidate.status !== "Offered")
+      return res.status(400).json({
+        message: "Candidate must be in Offered stage to hire"
+      });
+
+    /* 2️⃣ Fetch & validate offer */
+    let offer = await Offer.findOne({
+      _id: offerId,
+      candidate: candidate._id,
+      organization: organizationId,
+    }).populate("position");
+
+    if (!offer)
+      return res.status(404).json({
+        message: "Valid accepted offer not found for candidate"
+      });
+
+    /* 3️⃣ Create Employee Profile (DRAFT) */
+    const employeeCode = generateEmployeeCode();
+    const tempPassword = generateTempPassword();
+
+    const employee = await EmployeeProfile.create({
+      organizationId,
+      employeeCode,
+      userId: null, // will be linked after first login
+      firstName: candidate.firstName,
+      lastName: candidate.lastName,
+      email: candidate.email,
+      phone: candidate.phoneNumber,
+
+      departmentId,
+      positionId,
+      reportingManagerId,
+
+      joinDate: joiningDate,
+      employmentType: "Permanent",
+      workLocation:"Onsite",
+
+      status: "Active",
+      isActive: false, // becomes true after onboarding
+      role: "Employee",
+
+      salary: {
+        ctc: offer.offerDetails.baseSalary,
+        currency: offer.offerDetails.currency
+      },
+
+      createdBy: hrId
+    });
+
+    /* 4️⃣ Update candidate */
     candidate.status = "Hired";
     candidate.offer = offer._id;
-    candidate.employeeProfile = savedEmployee._id;
-    candidate.lastUpdated = new Date();
+    candidate.employeeProfile = employee._id;
     candidate.stageHistory.push({
       stage: "Hired",
-      changedAt: new Date(),
-      changedBy: hrId,
+      changedBy: hrId
     });
+    offer.status="Accepted"
     await candidate.save();
 
-    // 5️⃣ Send onboarding email
-    await sendEmail({
-      to: candidate.email,
-      subject: "Welcome to the Company!",
-      html: `<p>Hi ${candidate.firstName},</p>
-             <p>Congratulations! You have been hired as ${offer.position}.</p>
-             <p>Your joining date is ${new Date(offer.startDate).toDateString()}.</p>
-             <p>We look forward to having you on the team!</p>`,
+    /* 5️⃣ Send onboarding email */
+    await sendEmployeeWelcomeEmail({
+      candidate,
+      employee,
+      offer,
+      tempPassword
     });
 
     res.status(200).json({
       success: true,
-      message: "Candidate moved to Hired stage, EmployeeProfile created, onboarding email sent",
-      candidate,
-      employeeProfile: savedEmployee,
+      message: "Candidate hired successfully",
+      employee
     });
-  } catch (err) {
-    logger.error(err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
 
+  } catch (error) {
+    logger.error(error);
+    res.status(500).json({ error: error.message });
+  }
+}
 // controllers/candidateController.js
 
 export const updateCandidateStatus = async (req, res) => {
   try {
     const { candidateId } = req.params;
-    const { status } = req.body;
-    const orgId = req.orgUser.orgId;
+    const { status, offerId } = req.body;
+    const organizationId = req.orgUser.orgId;
+    const userId = req.user.userId;
 
-    // Validate status
-
-    const validStatuses = ["Applied",
+    const VALID_STATUSES = [
+      "Applied",
       "Screening",
       "Shortlisted",
       "Interview_Scheduled",
       "Interview_Completed",
       "Offered",
-      "Rejected",
-      "Hired"];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status value.",
-      });
+      "Hired",
+      "Rejected"
+    ];
+
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status" });
     }
 
+    /** 1️⃣ Fetch candidate once */
+    const candidate = await Candidate.findOne({
+      _id: candidateId,
+      organization: organizationId
+    }).populate("interviews offer");
 
-
-    let candidate = await Candidate.findOne({ _id: candidateId, organization: orgId });
     if (!candidate) {
-      return res.status(404).json({
-        success: false,
-        message: "Candidate not found.",
-      });
+      return res.status(404).json({ success: false, message: "Candidate not found" });
     }
-    // Optional: enforce allowed transitions
-    const currentIndex = validStatuses.indexOf(candidate.status);
-    const newIndex = validStatuses.indexOf(status);
 
-    if (newIndex < currentIndex) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot move backward from ${candidate.status} to ${status}.`
-      });
-    }
-    // Helper function to check if interview stage exists
-    ;
     if (candidate.status === status) {
       return res.status(400).json({
         success: false,
-        message: `Candidate is already in ${status} status.`,
+        message: `Candidate already in ${status}`
       });
     }
 
-
-    if (candidate.status != status) {
-      // create stage history entry
-      const stageEntry = {
-        stage: status,
-        changedAt: new Date(),
-        changedBy: req.user.userId,
-      };
-      candidate.stageHistory.push(stageEntry);
+    /** 2️⃣ Prevent backward movement */
+    if (
+      VALID_STATUSES.indexOf(status) <
+      VALID_STATUSES.indexOf(candidate.status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Backward status movement not allowed"
+      });
     }
 
-    await candidate.save();
-    // Handle side effects for certain statuses
+    /** 3️⃣ STATUS-SPECIFIC VALIDATION */
     switch (status) {
-      case "Interview_Scheduled":
-        {
-          const { interviewerId, scheduledDate, interviewType, panel } = req.body;
+   
 
-          // Make sure required fields are provided
-          if (!interviewerId || !scheduledDate || !interviewType || !panel) {
-            return res.status(400).json({
-              success: false,
-              message: "interviewerId, scheduledDate, interviewType, and panel are required for scheduling an interview",
-            });
-          }
-
-          // Create new interview
-          const interview = new Interview({
-            organization: orgId,
-            candidate: candidateId,
-            jobPosting: candidate.jobApplication,
-            interviewer: interviewerId,
-            scheduledDate,
-            interviewType,
-            panel,
-            status: "Scheduled",
+      case "Offered": {
+        const hasInterview = candidate.interviews?.length > 0;
+        if (!hasInterview) {
+          return res.status(400).json({
+            success: false,
+            message: "Cannot offer without interview"
           });
-
-          await interview.save();
-          // Update candidate
-          await candidate.updateOne({
-            $push: { interviews: interview._id },
-            status: "Interview_Scheduled",
-            lastUpdated: new Date(),
-          });
-
-          candidate = await Candidate.findById(candidateId).populate("interviews"); // optional: return populated data
         }
-        return res.status(200).json({
-          success: true,
-          message: "Candidate moved to Interview Scheduled stage",
-          candidate,
-        });
-
-      case "Offered":
-        {
-          const { offerData, jobApplicationId, positionId } = req.body;
-
-
-          if (!offerData || !offerData.baseSalary) {
-            return res.status(400).json({ message: "Incomplete offer data" });
-          }
-          if (!jobApplicationId || !positionId) {
-            return res.status(400).json({ message: "Job Application ID and Position ID are required" });
-          }
-
-          // Fetch candidate
-          let candidate = await Candidate.findOne({ _id: candidateId, organization: req.orgUser.orgId });
-          if (!candidate) return res.status(404).json({ message: "Candidate not found" });
-
-          // Ensure candidate has at least one interview stage
-          const hasInterview = candidate.stageHistory.some(stage =>
-            stage.stage === "Interview_Scheduled" || stage.stage === "Interview_Completed"
-          );
-
-          if (!hasInterview) {
-            return res.status(400).json({
-              message: `Cannot move candidate to ${status}. Candidate must have at least one interview stage in history.`,
-            });
-          }
-          // Validate job posting and position
-          const jobApplication = await JobPosting.findById(jobApplicationId);
-          if (!jobApplication) return res.status(404).json({ message: "Job Application not found" });
-
-          const position = await Position.findById(positionId);
-          if (!position) return res.status(404).json({ message: "Position not found" });
-
-          // Create Offer
-          const offer = await Offer.create({
-            Organization: req.orgUser.orgId,
-            candidate: candidateId,
-            jobPosting: jobApplicationId,
-            position: positionId,
-            offerDate: new Date(),
-            status: "Pending",
-            offerDetails: {
-              baseSalary: offerData.baseSalary,
-              bonus: offerData.bonus || 0,
-              currency: offerData.currency || "INR",
-              payFrequency: offerData.payFrequency || "Monthly",
-              benefits: offerData.benefits || [],
-              jobTitle: offerData.jobTitle,
-              location: offerData.location,
-            },
-          });
-
-          // Update candidate status and link offer
-          candidate.status = "Offered";
-          candidate.offer = offer._id;
-          candidate.lastUpdated = new Date();
-          await candidate.save();
-
-
-
-          // Return updated candidate and offer
-          candidate = await Candidate.findById(candidateId).populate("offer");
-        }
-        return res.status(200).json({
-          success: true,
-          message: "Candidate moved to Offer stage",
-          candidate,
-        });
         break;
-      case "Hired":
-        {
-          const { offerId } = req.body;
-          const hrId = req.user.userId;
-          const organization = req.orgUser.orgId;
+      }
 
-          // 1️⃣ Fetch candidate
-          let candidate = await Candidate.findOne({ _id: candidateId, organization });
-          if (!candidate) return res.status(404).json({ message: "Candidate not found" });
-          if (candidate.status === "Hired") return res.status(400).json({ message: "Candidate is already hired" });
-          logger.info(candidate);
-          // Ensure candidate has at least one interview stage
-          const hasInterview = candidate.stageHistory.some(stage =>
-            stage.stage === "Interview_Scheduled" || stage.stage === "Interview_Completed"
-          );
+      case "Hired": {
+        if (!offerId) {
+          return res.status(400).json({
+            success: false,
+            message: "offerId is required to hire"
+          });
+        }
 
-          if (!hasInterview) {
-            return res.status(400).json({
-              message: `Cannot move candidate to ${status}. Candidate must have at least one interview stage in history.`,
-            });
-          }
+        const offer = await Offer.findOne({
+          _id: offerId,
+          Organization: organizationId
+        });
 
-          // 2️⃣ Fetch offer
-          const offer = await Offer.findOne({ _id: offerId, Organization: organization }).populate("position");
-          if (!offer) return res.status(404).json({ message: "Offer not found" });
-          // 3️⃣ Generate employee ID & password
-          let employeeId = generateEmployeeId();
+        if (!offer) {
+          return res.status(404).json({ message: "Offer not found" });
+        }
 
-          // cross check if employeeid is already used 
-          const empidexist = await EmployeeProfile.findOne({ employeeId, organizationId: organization })
-          if (!empidexist) {
-            employeeId = generateEmployeeId()
-          }
+        if (!candidate.employeeProfile) {
+          const employeeId = generateEmployeeId();
 
-          // 4️⃣ Create EmployeeProfile
-          const employeeProfile = new EmployeeProfile({
-            organizationId: organization,
+          const employeeProfile = await EmployeeProfile.create({
+            organizationId,
             employeeId,
             offer: offer._id,
             personalInfo: {
               firstName: candidate.firstName,
               lastName: candidate.lastName,
-                email: candidate.email,
-                phone: candidate.phoneNumber,
-                address: candidate.location,
-              
+              email: candidate.email,
+              phone: candidate.phoneNumber
             },
             jobInfo: {
-              position: offer.position._id,
-              department: offer.position.department,
+              position: offer.position
             },
-            createdBy: hrId,
+            createdBy: userId
           });
 
-          await employeeProfile.save();
-          logger.info(employeeProfile);
-          // 5️⃣ Update candidate
-          candidate.status = "Hired";
-          candidate.offer = offer._id;
-          offer.status = "Accepted";
-          await offer.save();
           candidate.employeeProfile = employeeProfile._id;
-          candidate.lastUpdated = new Date();
-          candidate.stageHistory.push({
-            stage: "Hired",
-            changedAt: new Date(),
-            changedBy: hrId,
-          });
-          await candidate.save();
-
-
-          candidate = await Candidate.findById(candidateId).populate("offer");
         }
-        return res.status(200).json({
-          success: true,
-          message: "candidate moved to Hired stage and employee Account created",
-        });
+
+        offer.status = "Accepted";
+        await offer.save();
         break;
-      case "Rejected":
-        {
-          const hrId = req.user.userId;
-          const organization = req.orgUser.orgId;
-
-          // 1️⃣ Fetch candidate
-          const candidate = await Candidate.findOne({ _id: candidateId, organization });
-          if (!candidate) return res.status(404).json({ message: "Candidate not found" });
-          // Ensure candidate has at least one interview stage
-          const hasInterview = candidate.stageHistory.some(stage =>
-            stage.stage === "Interview_Scheduled" || stage.stage === "Interview_Completed"
-          );
-
-          if (!hasInterview) {
-            return res.status(400).json({
-              message: `Cannot move candidate to ${status}. Candidate must have at least one interview stage in history.`,
-            });
-          }
-
-          // 2️⃣ Update candidate status
-          candidate.status = "Rejected";
-          candidate.lastUpdated = new Date();
-          candidate.stageHistory.push({
-            stage: "Rejected",
-            changedAt: new Date(),
-            changedBy: hrId,
-          });
-          await candidate.save();
-
-          // 3️⃣ Optional: Delete or mark offer as rejected
-          if (candidate.offer) {
-            await Offer.findByIdAndUpdate(candidate.offer, { status: "Rejected" });
-          }
-          candidate.interviews = []
-          await candidate.save();
-
-          // 4️⃣ Optional: Cancel interviews
-          await Interview.updateMany(
-            { candidate: candidateId },
-            { status: "Canceled" }
-          );
-
-        }
-        return res.status(200).json({
-          success: true,
-          message: "Candidate marked as Rejected, related interviews canceled",
-          candidate,
-        });
-        break;
-
+      }
     }
+
+    /** 4️⃣ Update status + stage history */
     candidate.status = status;
+    candidate.lastUpdated = new Date();
+    candidate.stageHistory.push({
+      stage: status,
+      changedAt: new Date(),
+      changedBy: userId
+    });
+
     await candidate.save();
 
-
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: `Candidate status updated to ${status}.`,
-      candidate,
+      message: `Candidate moved to ${status}`,
+      candidate
     });
+
   } catch (error) {
-    logger.error("Error updating candidate status:", error);
-    res.status(500).json({
+    logger.error(error);
+    return res.status(500).json({
       success: false,
-      message: "Internal server error.",
+      message: "Internal server error"
     });
   }
 };
+
 
 export const getCandidatesList = async (req, res) => {
   try {
@@ -792,4 +773,58 @@ export const getCandidatesList = async (req, res) => {
       error: err.message,
     });
   }
+};
+const sendEmployeeWelcomeEmail = async ({
+  candidate,
+  employee,
+  offer,
+  tempPassword
+}) => {
+  await sendEmail({
+    to: candidate.email,
+    subject: "Welcome to the Company – Your Joining Details",
+    html: `
+      <p>Dear ${candidate.firstName} ${candidate.lastName},</p>
+
+      <p>Congratulations! We are pleased to welcome you to 
+      <strong>Our Company</strong>.</p>
+
+      <h3>📌 Employment Details</h3>
+      <ul>
+        <li><strong>Job Title:</strong> ${offer.offerDetails.jobTitle}</li>
+        <li><strong>Department:</strong> ${offer.offerDetails.location}</li>
+        <li><strong>Joining Date:</strong> ${new Date(employee.joinDate).toDateString()}</li>
+        <li><strong>Work Location:</strong> ${employee.workLocation}</li>
+      </ul>
+
+      <h3>💰 Compensation</h3>
+      <ul>
+        <li><strong>CTC:</strong> ${offer.offerDetails.currency}
+        ${offer.offerDetails.baseSalary.toLocaleString()}</li>
+        <li><strong>Bonus:</strong> ${offer.offerDetails.currency}
+        ${offer.offerDetails.bonus.toLocaleString()}</li>
+        <li><strong>Pay Frequency:</strong> ${offer.offerDetails.payFrequency}</li>
+      </ul>
+
+      <h3>🔐 Login Credentials</h3>
+      <p>
+        <strong>Employee Code:</strong> ${employee.employeeCode}<br/>
+        <strong>Temporary Password:</strong> ${tempPassword}
+      </p>
+
+      <p>
+        Please log in on your first day and complete your onboarding
+        (documents, bank details, and KYC).
+      </p>
+
+      <p>
+        If you have any questions, feel free to contact the HR team.
+      </p>
+
+      <p>
+        Warm regards,<br/>
+        <strong>HR Team</strong>
+      </p>
+    `
+  });
 };

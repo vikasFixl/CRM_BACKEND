@@ -14,6 +14,7 @@ const jobPostingSchema = new Schema({
     required: true,
     index: true,
   },
+  openingCount: { type: Number, default: 1 },
 
   location: { type: String, required: true },
   employmentType: { type: String, enum: ['Full-Time', 'Part-Time', 'Contract', 'Internship'], default: 'Full-Time' },
@@ -21,10 +22,8 @@ const jobPostingSchema = new Schema({
   status: { type: String, enum: ['Open', 'Closed', 'Filled'], default: 'Open', index: true },
   postedDate: { type: Date, default: Date.now },
   closingDate: Date,
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-});
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+},{ timestamps: true });
 
 jobPostingSchema.index({ title: 1, status: 1 });
 

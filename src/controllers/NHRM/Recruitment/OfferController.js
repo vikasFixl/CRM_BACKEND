@@ -2,16 +2,18 @@ import { Candidate } from "../../../models/NHRM/Recruitement/candidateTracking.j
 import { Offer } from "../../../models/NHRM/Recruitement/offerManagement.js";
 import { JobPosting } from "../../../models/NHRM/Recruitement/jobPostings.js";
 import Org from "../../../models/OrgModel.js";
+import logger from "../../../../config/logger.js";
 
 // ---------------------------- CREATE OFFER ----------------------------
 export const createOffer = async (req, res) => {
   try {
-    const { orgId: organization } = req.orgUser;
+    const   organization  = req.orgUser.orgId;
     const { candidate: candidateId, jobPosting: jobPostingId, offerDate, offerDetails } = req.body;
     if (!candidateId || !jobPostingId || !offerDate || !offerDetails) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    logger.info(`Creating offer for candidate ${candidateId} for job posting ${jobPostingId} in organization ${organization}`);
     // 1️⃣ Ensure candidate exists
     const candidate = await Candidate.findById(candidateId);
     if (!candidate) return res.status(404).json({ message: "Candidate not found" });

@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { Onboarding } from "../../../models/NHRM/employeeManagement/onboarding.js";
 import { EmployeeProfile } from "../../../models/NHRM/employeeManagement/employeeProfile.js";
 import Org from "../../../models/OrgModel.js"
+import User from "../../../models/userModel.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
 
@@ -235,92 +236,114 @@ export const getEmployees = async (req, res) => {
   try {
     const orgId = req.orgUser.orgId;
 
-    // Pagination
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+   /* ---------------- Pagination ---------------- */
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
     const skip = (page - 1) * limit;
 
-    // Filters
+    /* ---------------- Filters ---------------- */
     const {
       email,
-      status,           // jobInfo.status
-      employmentType,   // jobInfo.employmentType
-      department,       // jobInfo.department
-      position,         // jobInfo.position
-      onboarding,       // joinDate exists & endDate is null
-      offboarding       // endDate exists (completed/terminated)
+      status,            // Active | Suspended | Exited
+      employmentType,    // Permanent | Contract | Intern
+      departmentId,
+      positionId,
+      onboarding,        // true → not activated yet
+      offboarding        // true → exited
     } = req.query;
 
-    const filter = { organizationId: orgId };
+    const filter = {
+      organizationId: orgId,
+      deletedAt: null
+    };
 
-    if (email) filter.email = { $regex: email, $options: "i" };
+    if (email) {
+      filter.email = { $regex: email, $options: "i" };
+    }
 
-    if (status) filter["jobInfo.status"] = status;
+    if (status) {
+      filter.status = status;
+    }
 
-    if (employmentType) filter["jobInfo.employmentType"] = employmentType;
+    if (employmentType) {
+      filter.employmentType = employmentType;
+    }
 
-    if (department) filter["jobInfo.department"] = department;
+    if (departmentId) {
+      filter.departmentId = departmentId;
+    }
 
-    if (position) filter["jobInfo.position"] = position;
+    if (positionId) {
+      filter.positionId = positionId;
+    }
 
-    // Filtering onboarding
+    /* ---------------- Lifecycle Filters ---------------- */
+
+    // Onboarding → employee not active yet
     if (onboarding === "true") {
-      filter["onboardingStatus"] = { $in: ["InProgress", "Completed"] };
+      filter.isActive = false;
+      filter.status = "Active";
     }
 
-    // Filtering not onboarded (optional)
+    // Not onboarding
     if (onboarding === "false") {
-      filter["onboardingStatus"] = "NotStarted";
+      filter.isActive = true;
     }
 
-    // Filtering offboarding
+    // Offboarding → exited employees
     if (offboarding === "true") {
-      filter["offboardingStatus"] = { $in: ["InProgress", "Completed"] };
+      filter.status = "Exited";
     }
 
-    // Filtering not offboarded (optional)
-    if (offboarding === "false") {
-      filter["offboardingStatus"] = "NotStarted";
-    }
+    /* ---------------- Query ---------------- */
 
-    const employees = await EmployeeProfile.find(filter)
-      .populate("jobInfo.department jobInfo.position")
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    const [employees, total] = await Promise.all([
+      EmployeeProfile.find(filter)
+        .populate("departmentId", "name")
+        .populate("positionId", "title")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
 
-    const total = await EmployeeProfile.countDocuments(filter);
-    logger.info(employees);
-    const formattedEmployees = employees.map((emp) => ({
-      _id: emp._id,
-      employeeId: emp.employeeId,
-      email: emp.personalInfo?.email,
-      status: emp.jobInfo?.status || null,
-      employmentType: emp.jobInfo?.employmentType || null,
-      onboarding: Boolean(emp.onboardingStatus && emp.onboardingStatus !== "NotStarted"),
-      offboarding: Boolean(emp.offboardingStatus && emp.offboardingStatus !== "NotStarted"),
-      department: emp.jobInfo?.department?.name || null,
-      position: emp.jobInfo?.position?.title || null,
+      EmployeeProfile.countDocuments(filter)
+    ]);
+
+    /* ---------------- Response Mapping ---------------- */
+
+    const formattedEmployees = employees.map(emp => ({
+      id: emp._id,
+      employeeCode: emp.employeeCode,
+      name: `${emp.firstName} ${emp.lastName || ""}`.trim(),
+      email: emp.email,
+      status: emp.status,
+      employmentType: emp.employmentType || null,
+      onboarding: emp.status === "Active" && emp.isActive === false,
+      offboarding: emp.status === "Exited",
+      department: emp.departmentId?.name || null,
+      position: emp.positionId?.title || null,
+      joinDate: emp.joinDate
     }));
 
     res.json({
-      message: "employee fetched successfully",
       success: true,
+      message: "Employees fetched successfully",
       employees: formattedEmployees,
       pagination: {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
-      },
+        totalPages: Math.ceil(total / limit)
+      }
     });
 
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
-
-
 /**
  * Update Employee (for onboarding form updates)
  */

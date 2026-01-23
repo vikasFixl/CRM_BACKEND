@@ -450,16 +450,68 @@
 //   ],
 
 //   [ROLES.PROJECT_VIEWER]: [
-//     {
-//       module: MODULES.PROJECT,
-//       actions: [
-//         PERMISSIONS.VIEW_ONLY,
-//         PERMISSIONS.VIEW_PROJECT_ACTIVITY,
-//         PERMISSIONS.VIEW_TASK_HISTORY,
-//       ],
-//     },
-//   ],
+// //     {
+// //       module: MODULES.PROJECT,
+// //       actions: [
+// //         PERMISSIONS.VIEW_ONLY,
+// //         PERMISSIONS.VIEW_PROJECT_ACTIVITY,
+// //         PERMISSIONS.VIEW_TASK_HISTORY,
+// //       ],
+// //     },
+// //   ],
+// // };
+// export const HRM_PERMISSIONS = {
+//   /* Employee */
+//   CREATE_EMPLOYEE: "CREATE_EMPLOYEE",
+//   VIEW_EMPLOYEE: "VIEW_EMPLOYEE",
+//   EDIT_EMPLOYEE: "EDIT_EMPLOYEE",
+//   TERMINATE_EMPLOYEE: "TERMINATE_EMPLOYEE",
+
+//   /* Onboarding */
+//   START_ONBOARDING: "START_ONBOARDING",
+//   REVIEW_ONBOARDING: "REVIEW_ONBOARDING",
+//   COMPLETE_ONBOARDING: "COMPLETE_ONBOARDING",
+
+//   /* Attendance */
+//   VIEW_ATTENDANCE: "VIEW_ATTENDANCE",
+//   MARK_ATTENDANCE_MANUAL: "MARK_ATTENDANCE_MANUAL",
+//   REGULARIZE_ATTENDANCE: "REGULARIZE_ATTENDANCE",
+//   LOCK_ATTENDANCE: "LOCK_ATTENDANCE",
+//   UNLOCK_ATTENDANCE: "UNLOCK_ATTENDANCE",
+
+//   /* Shift */
+//   CREATE_SHIFT: "CREATE_SHIFT",
+//   EDIT_SHIFT: "EDIT_SHIFT",
+//   ASSIGN_SHIFT: "ASSIGN_SHIFT",
+
+//   /* Leave */
+//   CREATE_LEAVE_TYPE: "CREATE_LEAVE_TYPE",
+//   VIEW_LEAVE: "VIEW_LEAVE",
+//   APPROVE_LEAVE: "APPROVE_LEAVE",
+
+//   /* Holiday */
+//   CREATE_HOLIDAY: "CREATE_HOLIDAY",
+//   VIEW_HOLIDAY: "VIEW_HOLIDAY",
+
+//   /* Payroll */
+//   CREATE_SALARY_STRUCTURE: "CREATE_SALARY_STRUCTURE",
+//   RUN_PAYROLL: "RUN_PAYROLL",
+//   LOCK_PAYROLL: "LOCK_PAYROLL",
+//   VIEW_PAYROLL: "VIEW_PAYROLL",
+
+//   /* Policy */
+//   CREATE_POLICY: "CREATE_POLICY",
+//   EDIT_POLICY: "EDIT_POLICY",
+//   VIEW_POLICY: "VIEW_POLICY",
+
+//   /* Reports */
+//   VIEW_REPORTS: "VIEW_REPORTS",
+//   EXPORT_REPORTS: "EXPORT_REPORTS",
+
+//   /* Settings */
+//   MANAGE_HRM_SETTINGS: "MANAGE_HRM_SETTINGS"
 // };
+
 
 import { ROLES, PERMISSIONS, MODULES } from "../enums/role.enums.js";
 

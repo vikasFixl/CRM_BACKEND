@@ -41,7 +41,8 @@ export const ROLES = {
   HR_ADMIN: "HRAdmin",                  // Controls HR module
   HR_MANAGER: "HRManager",              // Manages employees, payroll
   EMPLOYEE: "Employee",                 // Standard staff role
-  HR_CUSTOM: "HRCustom"                 // Custom HR role
+  HR_CUSTOM: "HRCustom" 
+                  // Custom HR role
 };
 
 
@@ -59,8 +60,20 @@ export const MODULES = {
   REPORTS: "reports",                       // Org users
   ROLE_PERMISSION: "role_permission",       // Role-based access control
   PROJECT_MANAGEMENT: "project_management", // Projects, tasks, workflows
-  HRM_MANAGEMENT: "hrm_management"          // Employees, payroll, HR ops
+  HRM_MANAGEMENT: "hrm_management" ,
+  EMPLOYEE: "EMPLOYEE",
+  ONBOARDING: "ONBOARDING",
+  ATTENDANCE: "ATTENDANCE",
+  SHIFT: "SHIFT",
+  LEAVE: "LEAVE",
+  HOLIDAY: "HOLIDAY",
+  PAYROLL: "PAYROLL",
+  POLICY: "POLICY",
+  REPORTS: "REPORTS",
+  SETTINGS: "SETTINGS"
 };
+        // Employees, payroll, HR ops
+
 
 
 

@@ -51,7 +51,7 @@ export const getCommentsByTask = async (req, res) => {
       .lean();
 
     const map = {};
-    const roots = [];
+    const roots = [];3
 
     allComments.forEach((comment) => {
       map[comment._id.toString()] = { ...comment, replies: [] };
