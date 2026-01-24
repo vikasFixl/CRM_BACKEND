@@ -311,6 +311,7 @@ export const signup = async (req, res) => {
       },
     });
   } catch (error) {
+    logger.error("error at register ",error)
     return res.status(500).json({
       message: "Something went wrong",
       error: error?.message || JSON.stringify(error),

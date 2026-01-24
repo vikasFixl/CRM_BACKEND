@@ -256,3 +256,54 @@ export const setSupportAgentTokenCookie = (res, token) => {
 export const setSupportOrgTokenCookie = (res, token) => {
   res.cookie('support_org_token', token);
 };
+
+// utils/setHrmTokenCookies.js
+export const generateHrmTokens = (user, profile) => {
+const accessToken = jwt.sign(
+{
+sub: profile._id,
+userId: user._id,
+employeeCode: profile.employeeCode,
+orgId: profile.organizationId,
+role: profile.role,
+scope: "HRM"
+},
+process.env.HRM_JWT_SECRET,
+{ expiresIn: "2h" }
+);
+
+
+const refreshToken = jwt.sign(
+{
+userId: user._id,
+orgId: profile.organizationId,
+tokenType: "HRM_REFRESH"
+},
+process.env.HRM_REFRESH_SECRET,
+{ expiresIn: "7d" }
+);
+
+
+return { accessToken, refreshToken };
+};
+
+export const setHrmTokenCookies = (res, accessToken, refreshToken) => {
+  const baseOpts = {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "None" : "Lax",
+    path: "/"
+  };
+
+  // HRM Access Token (short-lived)
+  res.cookie("__hrm_at", accessToken, {
+    ...baseOpts,
+    maxAge: 1000 * 60 * 60 * 2 // 2 hours
+  });
+
+  // HRM Refresh Token (long-lived)
+  res.cookie("__hrm_rt", refreshToken, {
+    ...baseOpts,
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+  });
+};

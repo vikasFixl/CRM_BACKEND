@@ -1,6 +1,6 @@
 import cloudinary from "../../../config/cloudinary.config.js";
 import fs from "fs";
-
+import logger from "../../../config/logger.js";
 const allowedFileTypes = [
   "image/jpeg",
   "image/png",

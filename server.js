@@ -68,7 +68,7 @@ import Regularizationrouter from "./src/routes/HRM/Attendence/attendenceRegulari
 import LeaveBalanceRouter from "./src/routes/HRM/Attendence/leavebalance.js";
 import LeaveRequestRouter from "./src/routes/HRM/Attendence/leaveRequest.js";
 import MonthlyAttendanceRouter from "./src/routes/HRM/Attendence/monthlyattendence.js";
-
+import HRMAUTH from "./src/routes/HRM/Auth/HrmAuthRoute.js"
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
 const httpServer = createServer(app);
@@ -180,6 +180,7 @@ app.use("/api/attendance/daily", DailyAttendanceRouter);
 app.use("/api/attendance/regularization", Regularizationrouter);
 app.use("/api/attendance/monthly", MonthlyAttendanceRouter);
 
+app.use("/api/hrm",HRMAUTH)
 
 
 
