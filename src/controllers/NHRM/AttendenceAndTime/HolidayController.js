@@ -1,141 +1,121 @@
 import HolidayCalendar from "../../../models/NHRM/TimeAndAttendence/HolidayCalendar.js";
+import { asyncWrapper } from "../../../middleweare/middleware.js";
+import { AppError } from "../../../middleweare/errorhandler.js";
+import logger from "../../../../config/logger.js";
 
-export const createHoliday = async (req, res) => {
-  try {
-    const organizationId = req.orgUser.orgId;
+export const createHoliday = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, role } = req.user.hrm;
 
-    const holiday = await HolidayCalendar.create({
-      organizationId,
-      ...req.body
-    });
+  if (!["Admin"].includes(role)) {
+    throw new AppError("Not authorized to create holidays", 403);
+  }
 
-    res.status(201).json({
-      success: true,
-      data: holiday,
-      message: "Holiday created successfully"
-    });
+  const holiday = await HolidayCalendar.create({
+    organizationId,
+    ...req.body
+  });
 
-  } catch (err) {
-    if (err.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: "Holiday already exists for this date"
-      });
+  logger.info("Holiday created", {
+    organizationId,
+    date: holiday.date,
+    name: holiday.name
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Holiday created successfully",
+    data: holiday
+  });
+});
+
+
+export const getHolidays = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId } = req.user.hrm;
+  const { year } = req.query;
+
+  if (!year) {
+    throw new AppError("year is required", 400);
+  }
+
+  const start = new Date(`${year}-01-01`);
+  const end = new Date(`${year}-12-31`);
+
+  const holidays = await HolidayCalendar.find({
+    organizationId,
+    isActive: true,
+    date: { $gte: start, $lte: end }
+  }).sort({ date: 1 });
+
+  res.status(200).json({
+    success: true,
+    data: holidays
+  });
+});
+
+
+
+export const updateHoliday = asyncWrapper(async (req, res) => {
+  const { holidayId } = req.params;
+  const { orgId: organizationId, role } = req.user.hrm;
+
+  if (!["Admin"].includes(role)) {
+    throw new AppError("Not authorized to update holidays", 403);
+  }
+
+  const allowedFields = ["name", "type", "isPaid", "locationId", "isActive"];
+  const updates = {};
+
+  allowedFields.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      updates[field] = req.body[field];
     }
+  });
 
-    res.status(500).json({ success: false, message: err.message });
+  const updated = await HolidayCalendar.findOneAndUpdate(
+    { _id: holidayId, organizationId },
+    updates,
+    { new: true, runValidators: true }
+  );
+
+  if (!updated) {
+    throw new AppError("Holiday not found", 404);
   }
-};
-export const getHolidays = async (req, res) => {
-  try {
-    const organizationId = req.orgUser.orgId;
-    const { year } = req.query;
-    logger.info(year);
-    logger.info(organizationId);
 
-    const start = new Date(`${year}-01-01`);
-    const end = new Date(`${year}-12-31`);
+  logger.info("Holiday updated", {
+    holidayId,
+    updates
+  });
 
-    const holidays = await HolidayCalendar.find({
-      organizationId,
-      isActive: true,
-      date: { $gte: start, $lte: end }
-    }).sort({ date: 1 });
+  res.status(200).json({
+    success: true,
+    message: "Holiday updated successfully",
+    data: updated
+  });
+});
 
-    res.json({
-      success: true,
-      data: holidays
-    });
+export const disableHoliday = asyncWrapper(async (req, res) => {
+  const { holidayId } = req.params;
+  const { orgId: organizationId, role } = req.user.hrm;
 
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+  if (!["Admin"].includes(role)) {
+    throw new AppError("Not authorized to disable holidays", 403);
   }
-};
-export const getEmployeeHolidays = async (req, res) => {
-  try {
-    const { organizationId, locationId } = req.user;
-    const { from, to } = req.query;
 
-    const holidays = await HolidayCalendar.find({
-      organizationId,
-      isActive: true,
-      date: { $gte: new Date(from), $lte: new Date(to) },
-      $or: [
-        { locationId: null },
-        { locationId }
-      ]
-    }).sort({ date: 1 });
+  const holiday = await HolidayCalendar.findOneAndUpdate(
+    { _id: holidayId, organizationId },
+    { isActive: false },
+    { new: true }
+  );
 
-    res.json({
-      success: true,
-      data: holidays
-    });
-
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+  if (!holiday) {
+    throw new AppError("Holiday not found", 404);
   }
-};
-export const updateHoliday = async (req, res) => {
-  try {
-    const { holidayId } = req.params;
-    const organizationId = req.orgUser.orgId;
 
-    const allowedFields = ["name", "type", "isPaid", "isActive", "locationId"];
-    const updates = {};
+  logger.info("Holiday disabled", { holidayId });
 
-    allowedFields.forEach(field => {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
-    });
+  res.status(200).json({
+    success: true,
+    message: "Holiday disabled successfully"
+  });
+});
 
-    const updated = await HolidayCalendar.findOneAndUpdate(
-      { _id: holidayId, organizationId },
-      updates,
-      { new: true }
-    );
-
-    if (!updated) {
-      return res.status(404).json({
-        success: false,
-        message: "Holiday not found"
-      });
-    }
-
-    res.json({
-      success: true,
-      data: updated,
-      message: "Holiday updated successfully"
-    });
-
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-export const disableHoliday = async (req, res) => {
-  try {
-    const { holidayId } = req.params;
-    const organizationId = req.orgUser.orgId;
-
-    const holiday = await HolidayCalendar.findOneAndUpdate(
-      { _id: holidayId, organizationId },
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!holiday) {
-      return res.status(404).json({
-        success: false,
-        message: "Holiday not found"
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "Holiday disabled successfully"
-    });
-
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};

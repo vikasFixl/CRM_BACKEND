@@ -1,8 +1,7 @@
 import express from "express";
 const LeaveRequestRouter = express.Router();
+import { hrmAuth } from "../../../middleweare/middleware.js";
 
-import { isAuthenticated } from "../../../middleweare/middleware.js";
-import { authenticateOrgToken } from "../../../middleweare/orgmiddleware.js";
 
 import {
   createLeaveRequest,
@@ -15,37 +14,32 @@ import {
 /* Employee */
 LeaveRequestRouter.post(
   "/",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   createLeaveRequest
 );
 
 LeaveRequestRouter.get(
   "/me",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   getMyLeaveRequests
 );
 
 /* HR */
 LeaveRequestRouter.get(
   "/pending",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   getPendingLeaveRequests
 );
 
 LeaveRequestRouter.post(
   "/approve/:id",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   approveLeaveRequest
 );
 
 LeaveRequestRouter.post(
   "/reject/:id",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   rejectLeaveRequest
 );
 

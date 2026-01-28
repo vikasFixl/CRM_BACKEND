@@ -154,3 +154,12 @@ export const HrmSelectOrg = asyncWrapper(async (req, res) => {
         }
     });
 });
+export const hrmLogout = (req, res) => {
+  res.clearCookie("__hrm_at", { path: "/" });
+  res.clearCookie("__hrm_rt", { path: "/" });
+
+  res.status(200).json({
+    success: true,
+    message: "Logged out successfully"
+  });
+};

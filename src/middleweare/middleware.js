@@ -1,18 +1,22 @@
+import { generateHrmTokens, setHrmTokenCookies } from "../utils/generatetoken.js";
+import { AppError } from "../middleweare/errorhandler.js";
+import jwt from "jsonwebtoken";
 // middleware.js
 
 
 import { verifyRefreshToken } from "../utils/generatetoken.js";
+import logger from "../../config/logger.js";
 export const isAuthenticated = (req, res, next) => {
   const token = req.cookies?._fxl_9X8Y7Z;
-  
+
   if (!token) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
     const decoded = verifyRefreshToken(token); // Use your JWT secret
-   
-   
+
+
     req.user = decoded; // Attach decoded info to req
     next();
   } catch (err) {
@@ -99,3 +103,79 @@ export const isAdminOrSelf = (req, res, next) => {
 // utils/asyncWrapper.js
 export const asyncWrapper = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);
+
+
+
+
+export const hrmAuth = asyncWrapper(async (req, res, next) => {
+  const accessToken = req.cookies?.__hrm_at;
+  const refreshToken = req.cookies?.__hrm_rt;
+
+  /* 1️⃣ Refresh token is mandatory */
+  if (!refreshToken) {
+    throw new AppError("Session expired. Please login again.", 401);
+  }
+
+
+  let refreshPayload;
+
+  // console.log("refresh payload", refreshPayload)
+  try {
+     refreshPayload = jwt.verify(
+      refreshToken,
+      process.env.HRM_REFRESH_SECRET
+    );
+  
+
+    if (refreshPayload.tokenType !== "HRM_REFRESH") {
+      throw new Error("Invalid refresh token type");
+    }
+  } catch (err) {
+    throw new AppError("Session expired. bhaii Please login again.", 401);
+  }
+
+  /* 2️⃣ Try access token */
+  if (accessToken) {
+    try {
+      const decodedAccess = jwt.verify(
+        accessToken,
+        process.env.HRM_JWT_SECRET
+      );
+
+      // Access token valid → attach & continue
+      req.user = {
+        hrm: decodedAccess
+      };
+
+      return next();
+    } catch (err) {
+      // Only continue if token expired
+      if (err.name !== "TokenExpiredError") {
+        throw new AppError("Invalid access token", 401);
+      }
+    }
+  }
+
+  /* 3️⃣ Access token expired → rotate silently */
+  const newAccessToken = jwt.sign(
+    {
+      sub: refreshPayload.userId, // employeeId resolved later
+      userId: refreshPayload.userId,
+      orgId: refreshPayload.orgId,
+      scope: "HRM"
+    },
+    process.env.HRM_JWT_SECRET,
+    { expiresIn: "2h" }
+  );
+
+  // Re-set cookies (refresh token remains same)
+  setHrmTokenCookies(res, newAccessToken, refreshToken);
+
+  // Attach decoded token
+  req.user = {
+    hrm: jwt.decode(newAccessToken)
+  };
+
+  return next();
+})
+

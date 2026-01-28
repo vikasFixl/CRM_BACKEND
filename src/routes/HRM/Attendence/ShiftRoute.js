@@ -1,8 +1,8 @@
 import express from "express";
 const ShiftRouter = express.Router();
+import { hrmAuth } from "../../../middleweare/middleware.js";
 
-import { isAuthenticated } from "../../../middleweare/middleware.js";
-import { authenticateOrgToken } from "../../../middleweare/orgmiddleware.js";
+
 
 import {
     createShift,
@@ -16,8 +16,7 @@ import {
  */
 ShiftRouter.route("/")
     .post(
-        isAuthenticated,
-        authenticateOrgToken(),
+       hrmAuth,
         createShift
     );
 
@@ -26,8 +25,7 @@ ShiftRouter.route("/")
  */
 ShiftRouter.route("/active")
     .get(
-        isAuthenticated,
-        authenticateOrgToken(),
+       hrmAuth,
         getActiveShifts
     );
 
@@ -36,13 +34,11 @@ ShiftRouter.route("/active")
  */
 ShiftRouter.route("/:shiftId")
     .patch(
-        isAuthenticated,
-        authenticateOrgToken(),
+       hrmAuth,
         updateShift
     )
     .delete(
-        isAuthenticated,
-        authenticateOrgToken(),
+       hrmAuth,
         disableShift
     );
 

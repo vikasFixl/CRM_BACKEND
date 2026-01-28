@@ -1,6 +1,7 @@
+import { asyncWrapper } from "../../../middleweare/middleware.js";
+import { EmployeeProfile } from "../../../models/NHRM/employeeManagement/employeeProfile.js";
 import LeaveBalance from "../../../models/NHRM/TimeAndAttendence/LeaveBalance.js";
 import LeaveType from "../../../models/NHRM/TimeAndAttendence/LeaveType.js";
-
 export const initializeLeaveBalanceForEmployee = async ({
   organizationId,
   employeeId,
@@ -9,7 +10,6 @@ export const initializeLeaveBalanceForEmployee = async ({
 }) => {
   const year = new Date(joinDate).getFullYear();
 
-  // Get all active PAID leave types
   const leaveTypes = await LeaveType.find(
     { organizationId, isActive: true, isPaid: true },
     null,
@@ -20,18 +20,22 @@ export const initializeLeaveBalanceForEmployee = async ({
     organizationId,
     employeeId,
     leaveTypeId: lt._id,
-    isPaid: true,
     year,
     totalAllocated: lt.annualAllocation,
     used: 0,
     remaining: lt.annualAllocation,
-    accruedTillMonth: new Date(joinDate).getMonth() + 1
+    accruedTillMonth: lt.accrualType === "MONTHLY"
+      ? new Date(joinDate).getMonth() + 1
+      : 12
   }));
 
   if (balances.length) {
     await LeaveBalance.insertMany(balances, { session });
   }
+
+  return res.status(200).json({ message: "Leave balances initialized", success: true });
 };
+
 
 export const createLeaveBalanceForNewLeaveType = async ({
   organizationId,
@@ -43,7 +47,7 @@ export const createLeaveBalanceForNewLeaveType = async ({
   const year = new Date().getFullYear();
 
   const employees = await EmployeeProfile.find(
-    { organizationId, "jobInfo.status": "Active" },
+    { organizationId, isActive: true },
     "_id",
     { session }
   );
@@ -52,50 +56,41 @@ export const createLeaveBalanceForNewLeaveType = async ({
     organizationId,
     employeeId: emp._id,
     leaveTypeId: leaveType._id,
-    isPaid: true,
     year,
     totalAllocated: leaveType.annualAllocation,
     used: 0,
     remaining: leaveType.annualAllocation
   }));
 
-  await LeaveBalance.insertMany(balances, { session });
-};
-
-
-
-export const getMyLeaveBalance = async (req, res) => {
-  try {
-    const { organizationId, employeeId } = req.user;
-    const year = Number(req.query.year) || new Date().getFullYear();
-
-    const balances = await LeaveBalance.find({
-      organizationId,
-      employeeId,
-      year,
-      isActive: true
-    }).populate("leaveTypeId");
-
-    res.json({ success: true, data: balances });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+  if (balances.length) {
+    await LeaveBalance.insertMany(balances, { session });
   }
 };
+export const getMyLeaveBalance = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, sub: employeeId } = req.user.hrm;
+  const year = Number(req.query.year) || new Date().getFullYear();
 
-export const getEmployeeLeaveBalance = async (req, res) => {
-  try {
-    const organizationId = req.orgUser.orgId;
-    const { employeeId } = req.params;
-    const year = Number(req.query.year) || new Date().getFullYear();
+  const balances = await LeaveBalance.find({
+    organizationId,
+    employeeId,
+    year,
+    isActive: true
+  }).populate("leaveTypeId");
 
-    const balances = await LeaveBalance.find({
-      organizationId,
-      employeeId,
-      year
-    }).populate("leaveTypeId");
+  res.status(200).json({ message: "Leave Balance fetched", success: true, data: balances });
+});
 
-    res.json({ success: true, data: balances });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
+
+export const getEmployeeLeaveBalance = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, role } = req.user.hrm;
+  const { employeeId } = req.params;
+  const year = Number(req.query.year) || new Date().getFullYear();
+
+  const balances = await LeaveBalance.find({
+    organizationId,
+    employeeId,
+    year
+  }).populate("leaveTypeId");
+
+  res.status(200).json({ success: true, data: balances });
+});

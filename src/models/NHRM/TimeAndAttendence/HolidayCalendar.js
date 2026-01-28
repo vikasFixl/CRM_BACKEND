@@ -9,6 +9,10 @@ const holidaySchema = new Schema(
       required: true,
       index: true
     },
+isMandatory: {
+  type: Boolean,
+  default: true
+},
 
     date: {
       type: Date,

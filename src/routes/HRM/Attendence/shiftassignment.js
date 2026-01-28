@@ -1,8 +1,7 @@
 import express from "express";
 const employeeShiftAssignmentRouter = express.Router();
 
-import { isAuthenticated } from "../../../middleweare/middleware.js";
-import { authenticateOrgToken } from "../../../middleweare/orgmiddleware.js";
+import { hrmAuth } from "../../../middleweare/middleware.js";
 
 import {
   assignShift,
@@ -20,8 +19,7 @@ import {
  */
 employeeShiftAssignmentRouter.post(
   "/assign",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   assignShift
 );
 
@@ -31,8 +29,7 @@ employeeShiftAssignmentRouter.post(
  */
 employeeShiftAssignmentRouter.patch(
   "/:assignmentId/disable",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   disableShiftAssignment
 );
 
@@ -41,8 +38,7 @@ employeeShiftAssignmentRouter.patch(
  */
 employeeShiftAssignmentRouter.get(
   "/employee/:employeeId/history",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   getShiftHistory
 );
 
@@ -51,8 +47,7 @@ employeeShiftAssignmentRouter.get(
  */
 employeeShiftAssignmentRouter.get(
   "/employee/:employeeId/current",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   getCurrentShift
 );
 

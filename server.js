@@ -10,7 +10,7 @@ import { globalLimiter } from "./src/middleweare/ratelimitter.js";
 import { createServer } from "http";
 import { connectDB } from "./config/db.config.js";
 import { startUserCleanupCron } from "./src/automation/UserDeleteAutomation.js";
-import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
+// import { runWelcomeEmail } from "./src/automation/sendwelcomeEmail.js";
 import { errorHandler } from "./src/middleweare/errorhandler.js";
 import { downgradeExpiredTrials } from "./src/automation/downgradeplan.js"
 import logger from "./config/logger.js";
@@ -69,6 +69,7 @@ import LeaveBalanceRouter from "./src/routes/HRM/Attendence/leavebalance.js";
 import LeaveRequestRouter from "./src/routes/HRM/Attendence/leaveRequest.js";
 import MonthlyAttendanceRouter from "./src/routes/HRM/Attendence/monthlyattendence.js";
 import HRMAUTH from "./src/routes/HRM/Auth/HrmAuthRoute.js"
+import { startAttendanceCron } from "./src/automation/Attendencecron.js";
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
 const httpServer = createServer(app);
@@ -175,8 +176,8 @@ app.use(
   "/api/attendance/shift-assignments",
   employeeShiftAssignmentRouter
 );
-app.use("/api/attendance/raw-logs", RawTimeLogRouter);
-app.use("/api/attendance/daily", DailyAttendanceRouter);
+app.use("/api/hrm/attendance", RawTimeLogRouter);
+app.use("/api/hrm/attendance", DailyAttendanceRouter);
 app.use("/api/attendance/regularization", Regularizationrouter);
 app.use("/api/attendance/monthly", MonthlyAttendanceRouter);
 
@@ -235,5 +236,6 @@ httpServer.listen(PORT, async () => {
 });
 await connectDB();
 startUserCleanupCron();
-runWelcomeEmail();
+startAttendanceCron()
+// runWelcomeEmail();-
 downgradeExpiredTrials.start();

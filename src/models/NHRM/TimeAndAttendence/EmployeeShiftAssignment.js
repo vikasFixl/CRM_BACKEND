@@ -44,7 +44,7 @@ const assignmentSchema = new Schema(
     },
 
     locationId: {
-      type: Schema.Types.ObjectId,
+      type:String,
       index: true
     }
   },
@@ -71,7 +71,7 @@ assignmentSchema.index({
   effectiveTo: 1
 });
 
-export default mongoose.model(
+  export default mongoose.model(
   "EmployeeShiftAssignment",
   assignmentSchema
 );

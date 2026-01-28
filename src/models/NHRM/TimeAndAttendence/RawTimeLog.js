@@ -17,7 +17,24 @@ const rawTimeLogSchema = new Schema(
       index: true
     },
 
+    locationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Location",
+      index: true
+    },
+
+    /** Actual event time from device */
     timestamp: {
+      type: Date,
+      required: true,
+      index: true
+    },
+
+    /**
+     * Shift-resolved logical day
+     * (used for attendance grouping, NOT truth)
+     */
+    logicalDay: {
       type: Date,
       required: true,
       index: true
@@ -45,14 +62,38 @@ const rawTimeLogSchema = new Schema(
       trim: true
     },
 
-    /**
-     * Manual/admin punch indicator
-     * (used for audits & policy checks)
-     */
+    /** Deduplication key (CRITICAL) */
+    dedupKey: {
+      type: String,
+      required: true,
+      unique: true
+    },
+
+    /** System ingestion time */
+    ingestedAt: {
+      type: Date,
+      default: Date.now,
+      index: true
+    },
+
+    /** Manual punch info */
     isManual: {
       type: Boolean,
       default: false,
       index: true
+    },
+
+    manualMeta: {
+      reason: String,
+      approvedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User"
+      },
+      approvedAt: Date,
+      sourceRequestId: {
+        type: Schema.Types.ObjectId,
+        ref: "AttendanceRegularization"
+      }
     }
   },
   {
@@ -61,27 +102,31 @@ const rawTimeLogSchema = new Schema(
   }
 );
 
-/* 🔑 Core index: timeline per employee */
-rawTimeLogSchema.index(
-  { organizationId: 1, employeeId: 1, timestamp: 1 }
-);
+/* Core timeline index */
+rawTimeLogSchema.index({
+  organizationId: 1,
+  employeeId: 1,
+  timestamp: 1
+});
 
-/* 🔑 Day-based attendance queries */
-rawTimeLogSchema.index(
-  { organizationId: 1, employeeId: 1, punchType: 1, timestamp: 1 }
-);
+/* Logical day grouping */
+rawTimeLogSchema.index({
+  organizationId: 1,
+  employeeId: 1,
+  logicalDay: 1
+});
 
-/* 🔒 IMMUTABILITY GUARD */
-rawTimeLogSchema.pre("updateOne", function () {
+/* IMMUTABILITY GUARDS */
+rawTimeLogSchema.pre("updateOne", () => {
   throw new Error("RawTimeLog is immutable");
 });
-rawTimeLogSchema.pre("findOneAndUpdate", function () {
+rawTimeLogSchema.pre("findOneAndUpdate", () => {
   throw new Error("RawTimeLog is immutable");
 });
-rawTimeLogSchema.pre("deleteOne", function () {
+rawTimeLogSchema.pre("deleteOne", () => {
   throw new Error("RawTimeLog cannot be deleted");
 });
-rawTimeLogSchema.pre("findOneAndDelete", function () {
+rawTimeLogSchema.pre("findOneAndDelete", () => {
   throw new Error("RawTimeLog cannot be deleted");
 });
 

@@ -1,42 +1,38 @@
 import express from "express";
 const RawTimeLogRouter = express.Router();
 
-import { isAuthenticated } from "../../../middleweare/middleware.js";
+import { hrmAuth, isAuthenticated } from "../../../middleweare/middleware.js";
 import { authenticateOrgToken } from "../../../middleweare/orgmiddleware.js";
 
 import {
-  punchIn,
-  punchOut,
+  punch,
   getTodayPunches,
   getEmployeeRawLogs
 } from "../../../controllers/NHRM/AttendenceAndTime/rawTimelog.js";
 
 RawTimeLogRouter.post(
-  "/punch-in",
-  isAuthenticated,
-  authenticateOrgToken(),
-  punchIn
+  "/punch",
+  hrmAuth,
+  punch
 );
 
-RawTimeLogRouter.post(
-  "/punch-out",
-  isAuthenticated,
-  authenticateOrgToken(),
-  punchOut
-);
+// RawTimeLogRouter.post(
+//   "/punch-out",
+//   isAuthenticated,
+//   authenticateOrgToken(),
+//   punchOut
+// );
 
 RawTimeLogRouter.get(
-  "/today",
-  isAuthenticated,
-  authenticateOrgToken(),
+  "/punches/today",
+  hrmAuth,
   getTodayPunches
 );
 
 /* HR / ADMIN */
 RawTimeLogRouter.get(
-  "/employee/:employeeId",
-  isAuthenticated,
-  authenticateOrgToken(),
+  "/employee/:employeeId/raw-logs",
+  hrmAuth,
   getEmployeeRawLogs
 );
 

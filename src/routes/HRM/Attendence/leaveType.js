@@ -1,9 +1,8 @@
 import express from "express";
 const LeaveTypeRouter = express.Router();
 
-import { isAuthenticated } from "../../../middleweare/middleware.js";
-import { authenticateOrgToken } from "../../../middleweare/orgmiddleware.js";
 
+import { hrmAuth } from "../../../middleweare/middleware.js";
 import {
   createLeaveType,
   getActiveLeaveTypes,
@@ -12,11 +11,11 @@ import {
 } from "../../../controllers/NHRM/AttendenceAndTime/leaveTypeController.js";
 
 LeaveTypeRouter.route("/")
-  .post(isAuthenticated, authenticateOrgToken(), createLeaveType)
-  .get(isAuthenticated, authenticateOrgToken(), getActiveLeaveTypes);
+  .post(hrmAuth, createLeaveType)
+  .get(hrmAuth, getActiveLeaveTypes);
 
 LeaveTypeRouter.route("/:leaveTypeId")
-  .patch(isAuthenticated, authenticateOrgToken(), updateLeaveType)
-  .delete(isAuthenticated, authenticateOrgToken(), disableLeaveType);
+  .patch(hrmAuth, updateLeaveType)
+  .delete(hrmAuth, disableLeaveType);
 
 export default LeaveTypeRouter;

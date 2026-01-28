@@ -1,9 +1,10 @@
 import express from "express";
 import {
   HrmLogin,
+  hrmLogout,
 //   HrmSelectOrg,
 //   refreshHrmToken,
-//   HrmLogout
+
 } from "../../../controllers/NHRM/HrmAuth/hrmauthcontroller.js";
 
 const HRMAUTH = express.Router();
@@ -22,6 +23,6 @@ HRMAUTH.post("/login", HrmLogin);
 // HRMAUTH.post("/refresh", refreshHrmToken);
 
 // // Logout HRM (clear cookies)
-// HRMAUTH.post("/logout", HrmLogout);
+HRMAUTH.post("/logout", hrmLogout);
 
 export default HRMAUTH;

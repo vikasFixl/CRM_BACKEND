@@ -1,5 +1,11 @@
+
 import {v4 as uuidv4} from "uuid";
 import crypto from "crypto";
+export const resolveLogicalDay = (timestamp) => {
+  const d = new Date(timestamp);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+};
 export const generateInviteCode=()=>{
 return uuidv4().replace(/-/g, "").substring(0, 8);
 }
@@ -14,3 +20,19 @@ export const generateEmployeeCode = () => {
 export const generateTempPassword = () => {
   return crypto.randomBytes(4).toString("hex");
 };
+
+export const generateDedupKey = ({
+  employeeId,
+  logicalDay,
+  punchType,
+  source,
+  deviceId
+}) => {
+  return crypto
+    .createHash("sha256")
+    .update(
+      `${employeeId}-${logicalDay}-${punchType}-${source}-${deviceId || ""}`
+    )
+    .digest("hex");
+};
+

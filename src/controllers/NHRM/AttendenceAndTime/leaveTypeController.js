@@ -1,111 +1,79 @@
 import LeaveType from "../../../models/NHRM/TimeAndAttendence/LeaveType.js";
+import { asyncWrapper } from "../../../middleweare/middleware.js";
+import { AppError } from "../../../middleweare/errorhandler.js";
 
-/**
- * CREATE LEAVE TYPE (HR/Admin)
- */
-export const createLeaveType = async (req, res) => {
-  try {
-  const organizationId=req.orgUser.orgId;
+export const createLeaveType = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId } = req.user.hrm;
+  const leaveType = await LeaveType.create({
+    organizationId,
+    ...req.body
+  });
 
-    const leaveType = await LeaveType.create({
-      organizationId,
-      ...req.body
-    });
+  res.status(201).json({
+    success: true,
+    data: leaveType
+  });
+});
 
-    res.status(201).json({
-      success: true,
-      data: leaveType
-    });
-  } catch (err) {
-    if (err.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: "Leave code already exists for this organization"
-      });
-    }
 
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
+export const getActiveLeaveTypes = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId } = req.user.hrm;
+
+  const leaveTypes = await LeaveType.find({
+    organizationId,
+    isActive: true
+  }).sort({ name: 1 });
+
+  res.status(200).json({
+    success: true,
+    data: leaveTypes
+  });
+});
+
+export const updateLeaveType = asyncWrapper(async (req, res) => {
+  const { leaveTypeId } = req.params;
+  const { orgId: organizationId } = req.user.hrm;
+
+
+  // 🔒 Hard-block dangerous fields
+  delete req.body.isPaid;
+  delete req.body.organizationId;
+  delete req.body.code;
+
+  const updated = await LeaveType.findOneAndUpdate(
+    { _id: leaveTypeId, organizationId },
+    req.body,
+    { new: true, runValidators: true }
+  );
+
+  if (!updated) {
+    throw new AppError("Leave type not found", 404);
   }
-};
 
-/**
- * GET ACTIVE LEAVE TYPES
- */
-export const getActiveLeaveTypes = async (req, res) => {
-  try {
-  const organizationId=req.orgUser.orgId;
+  res.status(200).json({
+    success: true,
+    data: updated
+  });
+});
 
-    const leaveTypes = await LeaveType.find({
-      organizationId,
-      isActive: true
-    }).sort({ name: 1 });
+export const disableLeaveType = asyncWrapper(async (req, res) => {
+  const { leaveTypeId } = req.params;
+  const { orgId: organizationId } = req.user.hrm;
 
-    res.json({ success: true, data: leaveTypes });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+
+  const disabled = await LeaveType.findOneAndUpdate(
+    { _id: leaveTypeId, organizationId },
+    { isActive: false },
+    { new: true }
+  );
+
+  if (!disabled) {
+    throw new AppError("Leave type not found", 404);
   }
-};
 
-/**
- * UPDATE LEAVE TYPE (SAFE FIELDS ONLY)
- */
-export const updateLeaveType = async (req, res) => {
-  try {
-    const { leaveTypeId } = req.params;
-  const organizationId=req.orgUser.orgId;
+  res.status(200).json({
+    success: true,
+    message: "Leave type disabled"
+  });
+});
 
-    // Prevent isPaid update
-    delete req.body.isPaid;
-    delete req.body.organizationId;
-
-    const updated = await LeaveType.findOneAndUpdate(
-      { _id: leaveTypeId, organizationId },
-      req.body,
-      { new: true }
-    );
-
-    if (!updated) {
-      return res.status(404).json({
-        success: false,
-        message: "Leave type not found"
-      });
-    }
-
-    res.json({ success: true, data: updated });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/**
- * DISABLE LEAVE TYPE (NO DELETE)
- */
-export const disableLeaveType = async (req, res) => {
-  try {
-    const { leaveTypeId } = req.params;
-  const organizationId=req.orgUser.orgId;
-
-    const disabled = await LeaveType.findOneAndUpdate(
-      { _id: leaveTypeId, organizationId },
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!disabled) {
-      return res.status(404).json({
-        success: false,
-        message: "Leave type not found"
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "Leave type disabled"
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};

@@ -1,154 +1,147 @@
-import mongoose from "mongoose";
 import RawTimeLog from "../../../models/NHRM/TimeAndAttendence/RawTimeLog.js";
+import {
+  generateDedupKey,
+  resolveLogicalDay
+} from "../../../utils/helperfuntions/generateInviteCode.js";
+import { EmployeeProfile } from "../../../models/NHRM/employeeManagement/employeeProfile.js";
+import { asyncWrapper } from "../../../middleweare/middleware.js";
+import { AppError } from "../../../middleweare/errorhandler.js";
+import AttendancePolicy from "../../../models/NHRM/TimeAndAttendence/AttendancePolicy.js";
+import logger from "../../../../config/logger.js";
 
-export const punchIn = async (req, res) => {
-  const session = await mongoose.startSession();
-  try {
-    session.startTransaction();
+export const punch = asyncWrapper(async (req, res) => {
+  const { sub: employeeId, orgId } = req.user.hrm;
+  const { punchType, source = "web", deviceId } = req.body;
 
-    const { organizationId, employeeId, role } = req.user;
-    const { source = "web", deviceId } = req.body;
-
-    const lastLog = await RawTimeLog.findOne(
-      { organizationId, employeeId },
-      null,
-      { session }
-    ).sort({ timestamp: -1 });
-
-    if (lastLog?.punchType === "IN") {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: "Already punched in"
-      });
-    }
-
-    const log = await RawTimeLog.create(
-      [{
-        organizationId,
-        employeeId,
-        timestamp: new Date(),
-        punchType: "IN",
-        source,
-        deviceId,
-        ipAddress: req.ip,
-        isManual: role === "HR" || role === "ADMIN"
-      }],
-      { session }
-    );
-
-    await session.commitTransaction();
-
-    res.status(201).json({
-      success: true,
-      message: "Punch in recorded",
-      data: log[0]
-    });
-
-  } catch (err) {
-    await session.abortTransaction();
-    res.status(500).json({ success: false, message: err.message });
-  } finally {
-    session.endSession();
+  if (!["IN", "OUT"].includes(punchType)) {
+    throw new AppError("Invalid punch type", 400);
   }
-};
 
-export const punchOut = async (req, res) => {
-  const session = await mongoose.startSession();
-  try {
-    session.startTransaction();
+  logger.info(`Punch request: ${employeeId} - ${punchType} via ${source}`);
+  logger.info(req.body);
+  /* 1️⃣ Fetch employee */
+  const employee = await EmployeeProfile.findOne({
+    _id: employeeId,
+    organizationId: orgId,
+    deletedAt: null
+  });
+  logger.info(employee);
 
-    const { organizationId, employeeId, role } = req.user;
-    const { source = "web", deviceId } = req.body;
-
-    const lastLog = await RawTimeLog.findOne(
-      { organizationId, employeeId },
-      null,
-      { session }
-    ).sort({ timestamp: -1 });
-
-    if (!lastLog || lastLog.punchType !== "IN") {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: "Punch in required before punch out"
-      });
-    }
-
-    const log = await RawTimeLog.create(
-      [{
-        organizationId,
-        employeeId,
-        timestamp: new Date(),
-        punchType: "OUT",
-        source,
-        deviceId,
-        ipAddress: req.ip,
-        isManual: role === "HR" || role === "ADMIN"
-      }],
-      { session }
-    );
-
-    await session.commitTransaction();
-
-    res.status(201).json({
-      success: true,
-      message: "Punch out recorded",
-      data: log[0]
-    });
-
-  } catch (err) {
-    await session.abortTransaction();
-    res.status(500).json({ success: false, message: err.message });
-  } finally {
-    session.endSession();
+  if (!employee) {
+    throw new AppError("Employee profile not found", 404);
   }
-};
 
+  /* 2️⃣ Eligibility checks */
+  if (!employee.isActive || employee.status !== "Active") {
+    throw new AppError("Employee is not active", 403);
+  }
 
+  const today = resolveLogicalDay(new Date());
+  if (today < resolveLogicalDay(employee.joinDate)) {
+    throw new AppError("Attendance not applicable before joining date", 403);
+  }
 
-export const getTodayPunches = async (req, res) => {
+  /* 3️⃣ Attendance system readiness */
+  const policyExists = await AttendancePolicy.exists({
+    organizationId: orgId,
+    isActive: true
+  });
+  logger.info(`Attendance policy exists: ${policyExists}`);
+  if (!policyExists) {
+    throw new AppError("Attendance policy not configured", 409);
+  }
+
+  /* 4️⃣ Log raw punch */
+  const now = new Date();
+  const logicalDay = resolveLogicalDay(now);
+
+  const dedupKey = generateDedupKey({
+    employeeId,
+    logicalDay,
+    punchType,
+    source,
+    deviceId
+  });
+
+  logger.info(`Generated dedupKey: ${dedupKey}`);
   try {
-    const { organizationId, employeeId } = req.user;
-
-    const start = new Date();
-    start.setUTCHours(0, 0, 0, 0);
-
-    const end = new Date();
-    end.setUTCHours(23, 59, 59, 999);
-
-    const logs = await RawTimeLog.find({
-      organizationId,
+    const log = await RawTimeLog.create({
+      organizationId: orgId,
       employeeId,
-      timestamp: { $gte: start, $lte: end }
-    }).sort({ timestamp: 1 });
+      timestamp: now,
+      logicalDay,
+      punchType,
+      source,
+      deviceId,
+      ipAddress: req.ip,
+      dedupKey
+    });
 
-    res.json({ success: true, data: logs });
+    logger.info(`Punch logged: ${log._id} ${log}`);
+    res.status(201).json({
+      success: true,
+      message: `Punch ${punchType} recorded`,
+      data: log
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-export const getEmployeeRawLogs = async (req, res) => {
-  try {
-    const { organizationId } = req.user;
-    const { employeeId } = req.params;
-    const { from, to } = req.query;
-
-    const query = { organizationId, employeeId };
-
-    if (from && to) {
-      query.timestamp = {
-        $gte: new Date(from),
-        $lte: new Date(to)
-      };
+    if (err.code === 11000) {
+      return res.status(200).json({
+        success: true,
+        message: "Duplicate punch ignored"
+      });
     }
-
-    const logs = await RawTimeLog.find(query)
-      .sort({ timestamp: 1 })
-      .limit(1000);
-
-    res.json({ success: true, data: logs });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    throw err;
   }
-};
+});
+
+export const getTodayPunches = asyncWrapper(async (req, res) => {
+  const { sub: employeeId, orgId: organizationId } = req.user.hrm;
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const logs = await RawTimeLog.find({
+    organizationId,
+    employeeId,
+    logicalDay: today
+  }).sort({ timestamp: 1 });
+
+
+  const response = logs.map(log => ({
+    punchType: log.punchType,
+    source: log.source,
+    timestamp: log.timestamp,
+    logicalDay: log.logicalDay
+  }));
+  res.status(200).json({
+    success: true,
+    data: response
+  });
+});
+
+export const getEmployeeRawLogs = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId } = req.user.hrm;
+  const { employeeId } = req.params;
+  const { from, to } = req.query;
+
+  const query = { organizationId, employeeId };
+
+  if (from && to) {
+    query.timestamp = {
+      $gte: new Date(from),
+      $lte: new Date(to)
+    };
+  }
+
+  const logs = await RawTimeLog.find(query)
+    .sort({ timestamp: 1 })
+    .limit(2000);
+
+  res.status(200).json({
+    success: true,
+    data: logs
+  });
+});
+
+
+

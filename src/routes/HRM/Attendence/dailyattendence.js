@@ -1,45 +1,53 @@
 import express from "express";
 const DailyAttendanceRouter = express.Router();
 
-import { isAuthenticated } from "../../../middleweare/middleware.js";
-import { authenticateOrgToken } from "../../../middleweare/orgmiddleware.js";
+import { hrmAuth } from "../../../middleweare/middleware.js";
+
 
 import {
   getMyAttendance,
   getEmployeeAttendance,
   overrideAttendance,
-  lockAttendanceForPayroll
+  lockAttendanceForPayroll,
+  lockEmployeeAttendance,
+  unlockEmployeeAttendance
 } from "../../../controllers/NHRM/AttendenceAndTime/dailyAttendanceController.js";
 
 /* Employee */
 DailyAttendanceRouter.get(
   "/me",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   getMyAttendance
 );
 
 /* HR */
 DailyAttendanceRouter.get(
   "/employee/:employeeId",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   getEmployeeAttendance
 );
 
 DailyAttendanceRouter.patch(
-  "/override/:attendanceId",
-  isAuthenticated,
-  authenticateOrgToken(),
+  "/:attendanceId/override",
+  hrmAuth,
   overrideAttendance
 );
 
 /* Payroll */
 DailyAttendanceRouter.post(
   "/lock",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   lockAttendanceForPayroll
+);
+DailyAttendanceRouter.post(
+  "/employee/:employeeId/lock",
+  hrmAuth,
+  lockEmployeeAttendance
+);
+DailyAttendanceRouter.post(
+  "/employee/:employeeId/unlock",
+  hrmAuth,
+  unlockEmployeeAttendance
 );
 
 export default DailyAttendanceRouter;

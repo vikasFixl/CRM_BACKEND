@@ -1,172 +1,155 @@
 import LeaveRequest from "../../../models/NHRM/TimeAndAttendence/LeaveRequest.js";
+import LeaveType from "../../../models/NHRM/TimeAndAttendence/LeaveType.js";
+import { asyncWrapper } from "../../../middleweare/middleware.js";
+import { AppError } from "../../../middleweare/errorhandler.js";
 
-export const createLeaveRequest = async (req, res) => {
-  try {
-    const { organizationId, employeeId } = req.user;
-    const {
-      leaveType,
-      startDate,
-      endDate,
-      isHalfDay,
-      halfDaySession,
-      hours,
-      reason
-    } = req.body;
+export const createLeaveRequest = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, sub: employeeId } = req.user.hrm;
 
-    if (!leaveType || !startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: "leaveType, startDate and endDate are required"
-      });
-    }
+  const {
+    leaveType: leaveTypeId,
+    startDate,
+    endDate,
+    isHalfDay,
+    halfDaySession,
+    reason
+  } = req.body;
 
-    if (isHalfDay && !halfDaySession) {
-      return res.status(400).json({
-        success: false,
-        message: "halfDaySession required for half day leave"
-      });
-    }
-
-    // Basic overlap guard (soft)
-    const overlap = await LeaveRequest.findOne({
-      organizationId,
-      employeeId,
-      status: { $in: ["Pending", "Approved"] },
-      $or: [
-        { startDate: { $lte: endDate }, endDate: { $gte: startDate } }
-      ]
-    });
-
-    if (overlap) {
-      return res.status(409).json({
-        success: false,
-        message: "Overlapping leave request already exists"
-      });
-    }
-
-    const leave = await LeaveRequest.create({
-      organizationId,
-      employeeId,
-      leaveType,
-      startDate,
-      endDate,
-      isHalfDay,
-      halfDaySession,
-      hours,
-      reason
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Leave request submitted",
-      data: leave
-    });
-
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+  if (!leaveTypeId || !startDate || !endDate) {
+    throw new AppError("leaveType, startDate and endDate are required", 400);
   }
-};
-export const getMyLeaveRequests = async (req, res) => {
-  try {
-    const { organizationId, employeeId } = req.user;
 
-    const requests = await LeaveRequest.find({
-      organizationId,
-      employeeId
-    }).sort({ createdAt: -1 });
+  const leaveType = await LeaveType.findOne({
+    _id: leaveTypeId,
+    organizationId,
+    isActive: true
+  });
 
-    res.json({ success: true, data: requests });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+  if (!leaveType) {
+    throw new AppError("Invalid or inactive leave type", 400);
   }
-};
 
-export const getPendingLeaveRequests = async (req, res) => {
-  try {
-    const organizationId = req.orgUser.orgId;
-
-    const requests = await LeaveRequest.find({
-      organizationId,
-      status: "Pending"
-    }).sort({ createdAt: 1 });
-
-    res.json({ success: true, data: requests });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-export const approveLeaveRequest = async (req, res) => {
-  try {
-    const organizationId = req.orgUser.orgId;
-    const approverId = req.user.userId;
-    const { id } = req.params;
-
-    const leave = await LeaveRequest.findOne({
-      _id: id,
-      organizationId,
-      status: "Pending"
-    });
-
-    if (!leave) {
-      return res.status(404).json({
-        success: false,
-        message: "Leave request not found or already processed"
-      });
+  if (isHalfDay) {
+    if (!leaveType.allowHalfDay) {
+      throw new AppError("Half-day not allowed for this leave type", 400);
     }
-
-    leave.status = "Approved";
-    leave.approvedBy = approverId;
-    leave.approvedAt = new Date();
-
-    await leave.save();
-
-    res.json({
-      success: true,
-      message: "Leave approved",
-      data: leave
-    });
-
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-export const rejectLeaveRequest = async (req, res) => {
-  try {
-    const organizationId = req.orgUser.orgId;
-    const approverId = req.user.userId;
-    const { id } = req.params;
-    const { reason } = req.body;
-
-    const leave = await LeaveRequest.findOne({
-      _id: id,
-      organizationId,
-      status: "Pending"
-    });
-
-    if (!leave) {
-      return res.status(404).json({
-        success: false,
-        message: "Leave request not found or already processed"
-      });
+    if (!halfDaySession) {
+      throw new AppError("halfDaySession is required for half-day leave", 400);
     }
-
-    leave.status = "Rejected";
-    leave.approvedBy = approverId;
-    leave.approvedAt = new Date();
-    leave.reason = reason || leave.reason;
-
-    await leave.save();
-
-    res.json({
-      success: true,
-      message: "Leave rejected",
-      data: leave
-    });
-
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
   }
-};
 
+  // Overlap check
+  const overlap = await LeaveRequest.findOne({
+    organizationId,
+    employeeId,
+    status: { $in: ["Pending", "Approved"] },
+    startDate: { $lte: new Date(endDate) },
+    endDate: { $gte: new Date(startDate) }
+  });
+
+  if (overlap) {
+    throw new AppError("Overlapping leave request already exists", 409);
+  }
+
+  const leave = await LeaveRequest.create({
+    organizationId,
+    employeeId,
+    leaveType: leaveTypeId,
+    startDate,
+    endDate,
+    isHalfDay,
+    halfDaySession,
+    reason,
+    status: "Pending"
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Leave request submitted",
+    data: leave
+  });
+});
+
+export const getMyLeaveRequests = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, sub: employeeId } = req.user.hrm;
+
+  const requests = await LeaveRequest.find({
+    organizationId,
+    employeeId
+  }).sort({ createdAt: -1 });
+
+  res.status(200).json({ success: true, data: requests });
+});
+
+export const getPendingLeaveRequests = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, role } = req.user.hrm;
+
+
+  const requests = await LeaveRequest.find({
+    organizationId,
+    status: "Pending"
+  }).sort({ createdAt: 1 });
+
+  res.status(200).json({ success: true, data: requests });
+});
+
+export const approveLeaveRequest = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, userId, role } = req.user.hrm;
+  const { id } = req.params;
+
+
+  const leave = await LeaveRequest.findOne({
+    _id: id,
+    organizationId,
+    status: "Pending"
+  });
+
+  if (!leave) {
+    throw new AppError("Leave request not found or already processed", 404);
+  }
+
+  leave.status = "Approved";
+  leave.approvedBy = userId;
+  leave.approvedAt = new Date();
+
+  await leave.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Leave approved",
+    data: leave
+  });
+});
+export const rejectLeaveRequest = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, userId, role } = req.user.hrm;
+  const { id } = req.params;
+  const { reason } = req.body;
+
+
+  if (!reason || reason.trim().length < 3) {
+    throw new AppError("Rejection reason is required", 400);
+  }
+
+  const leave = await LeaveRequest.findOne({
+    _id: id,
+    organizationId,
+    status: "Pending"
+  });
+
+  if (!leave) {
+    throw new AppError("Leave request not found or already processed", 404);
+  }
+
+  leave.status = "Rejected";
+  leave.approvedBy = userId;
+  leave.approvedAt = new Date();
+  leave.rejectionReason = reason;
+
+  await leave.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Leave rejected",
+    data: leave
+  });
+});

@@ -1,13 +1,12 @@
 import express from "express";
 const holidayRouter = express.Router();
 
-import { isAuthenticated } from "../../../middleweare/middleware.js";
-import { authenticateOrgToken } from "../../../middleweare/orgmiddleware.js";
+import { hrmAuth } from "../../../middleweare/middleware.js";
+
 
 import {
   createHoliday,
   getHolidays,
-  getEmployeeHolidays,
   updateHoliday,
   disableHoliday
 } from "../../../controllers/NHRM/AttendenceAndTime/HolidayController.js";
@@ -17,40 +16,28 @@ import {
  */
 holidayRouter.post(
   "/",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   createHoliday
 );
 
 holidayRouter.get(
   "/",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   getHolidays
 );
 
 holidayRouter.patch(
   "/:holidayId",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   updateHoliday
 );
 
 holidayRouter.patch(
   "/:holidayId/disable",
-  isAuthenticated,
-  authenticateOrgToken(),
+  hrmAuth,
   disableHoliday
 );
 
-/**
- * EMPLOYEE ROUTE (READ ONLY)
- */
-holidayRouter.get(
-  "/employee/view",
-  isAuthenticated,
-  authenticateOrgToken(),
-  getEmployeeHolidays
-);
+
 
 export default holidayRouter;
