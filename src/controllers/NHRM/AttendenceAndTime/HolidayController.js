@@ -2,17 +2,28 @@ import HolidayCalendar from "../../../models/NHRM/TimeAndAttendence/HolidayCalen
 import { asyncWrapper } from "../../../middleweare/middleware.js";
 import { AppError } from "../../../middleweare/errorhandler.js";
 import logger from "../../../../config/logger.js";
+import { HrmAuditLog } from "../../../models/NHRM/logs/HrmLogs.js";
 
 export const createHoliday = asyncWrapper(async (req, res) => {
-  const { orgId: organizationId, role } = req.user.hrm;
+  const { orgId: organizationId } = req.user.hrm;
 
-  if (!["Admin"].includes(role)) {
-    throw new AppError("Not authorized to create holidays", 403);
-  }
+
 
   const holiday = await HolidayCalendar.create({
     organizationId,
     ...req.body
+  });
+   await HrmAuditLog.create({
+    organizationId,
+    actorId: userId,
+    actorRole: role,
+    entityType: "Holiday",
+    entityId: holiday._id,
+    action: "CREATE",
+    message: `Holiday created: ${holiday.name} (${holiday.date.toDateString()})`,
+    after: holiday.toObject(),
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"]
   });
 
   logger.info("Holiday created", {
@@ -54,15 +65,33 @@ export const getHolidays = asyncWrapper(async (req, res) => {
 
 
 
-export const updateHoliday = asyncWrapper(async (req, res) => {
+export const getHolidayById = asyncWrapper(async (req, res) => {
   const { holidayId } = req.params;
-  const { orgId: organizationId, role } = req.user.hrm;
+  const { orgId: organizationId } = req.user.hrm;
 
-  if (!["Admin"].includes(role)) {
-    throw new AppError("Not authorized to update holidays", 403);
+  const holiday = await HolidayCalendar.findOne({
+    _id: holidayId,
+    organizationId,
+    isActive: true
+  });
+
+  if (!holiday) {
+    throw new AppError("Holiday not found", 404);
   }
 
-  const allowedFields = ["name", "type", "isPaid", "locationId", "isActive"];
+  res.status(200).json({
+    success: true,
+    data: holiday
+  });
+});
+
+export const updateHoliday = asyncWrapper(async (req, res) => {
+  const { holidayId } = req.params;
+  const { orgId: organizationId } = req.user.hrm;
+
+
+
+  const allowedFields = ["name", "type", "isPaid", "locationId", "isActive","isMandatory"];
   const updates = {};
 
   allowedFields.forEach((field) => {
@@ -81,6 +110,20 @@ export const updateHoliday = asyncWrapper(async (req, res) => {
     throw new AppError("Holiday not found", 404);
   }
 
+  await HrmAuditLog.create({
+    organizationId,
+    actorId: userId,
+    actorRole: role,
+    entityType: "Holiday",
+    entityId: updated._id,
+    action: "UPDATE",
+    message: `Holiday updated: ${updated.name}`,
+    before: before.toObject(),
+    after: updated.toObject(),
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"]
+  });
+
   logger.info("Holiday updated", {
     holidayId,
     updates
@@ -97,25 +140,31 @@ export const disableHoliday = asyncWrapper(async (req, res) => {
   const { holidayId } = req.params;
   const { orgId: organizationId, role } = req.user.hrm;
 
-  if (!["Admin"].includes(role)) {
-    throw new AppError("Not authorized to disable holidays", 403);
-  }
+ 
 
-  const holiday = await HolidayCalendar.findOneAndUpdate(
-    { _id: holidayId, organizationId },
-    { isActive: false },
-    { new: true }
+  const holiday = await HolidayCalendar.findOneAndDelete(
+    { _id: holidayId, organizationId }
   );
 
   if (!holiday) {
     throw new AppError("Holiday not found", 404);
   }
 
-  logger.info("Holiday disabled", { holidayId });
-
+   await HrmAuditLog.create({
+    organizationId,
+    actorId: userId,
+    actorRole: role,
+    entityType: "Holiday",
+    entityId: holiday._id,
+    action: "DELETE",
+    message: `Holiday deleted: ${holiday.name} (${holiday.date.toDateString()})`,
+    before: holiday.toObject(),
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"]
+  });
   res.status(200).json({
     success: true,
-    message: "Holiday disabled successfully"
+    message: "Holiday deleted successfully"
   });
 });
 

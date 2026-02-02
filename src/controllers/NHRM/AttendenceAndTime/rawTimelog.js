@@ -8,6 +8,7 @@ import { asyncWrapper } from "../../../middleweare/middleware.js";
 import { AppError } from "../../../middleweare/errorhandler.js";
 import AttendancePolicy from "../../../models/NHRM/TimeAndAttendence/AttendancePolicy.js";
 import logger from "../../../../config/logger.js";
+import HolidayCalendar from "../../../models/NHRM/TimeAndAttendence/HolidayCalendar.js";
 
 export const punch = asyncWrapper(async (req, res) => {
   const { sub: employeeId, orgId } = req.user.hrm;
@@ -17,8 +18,7 @@ export const punch = asyncWrapper(async (req, res) => {
     throw new AppError("Invalid punch type", 400);
   }
 
-  logger.info(`Punch request: ${employeeId} - ${punchType} via ${source}`);
-  logger.info(req.body);
+  
   /* 1️⃣ Fetch employee */
   const employee = await EmployeeProfile.findOne({
     _id: employeeId,
@@ -54,6 +54,20 @@ export const punch = asyncWrapper(async (req, res) => {
   /* 4️⃣ Log raw punch */
   const now = new Date();
   const logicalDay = resolveLogicalDay(now);
+  /* 3️⃣ Holiday restriction check */
+const holiday = await HolidayCalendar.findOne({
+  organizationId: orgId,
+  date: logicalDay,
+  isActive: true
+});
+
+if (holiday && holiday.isMandatory) {
+  throw new AppError(
+    `Punch not allowed. Today is a mandatory holiday (${holiday.name})`,
+    403
+  );
+}
+
 
   const dedupKey = generateDedupKey({
     employeeId,

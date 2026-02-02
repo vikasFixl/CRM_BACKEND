@@ -1,26 +1,28 @@
-import RawTimeLog from "../../../models/NHRM/TimeAndAttendence/RawTimeLog.js";
-import DailyAttendance from "../../../models/NHRM/TimeAndAttendence/DailyAttendance.js";
+import mongoose from "mongoose";
+import { asyncWrapper } from "../../../middleweare/middleware.js";
+import { AppError } from "../../../middleweare/errorhandler.js";
+
 import AttendanceRegularization from "../../../models/NHRM/TimeAndAttendence/AttendanceRegularization.js";
+import { HrmAuditLog } from "../../../models/NHRM/logs/HrmLogs.js";
 
-export const requestRegularization = async (req, res) => {
+export const requestRegularization = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, sub: employeeId, role } = req.user.hrm;
+  const { attendanceDate, requestedIn, requestedOut, reason } = req.body;
+
+  if (!attendanceDate || !reason) {
+    throw new AppError("attendanceDate and reason are required", 400);
+  }
+
+  const date = new Date(attendanceDate);
+  date.setUTCHours(0, 0, 0, 0);
+
+  const diffDays = Math.floor(
+    (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  let request;
   try {
-    const { organizationId, employeeId } = req.user;
-    const { attendanceDate, requestedIn, requestedOut, reason } = req.body;
-
-    if (!attendanceDate || !reason) {
-      return res.status(400).json({
-        success: false,
-        message: "attendanceDate and reason are required"
-      });
-    }
-
-    const date = new Date(attendanceDate);
-    date.setUTCHours(0, 0, 0, 0);
-
-    const diffDays =
-      Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-
-    const request = await AttendanceRegularization.create({
+    request = await AttendanceRegularization.create({
       organizationId,
       employeeId,
       attendanceDate: date,
@@ -30,32 +32,41 @@ export const requestRegularization = async (req, res) => {
       isBackdated: diffDays > 0,
       backdatedDays: Math.max(diffDays, 0)
     });
-
-    res.status(201).json({
-      success: true,
-      message: "Regularization request submitted",
-      data: request
-    });
-
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({
-        success: false,
-        message: "Regularization already requested for this date"
-      });
+      throw new AppError(
+        "Regularization already requested for this date",
+        409
+      );
     }
-    res.status(500).json({ success: false, message: err.message });
+    throw err;
   }
-};
 
+  await HrmAuditLog.create({
+    organizationId,
+    actorId: employeeId,
+    actorRole: role,
+    entityType: "Attendance",
+    entityId: request._id,
+    action: "CREATE",
+    message: `Attendance regularization requested for ${date.toDateString()}`,
+    after: request.toObject(),
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"]
+  });
 
-export const approveRegularization = async (req, res) => {
+  res.status(201).json({
+    success: true,
+    message: "Regularization request submitted",
+    data: request
+  });
+});
+export const approveRegularization = asyncWrapper(async (req, res) => {
   const session = await mongoose.startSession();
-  try {
-    session.startTransaction();
+  session.startTransaction();
 
-    const organizationId = req.orgUser.orgId;
-    const approverId = req.user.userId;
+  try {
+    const { orgId: organizationId, sub: approverId, role } = req.user.hrm;
     const { id } = req.params;
 
     const reg = await AttendanceRegularization.findOne(
@@ -65,37 +76,42 @@ export const approveRegularization = async (req, res) => {
     );
 
     if (!reg) {
-      await session.abortTransaction();
-      return res.status(404).json({
-        success: false,
-        message: "Regularization request not found or already processed"
-      });
+      throw new AppError(
+        "Regularization request not found or already processed",
+        404
+      );
     }
 
-    /** 1️⃣ Create manual RawTimeLogs */
+    /** 1️⃣ Create manual punches */
     if (reg.requestedIn) {
-      await RawTimeLog.create([{
-        organizationId,
-        employeeId: reg.employeeId,
-        timestamp: reg.requestedIn,
-        punchType: "IN",
-        source: "admin",
-        isManual: true
-      }], { session });
+      await RawTimeLog.create(
+        [{
+          organizationId,
+          employeeId: reg.employeeId,
+          timestamp: reg.requestedIn,
+          punchType: "IN",
+          source: "admin",
+          isManual: true
+        }],
+        { session }
+      );
     }
 
     if (reg.requestedOut) {
-      await RawTimeLog.create([{
-        organizationId,
-        employeeId: reg.employeeId,
-        timestamp: reg.requestedOut,
-        punchType: "OUT",
-        source: "admin",
-        isManual: true
-      }], { session });
+      await RawTimeLog.create(
+        [{
+          organizationId,
+          employeeId: reg.employeeId,
+          timestamp: reg.requestedOut,
+          punchType: "OUT",
+          source: "admin",
+          isManual: true
+        }],
+        { session }
+      );
     }
 
-    /** 2️⃣ Mark existing attendance as recalculable */
+    /** 2️⃣ Mark attendance recalculable */
     await DailyAttendance.findOneAndUpdate(
       {
         organizationId,
@@ -115,6 +131,20 @@ export const approveRegularization = async (req, res) => {
 
     await session.commitTransaction();
 
+    await HrmAuditLog.create({
+      organizationId,
+      actorId: approverId,
+      actorRole: role,
+      entityType: "Attendance",
+      entityId: reg._id,
+      action: "APPROVE",
+      message: `Attendance regularization approved for ${reg.attendanceDate.toDateString()}`,
+      before: { status: "Pending" },
+      after: { status: "Approved" },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"]
+    });
+
     res.json({
       success: true,
       message: "Regularization approved and attendance recalculated"
@@ -122,43 +152,53 @@ export const approveRegularization = async (req, res) => {
 
   } catch (err) {
     await session.abortTransaction();
-    res.status(500).json({ success: false, message: err.message });
+    throw err;
   } finally {
     session.endSession();
   }
-};
+});
 
-export const rejectRegularization = async (req, res) => {
-  try {
-    const organizationId = req.orgUser.orgId;
-    const { id } = req.params;
-    const { remarks } = req.body;
+export const rejectRegularization = asyncWrapper(async (req, res) => {
+  const { orgId: organizationId, sub: approverId, role } = req.user.hrm;
+  const { id } = req.params;
+  const { remarks } = req.body;
 
-    const reg = await AttendanceRegularization.findOneAndUpdate(
-      { _id: id, organizationId, status: "Pending" },
-      {
-        status: "Rejected",
-        approvedBy: req.user.userId,
-        approvedAt: new Date(),
-        remarks
-      },
-      { new: true }
+  const reg = await AttendanceRegularization.findOneAndUpdate(
+    { _id: id, organizationId, status: "Pending" },
+    {
+      status: "Rejected",
+      approvedBy: approverId,
+      approvedAt: new Date(),
+      remarks
+    },
+    { new: true }
+  );
+
+  if (!reg) {
+    throw new AppError(
+      "Request not found or already processed",
+      404
     );
-
-    if (!reg) {
-      return res.status(404).json({
-        success: false,
-        message: "Request not found or already processed"
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "Regularization rejected",
-      data: reg
-    });
-
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
   }
-};
+
+  await HrmAuditLog.create({
+    organizationId,
+    actorId: approverId,
+    actorRole: role,
+    entityType: "Attendance",
+    entityId: reg._id,
+    action: "REJECT",
+    message: `Attendance regularization rejected for ${reg.attendanceDate.toDateString()}`,
+    before: { status: "Pending" },
+    after: { status: "Rejected" },
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"]
+  });
+
+  res.json({
+    success: true,
+    message: "Regularization rejected",
+    data: reg
+  });
+});
+

@@ -8,7 +8,8 @@ import {
   createHoliday,
   getHolidays,
   updateHoliday,
-  disableHoliday
+  disableHoliday,
+  getHolidayById
 } from "../../../controllers/NHRM/AttendenceAndTime/HolidayController.js";
 
 /**
@@ -31,9 +32,14 @@ holidayRouter.patch(
   hrmAuth,
   updateHoliday
 );
+holidayRouter.get(
+  "/:holidayId",
+  hrmAuth,
+  getHolidayById
+);
 
-holidayRouter.patch(
-  "/:holidayId/disable",
+holidayRouter.delete(
+  "/:holidayId",
   hrmAuth,
   disableHoliday
 );

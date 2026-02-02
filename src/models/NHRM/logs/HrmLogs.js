@@ -34,15 +34,23 @@ const auditLogSchema = new Schema(
       type: String,
       enum: [
         "Attendance",
+        "AttendancePolicy",
+        "Shift",
         "ShiftAssignment",
         "LeaveRequest",
+        "LeaveType",
+        "LeaveBalance",
+        "Holiday",
         "Payroll",
+        "PayrollRun",
         "Employee",
+        "Onboarding",
         "Policy"
       ],
       required: true,
       index: true
-    },
+    }
+    ,
 
     entityId: {
       type: Schema.Types.ObjectId,
@@ -126,4 +134,4 @@ auditLogSchema.index({
   createdAt: -1
 });
 
-export const HrmAuditLog =  mongoose.model("HrmAuditLog", auditLogSchema);
+export const HrmAuditLog = mongoose.model("HrmAuditLog", auditLogSchema);

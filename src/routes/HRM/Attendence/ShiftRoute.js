@@ -8,7 +8,8 @@ import {
     createShift,
     getActiveShifts,
     updateShift,
-    disableShift
+    disableShift,
+    getShiftById
 } from "../../../controllers/NHRM/AttendenceAndTime/ShiftMasterController.js";
 
 /**
@@ -36,6 +37,9 @@ ShiftRouter.route("/:shiftId")
     .patch(
        hrmAuth,
         updateShift
+    ).get(
+       hrmAuth,
+        getShiftById
     )
     .delete(
        hrmAuth,
