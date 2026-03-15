@@ -1,0 +1,1949 @@
+{
+  "info": {
+    "name": "FixlCRM SCM APIs (Generated 2026-03-15)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Catalog",
+      "description": "No SCM catalog routes are currently implemented in src/routes/SCM. Models exist: Category, Product, ProductVariant, SKU.",
+      "item": []
+    },
+    {
+      "name": "Procurement",
+      "item": [
+        {
+          "name": "Create Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vendors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vendors"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Supplies\",\n  \"vendorCode\": \"ACME-001\",\n  \"email\": \"ops@acme.com\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Vendor created successfully\",\n  \"data\": {\n    \"_id\": \"{{vendorId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Vendors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vendors?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vendors"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Vendors fetched successfully\",\n  \"data\": {\n    \"vendors\": [],\n    \"pagination\": {\n      \"total\": 0,\n      \"page\": 1,\n      \"limit\": 20,\n      \"totalPages\": 0\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Vendor By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vendors/{{vendorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vendors",
+                "{{vendorId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Vendor fetched successfully\",\n  \"data\": {\n    \"_id\": \"{{vendorId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Vendor",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vendors/{{vendorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vendors",
+                "{{vendorId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+1-555-222-3333\",\n  \"isActive\": true\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Vendor updated successfully\",\n  \"data\": {\n    \"_id\": \"{{vendorId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Vendor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vendors/{{vendorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vendors",
+                "{{vendorId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Vendor deleted successfully\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Purchase Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchase-orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchase-orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendorId}}\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"orderNumber\": \"PO-1001\",\n  \"items\": [\n    {\n      \"skuId\": \"{{skuId}}\",\n      \"quantity\": 10,\n      \"unitPrice\": 25\n    }\n  ]\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Purchase order created\",\n  \"data\": {\n    \"_id\": \"{{purchaseOrderId}}\",\n    \"status\": \"draft\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Purchase Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/purchase-orders?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchase-orders"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase orders fetched\",\n  \"data\": {\n    \"orders\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Purchase Order By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/purchase-orders/{{purchaseOrderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchase-orders",
+                "{{purchaseOrderId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase order fetched\",\n  \"data\": {\n    \"_id\": \"{{purchaseOrderId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Purchase Order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchase-orders/{{purchaseOrderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchase-orders",
+                "{{purchaseOrderId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Updated notes\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase order updated\",\n  \"data\": {\n    \"_id\": \"{{purchaseOrderId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Approve Purchase Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/purchase-orders/{{purchaseOrderId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchase-orders",
+                "{{purchaseOrderId}}",
+                "approve"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase order approved\",\n  \"data\": {\n    \"_id\": \"{{purchaseOrderId}}\",\n    \"status\": \"approved\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Receive Purchase Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchase-orders/{{purchaseOrderId}}/receive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchase-orders",
+                "{{purchaseOrderId}}",
+                "receive"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"items\": [\n    {\n      \"skuId\": \"{{skuId}}\",\n      \"receivedQuantity\": 10\n    }\n  ]\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase order received\",\n  \"data\": {\n    \"_id\": \"{{purchaseOrderId}}\",\n    \"status\": \"received\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Supplier Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/supplier/orders?vendorId={{vendorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplier",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "vendorId",
+                  "value": "{{vendorId}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Supplier orders fetched\",\n  \"data\": {\n    \"orders\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Confirm Supplier Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/supplier/orders/{{purchaseOrderId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplier",
+                "orders",
+                "{{purchaseOrderId}}",
+                "confirm"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendorId}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Purchase order confirmed\",\n  \"data\": {\n    \"_id\": \"{{purchaseOrderId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Supplier Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/supplier/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplier",
+                "shipments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{purchaseOrderId}}\",\n  \"vendorId\": \"{{vendorId}}\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"carrier\": \"DHL\",\n  \"trackingNumber\": \"DHL-TRK-001\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Supplier shipment created\",\n  \"data\": {\n    \"_id\": \"{{supplierShipmentId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Replenishment Suggestions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/replenishment?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "replenishment"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Replenishment suggestions fetched\",\n  \"data\": {\n    \"suggestions\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Approve Replenishment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/replenishment/{{replenishmentId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "replenishment",
+                "{{replenishmentId}}",
+                "approve"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendorId}}\",\n  \"warehouseId\": \"{{warehouseId}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Replenishment approved and PO created\",\n  \"data\": {\n    \"suggestion\": {\n      \"_id\": \"{{replenishmentId}}\"\n    },\n    \"purchaseOrder\": {\n      \"_id\": \"{{purchaseOrderId}}\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reject Replenishment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/replenishment/{{replenishmentId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "replenishment",
+                "{{replenishmentId}}",
+                "reject"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Replenishment rejected\",\n  \"data\": {\n    \"_id\": \"{{replenishmentId}}\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "Get Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Inventory fetched successfully\",\n  \"data\": {\n    \"items\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Inventory By SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/{{skuId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory",
+                "{{skuId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Inventory fetched successfully\",\n  \"data\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "Adjust Inventory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory/adjust",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory",
+                "adjust"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skuId\": \"{{skuId}}\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"quantity\": 5,\n  \"note\": \"Manual correction\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Inventory adjusted successfully\",\n  \"data\": {\n    \"skuId\": \"{{skuId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Global Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/global-inventory",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "global-inventory"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Global inventory fetched\",\n  \"data\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Global Inventory By SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/global-inventory/{{skuId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "global-inventory",
+                "{{skuId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Global inventory fetched\",\n  \"data\": {\n    \"skuId\": \"{{skuId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Stock Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-transfers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skuId\": \"{{skuId}}\",\n  \"sourceWarehouseId\": \"{{warehouseId}}\",\n  \"destinationWarehouseId\": \"{{warehouseId2}}\",\n  \"quantity\": 10\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Stock transfer created\",\n  \"data\": {\n    \"_id\": \"{{stockTransferId}}\",\n    \"status\": \"requested\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Stock Transfers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/stock-transfers?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-transfers"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Stock transfers fetched\",\n  \"data\": {\n    \"transfers\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Approve Stock Transfer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/stock-transfers/{{stockTransferId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-transfers",
+                "{{stockTransferId}}",
+                "approve"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Stock transfer approved\",\n  \"data\": {\n    \"_id\": \"{{stockTransferId}}\",\n    \"status\": \"in_transit\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Complete Stock Transfer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/stock-transfers/{{stockTransferId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-transfers",
+                "{{stockTransferId}}",
+                "complete"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Stock transfer completed\",\n  \"data\": {\n    \"_id\": \"{{stockTransferId}}\",\n    \"status\": \"completed\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Warehouse",
+      "item": [
+        {
+          "name": "Create Picking List",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/picking-lists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picking-lists"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"items\": [\n    {\n      \"skuId\": \"{{skuId}}\",\n      \"locationId\": \"{{warehouseLocationId}}\",\n      \"quantity\": 2\n    }\n  ]\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Picking list created\",\n  \"data\": {\n    \"_id\": \"{{pickingListId}}\",\n    \"status\": \"pending\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Picking Lists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/picking-lists?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picking-lists"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Picking lists fetched\",\n  \"data\": {\n    \"lists\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Picking List By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/picking-lists/{{pickingListId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picking-lists",
+                "{{pickingListId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Picking list fetched\",\n  \"data\": {\n    \"_id\": \"{{pickingListId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Assign Picker",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/picking-lists/{{pickingListId}}/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picking-lists",
+                "{{pickingListId}}",
+                "assign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickerId\": \"{{pickerId}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Picker assigned\",\n  \"data\": {\n    \"_id\": \"{{pickingListId}}\",\n    \"status\": \"assigned\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Pick Items",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/picking-lists/{{pickingListId}}/pick",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picking-lists",
+                "{{pickingListId}}",
+                "pick"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skuId\": \"{{skuId}}\",\n  \"quantity\": 1\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Item picked\",\n  \"data\": {\n    \"_id\": \"{{pickingListId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Complete Picking",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/picking-lists/{{pickingListId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picking-lists",
+                "{{pickingListId}}",
+                "complete"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Picking completed\",\n  \"data\": {\n    \"_id\": \"{{pickingListId}}\",\n    \"status\": \"completed\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Warehouse Locations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/warehouse-locations?warehouseId={{warehouseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warehouse-locations"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "{{warehouseId}}"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Warehouse locations fetched\",\n  \"data\": {\n    \"locations\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Warehouse Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/warehouse-locations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warehouse-locations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"zone\": \"A\",\n  \"rack\": \"R1\",\n  \"bin\": \"B01\",\n  \"capacity\": 100\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Warehouse location created\",\n  \"data\": {\n    \"_id\": \"{{warehouseLocationId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Warehouse Location",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/warehouse-locations/{{warehouseLocationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warehouse-locations",
+                "{{warehouseLocationId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacity\": 120\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Warehouse location updated\",\n  \"data\": {\n    \"_id\": \"{{warehouseLocationId}}\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": \"SO-1001\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"customerId\": \"{{customerId}}\",\n  \"items\": [\n    {\n      \"skuId\": \"{{skuId}}\",\n      \"quantity\": 2,\n      \"unitPrice\": 100\n    }\n  ]\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Order created\",\n  \"data\": {\n    \"_id\": \"{{orderId}}\",\n    \"status\": \"created\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Orders fetched\",\n  \"data\": {\n    \"orders\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Order By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Order fetched\",\n  \"data\": {\n    \"_id\": \"{{orderId}}\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Confirm Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "confirm"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Order confirmed\",\n  \"data\": {\n    \"_id\": \"{{orderId}}\",\n    \"status\": \"confirmed\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Pick Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/pick",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "pick"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Order moved to picking\",\n  \"data\": {\n    \"_id\": \"{{orderId}}\",\n    \"status\": \"picking\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Pack Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/pack",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "pack"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Order packed\",\n  \"data\": {\n    \"_id\": \"{{orderId}}\",\n    \"status\": \"packed\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}",
+                "cancel"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Order cancelled\",\n  \"data\": {\n    \"_id\": \"{{orderId}}\",\n    \"status\": \"cancelled\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shipments",
+      "item": [
+        {
+          "name": "Create Shipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"carrier\": \"DHL\",\n  \"trackingNumber\": \"DHL-TRK-001\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Shipment created\",\n  \"data\": {\n    \"_id\": \"{{shipmentId}}\",\n    \"status\": \"pending\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Dispatch Shipment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shipments/{{shipmentId}}/dispatch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments",
+                "{{shipmentId}}",
+                "dispatch"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Shipment dispatched\",\n  \"data\": {\n    \"_id\": \"{{shipmentId}}\",\n    \"status\": \"shipped\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Tracking By Shipment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tracking/{{shipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tracking",
+                "{{shipmentId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Tracking fetched\",\n  \"data\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "Tracking Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tracking/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tracking",
+                "webhook"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipmentId\": \"{{shipmentId}}\",\n  \"carrier\": \"DHL\",\n  \"trackingNumber\": \"DHL-TRK-001\",\n  \"status\": \"in_transit\",\n  \"location\": \"Delhi Hub\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Tracking updated\",\n  \"data\": {\n    \"_id\": \"{{trackingEventId}}\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Returns",
+      "item": [
+        {
+          "name": "Create Return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/returns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "returns"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"reason\": \"Damaged\",\n  \"items\": [\n    {\n      \"skuId\": \"{{skuId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Return requested\",\n  \"data\": {\n    \"_id\": \"{{returnId}}\",\n    \"status\": \"requested\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Returns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/returns?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "returns"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Returns fetched\",\n  \"data\": {\n    \"returns\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Approve Return",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/returns/{{returnId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "returns",
+                "{{returnId}}",
+                "approve"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Return approved\",\n  \"data\": {\n    \"_id\": \"{{returnId}}\",\n    \"status\": \"approved\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Receive Return",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/returns/{{returnId}}/receive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "returns",
+                "{{returnId}}",
+                "receive"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Return received\",\n  \"data\": {\n    \"_id\": \"{{returnId}}\",\n    \"status\": \"received\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Forecasting",
+      "item": [
+        {
+          "name": "Run Forecast",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/forecast/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "forecast",
+                "run"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Forecast generated\",\n  \"data\": {\n    \"forecasts\": [],\n    \"suggestions\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Forecasts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/forecast?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "forecast"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Forecasts fetched\",\n  \"data\": {\n    \"forecasts\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Forecast By SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/forecast/{{skuId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "forecast",
+                "{{skuId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Forecast fetched\",\n  \"data\": {\n    \"skuId\": \"{{skuId}}\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Run Supplier Analytics",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/supplier-analytics/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplier-analytics",
+                "run"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Supplier analytics generated\",\n  \"data\": {\n    \"analytics\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Supplier Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/supplier-analytics?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplier-analytics"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Supplier analytics fetched\",\n  \"data\": {\n    \"analytics\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Supplier Analytics By Vendor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/supplier-analytics/{{vendorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplier-analytics",
+                "{{vendorId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Supplier analytics fetched\",\n  \"data\": {\n    \"vendorId\": \"{{vendorId}}\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Integrations",
+      "item": [
+        {
+          "name": "Send EDI",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/edi/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "edi",
+                "send"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"850\",\n  \"referenceId\": \"{{purchaseOrderId}}\",\n  \"referenceType\": \"PurchaseOrder\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"EDI document sent\",\n  \"data\": {\n    \"_id\": \"{{ediId}}\",\n    \"direction\": \"outbound\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Receive EDI",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/edi/receive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "edi",
+                "receive"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"855\",\n  \"referenceId\": \"{{purchaseOrderId}}\",\n  \"referenceType\": \"PurchaseOrder\",\n  \"payload\": {\n    \"ack\": \"accepted\"\n  }\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"EDI document received\",\n  \"data\": {\n    \"_id\": \"{{ediId}}\",\n    \"direction\": \"inbound\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get EDI Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/edi?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "edi"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"EDI transactions fetched\",\n  \"data\": {\n    \"items\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get EDI By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/edi/{{ediId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "edi",
+                "{{ediId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"EDI transaction fetched\",\n  \"data\": {\n    \"_id\": \"{{ediId}}\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001/api/scm"
+    },
+    {
+      "key": "vendorId",
+      "value": ""
+    },
+    {
+      "key": "purchaseOrderId",
+      "value": ""
+    },
+    {
+      "key": "skuId",
+      "value": ""
+    },
+    {
+      "key": "warehouseId",
+      "value": ""
+    },
+    {
+      "key": "warehouseId2",
+      "value": ""
+    },
+    {
+      "key": "warehouseLocationId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "shipmentId",
+      "value": ""
+    },
+    {
+      "key": "supplierShipmentId",
+      "value": ""
+    },
+    {
+      "key": "trackingEventId",
+      "value": ""
+    },
+    {
+      "key": "pickingListId",
+      "value": ""
+    },
+    {
+      "key": "returnId",
+      "value": ""
+    },
+    {
+      "key": "replenishmentId",
+      "value": ""
+    },
+    {
+      "key": "stockTransferId",
+      "value": ""
+    },
+    {
+      "key": "ediId",
+      "value": ""
+    },
+    {
+      "key": "pickerId",
+      "value": ""
+    },
+    {
+      "key": "customerId",
+      "value": ""
+    }
+  ]
+}

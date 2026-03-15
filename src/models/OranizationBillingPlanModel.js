@@ -16,23 +16,8 @@ const PaymentMethodSchema = new Schema(
   { _id: false }
 );
 
-// /**
-//  * Coupon schema
-//  */
-// const CouponSchema = new Schema(
-//   {
-//     code: { type: String, trim: true },
-//     discountType: { type: String, enum: ["percent", "fixed"] },
-//     amount: { type: Number, min: 0 },
-//     expiresAt: { type: Date },
-//     appliedAt: { type: Date, default: Date.now },
-//   },
-//   { _id: false }
-// );
 
-/**
- * OrganizationBilling schema
- */
+ 
 const OrganizationBillingSchema = new Schema(
   {
     organizationId: {
@@ -107,6 +92,36 @@ const OrganizationBillingSchema = new Schema(
     },
 
     metadata: { type: Map, of: String },
+
+    addOns: [
+  {
+    moduleCode: {
+      type: String,
+      uppercase: true,
+      required: true
+    },
+
+    pricingSnapshot: {
+      currency: { type: String, required: true },
+      amount: { type: Number, required: true },
+      billingCycle: {
+        type: String,
+        enum: ["monthly", "quarterly", "yearly"],
+        required: true
+      }
+    },
+
+    activatedAt: { type: Date, default: Date.now },
+    deactivatedAt: { type: Date },
+
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active"
+    }
+  }
+]
+,
 
     isDeleted: { type: Boolean, default: false },
 status: { type: String, enum: ["active", "inactive"], default: "active", index: true },

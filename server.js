@@ -70,6 +70,22 @@ import LeaveRequestRouter from "./src/routes/HRM/Attendence/leaveRequest.js";
 import MonthlyAttendanceRouter from "./src/routes/HRM/Attendence/monthlyattendence.js";
 import HRMAUTH from "./src/routes/HRM/Auth/HrmAuthRoute.js"
 import { startAttendanceCron } from "./src/automation/Attendencecron.js";
+import ScmVendorRoutes from "./src/routes/SCM/vendor.routes.js";
+import ScmPurchaseOrderRoutes from "./src/routes/SCM/purchaseOrder.routes.js";
+import ScmInventoryRoutes from "./src/routes/SCM/inventory.routes.js";
+import ScmOrderRoutes from "./src/routes/SCM/order.routes.js";
+import ScmShipmentRoutes from "./src/routes/SCM/shipment.routes.js";
+import ScmPickingListRoutes from "./src/routes/SCM/pickingList.routes.js";
+import ScmWarehouseLocationRoutes from "./src/routes/SCM/warehouseLocation.routes.js";
+import ScmReturnRoutes from "./src/routes/SCM/return.routes.js";
+import ScmForecastRoutes from "./src/routes/SCM/forecast.routes.js";
+import ScmReplenishmentRoutes from "./src/routes/SCM/replenishment.routes.js";
+import ScmStockTransferRoutes from "./src/routes/SCM/stockTransfer.routes.js";
+import ScmSupplierAnalyticsRoutes from "./src/routes/SCM/supplierAnalytics.routes.js";
+import ScmTrackingRoutes from "./src/routes/SCM/tracking.routes.js";
+import ScmGlobalInventoryRoutes from "./src/routes/SCM/globalInventory.routes.js";
+import ScmEdiRoutes from "./src/routes/SCM/edi.routes.js";
+import ScmSupplierPortalRoutes from "./src/routes/SCM/supplierPortal.routes.js";
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
 const httpServer = createServer(app);
@@ -182,6 +198,23 @@ app.use("/api/attendance/regularization", Regularizationrouter);
 app.use("/api/attendance/monthly", MonthlyAttendanceRouter);
 
 app.use("/api/hrm",HRMAUTH)
+// SCM routes
+app.use("/api/scm", ScmVendorRoutes);
+app.use("/api/scm", ScmPurchaseOrderRoutes);
+app.use("/api/scm", ScmInventoryRoutes);
+app.use("/api/scm", ScmOrderRoutes);
+app.use("/api/scm", ScmShipmentRoutes);
+app.use("/api/scm", ScmPickingListRoutes);
+app.use("/api/scm", ScmWarehouseLocationRoutes);
+app.use("/api/scm", ScmReturnRoutes);
+app.use("/api/scm", ScmForecastRoutes);
+app.use("/api/scm", ScmReplenishmentRoutes);
+app.use("/api/scm", ScmStockTransferRoutes);
+app.use("/api/scm", ScmSupplierAnalyticsRoutes);
+app.use("/api/scm", ScmTrackingRoutes);
+app.use("/api/scm", ScmGlobalInventoryRoutes);
+app.use("/api/scm", ScmEdiRoutes);
+app.use("/api/scm", ScmSupplierPortalRoutes);
 
 
 

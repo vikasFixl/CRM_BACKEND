@@ -100,7 +100,13 @@ const PlanSchema = new Schema(
         message: "At least one feature is required",
       },
     },
-    modules: [{ type: String, trim: true, lowercase: true }],
+  modules: [
+  {
+    code: { type: String, uppercase: true }, // HRM, CRM
+    included: { type: Boolean, default: true }
+  }
+]
+,
 
     limits: {
       maxUsers: { type: Number, min: 1, default: null },
