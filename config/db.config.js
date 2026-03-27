@@ -15,7 +15,7 @@ export async function connectDB() {
   
   if (!cached.promise) {
     cached.promise = mongoose
-      .connect(uri, {
+      .connect("mongodb+srv://cubicle_crm:crm123@cluster0.gkuhyji.mongodb.net/CRMpROD", {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 10_000,
       })
