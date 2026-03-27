@@ -89,7 +89,7 @@ import ScmSupplierPortalRoutes from "./src/routes/SCM/supplierPortal.routes.js";
 const isProd = process.env.NODE_ENV === "production";
 const app = express();
 const httpServer = createServer(app);
-initSocket(httpServer)
+// initSocket(httpServer)
 
 const PORT = process.env.PORT || 5001;
 app.set("trust proxy", isProd);
@@ -100,14 +100,21 @@ app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: "/tmp/",
 }));
+
+
 app.use(bodyParser.urlencoded({ extended: true }));
+// app.use(cors({
+//   // origin: "https://cubicle-crm.vercel.app",
+//   // origin: "https://cubicle-crm.vercel.app",
+//   origin: "https://cubicle-crm-xmal.vercel.app",
+//   // origin: "https://vikas-frontend-sigma.vercel.app",
+//   // origin: "http://localhost:5173",
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+// }));
+
 app.use(cors({
-  // origin: "https://cubicle-crm.vercel.app",
-  // origin: "https://cubicle-crm.vercel.app",
-  origin: "https://cubicle-crm-xmal.vercel.app",
-  // origin: "https://vikas-frontend-sigma.vercel.app",
-  // origin: "http://localhost:5173",
-  credentials: true,
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 }));
 app.use(express.json());
