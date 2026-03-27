@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 // dotenv.config({ path: "../../.env" }); /// use while seedeing 
 dotenv.config();
-// logger.info(process.env.Mongo_URI);
+logger.info(process.env.Mongo_URI);
 
 import logger from './logger.js';
 
@@ -24,7 +24,7 @@ export async function connectDB() {
       })
       .then((m) => {
         logger.info('MongoDB connected successfully');
-        if (process.env.MONGOOSE_DEBUG === 'true') mongoose.set('debug', logger.debug.bind(logger));
+        if (process.env.MONGOOSE_DEBUG  === 'true') mongoose.set('debug', logger.debug.bind(logger));
         m.connection.on('error', (e) => logger.error('MongoDB error:', e));
         m.connection.on('disconnected', () => logger.warn('MongoDB disconnected'));
         return m;

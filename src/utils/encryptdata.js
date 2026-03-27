@@ -1,10 +1,11 @@
 // utils/encryption.js
 import crypto from "crypto";
 import dotenv from "dotenv";
+import logger from "../../config/logger.js";
 dotenv.config({ path: "../../.env" });
-// logger.info(process.env.ENCRYPTION_SCERET);
+logger.info(process.env.ENCRYPTION_SCERET);
 const algorithm = "aes-256-cbc";
-const secretKey = process.env.ENCRYPTION_SCERET
+const secretKey = process.env.ENCRYPTION_SCERET || "12345678901234567890123456789012"; // Must be 32 bytes for AES-256
 
 const keyBuffer = Buffer.from(secretKey);
 
