@@ -9,7 +9,28 @@ import { checkPermission } from "../middleweare/orgmiddleware.js";
 import { authenticateOrgToken } from "../middleweare/orgmiddleware.js";
 const Router = express.Router();
 
+const s3 = new AWS.S3({
+  accessKeyId: "AKIAXLHG4KUVTUGY2JWI",
+  secretAccessKey: "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",
+});
 
+const storage = multerS3({
+  s3: s3,
+  bucket: "crmfirmupload",
+  key: (req, file, cb) => {
+    cb(
+      null,
+      file.fieldname +
+      "-" +
+      Math.random() +
+      Date.now() +
+      path.extname(file.originalname)
+    );
+  },
+});
+
+const upload = multer({ storage });
+//withmiddlware
 
 // Create firm
 Router.route("/create").post(
